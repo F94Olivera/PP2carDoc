@@ -1,0 +1,14 @@
+{
+  "name": "pp2-cardoc",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.7.0",
+  "scripts": {
+    "dev": "pnpm --dir apps/back dev",
+    "build": "pnpm --dir apps/back build",
+    "start": "pnpm --dir apps/back start",
+    "lint": "pnpm --dir apps/back lint",
+    "test": "pnpm --dir apps/back test",
+    "typecheck": "pnpm --dir apps/back typecheck"
+  }
+}
