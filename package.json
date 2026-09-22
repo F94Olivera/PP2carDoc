@@ -7,6 +7,20 @@
     "dev": "pnpm --filter @cardoc/back dev",
     "build": "pnpm --filter @cardoc/back build",
     "start": "pnpm --filter @cardoc/back start",
+    "db:generate": "pnpm --filter @cardoc/back db:generate",
+    "seed:superheroes": "pnpm --filter @cardoc/back seed:superheroes",
+    "lint": "pnpm --recursive --if-present --no-bail lint",
+    "lint:fix": "pnpm lint --fix",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
     "typecheck": "pnpm --filter @cardoc/back typecheck"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.6.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.7.0",
+    "prettier": "^3.9.4",
+    "typescript-eslint": "^8.62.1"
   }
 }
