@@ -1,4 +1,4 @@
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import pino from "pino";
 
 import { getDatabase, initializeDatabase } from "../apps/back/src/database.js";
@@ -7,6 +7,7 @@ import { vehicles } from "../apps/back/src/models/vehicle.js";
 import { workOrderItems } from "../apps/back/src/models/work-order-item.js";
 import { workOrderRecommendations } from "../apps/back/src/models/work-order-recommendation.js";
 import { workOrders } from "../apps/back/src/models/work-order.js";
+import { users } from "../apps/back/src/models/user.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
@@ -32,6 +33,11 @@ const superheroes = [
   { firstName: "Oliver", lastName: "Queen", alias: "Green Arrow" },
   { firstName: "Jean", lastName: "Grey", alias: "Phoenix" },
 ] as const;
+
+const testUser = {
+  email: "test@test.com",
+  password: "123qwe",
+} as const;
 
 const vehicleAssignments: Record<number, { make: string; model: string; year: number }[]> = {
   0: [],
@@ -202,6 +208,14 @@ const seedSuperheroes = () => {
     let workOrderCount = 0;
     let itemCount = 0;
     let recommendationCount = 0;
+
+    tx.delete(users).where(eq(users.email, testUser.email)).run();
+    tx.insert(users)
+      .values({
+        email: testUser.email,
+        passwordHash: testUser.password,
+      })
+      .run();
 
     superheroes.forEach((superhero, customerIndex) => {
       const documentNumber = customerDocumentNumbers[customerIndex]!;
