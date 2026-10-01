@@ -20,3 +20,7 @@ export const signInWithPassword = async (credentials: LoginInput) => {
 export const revokeSession = async (accessToken: string) => {
   return createAuthClient().auth.admin.signOut(accessToken, "local");
 };
+
+export const findUserByAccessToken = async (accessToken: string) => {
+  return createAuthClient().auth.getUser(accessToken);
+};

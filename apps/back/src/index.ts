@@ -1,7 +1,7 @@
 import express from "express";
 import pino from "pino";
 
-import { loginController, logoutController } from "./controllers/auth-controller.js";
+import { loginController, logoutController, meController } from "./controllers/auth-controller.js";
 
 import { closeDatabase, initializeDatabase } from "./database.js";
 
@@ -11,7 +11,7 @@ const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
 app.post("/login", express.json({ limit: "8kb" }), loginController);
 app.post("/logout", logoutController);
-// app.get("/auth/me", meController);
+app.get("/auth/me", meController);
 // app.post("/budgets/pdf", requireAuth, createBudgetPdfController);
 // app.get("/finances", requireAuth, financesController);
 // app.post("/customers", requireAuth, createCustomerController);

@@ -22,9 +22,17 @@
 4. Supabase Auth checks the credentials and applies its own rate limits; carDoc does not store passwords or issue its own JWT.
 5. The mapper returns only the user ID/email and session tokens/expiration. Login responses use Cache-Control: no-store.
 6. Invalid credentials or an unconfirmed email return a generic 401; upstream rate limiting returns 429; configuration/provider failures return 503 without exposing provider details or credentials.
-7. The client owns session storage and renewal using Supabase Auth. /auth/me is pending and is not registered yet.
+7. The client owns session storage and renewal using Supabase Auth and can retrieve the current user through `GET /auth/me`.
 
 There is no local login rate limiter. Supabase normally sees the backend IP, so its upstream limit is shared across users unless supported IP forwarding is configured.
+
+## Current authenticated user
+
+1. A client sends `GET /auth/me` with `Authorization: Bearer <access_token>`; no body is used.
+2. The auth controller validates the authorization header with the shared auth schema. Missing or malformed headers return 401 with `WWW-Authenticate: Bearer`.
+3. The auth service calls the auth repository, which creates an isolated Supabase client and calls `auth.getUser(accessToken)` to validate the token with Supabase Auth and retrieve the current user.
+4. The shared user mapper returns `{ "user": { "id": "<user_id>", "email": "<email_or_null>" } }`. Session tokens and user metadata are not included.
+5. Invalid or expired tokens and missing users return 401 with `WWW-Authenticate: Bearer`; provider rate limits return 429; configuration or provider failures return 503 without exposing provider details. All responses use `Cache-Control: no-store`.
 
 ## Logout
 

@@ -1,9 +1,39 @@
 import type { RequestHandler } from "express";
 import pino from "pino";
 import { bearerTokenSchema, loginSchema } from "../schemas/auth.js";
-import { login, logout } from "../services/auth-service.js";
+import { getCurrentUser, login, logout } from "../services/auth-service.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
+
+export const meController: RequestHandler = async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const parsed = bearerTokenSchema.safeParse(req.get("Authorization"));
+  if (!parsed.success) {
+    res.setHeader("WWW-Authenticate", "Bearer");
+    res.status(401).json({ error: "A valid Bearer access token is required." });
+    return;
+  }
+  try {
+    const result = await getCurrentUser(parsed.data);
+    switch (result.outcome) {
+      case "success":
+        res.json(result.response);
+        return;
+      case "unauthorized":
+        res.setHeader("WWW-Authenticate", "Bearer");
+        res.status(401).json({ error: "Invalid or expired access token." });
+        return;
+      case "rate_limited":
+        res.status(429).json({ error: "Too many authentication attempts. Try again later." });
+        return;
+      case "unavailable":
+        res.status(503).json({ error: "Authentication service unavailable." });
+    }
+  } catch {
+    logger.error("Current user lookup failed because authentication is unavailable");
+    res.status(503).json({ error: "Authentication service unavailable." });
+  }
+};
 
 export const logoutController: RequestHandler = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");

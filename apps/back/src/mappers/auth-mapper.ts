@@ -1,7 +1,12 @@
 import type { Session, User } from "@supabase/supabase-js";
 
+export const toUserResponse = (user: User) => ({
+  id: user.id,
+  email: user.email ?? null,
+});
+
 export const toLoginResponse = (user: User, session: Session) => ({
-  user: { id: user.id, email: user.email ?? null },
+  user: toUserResponse(user),
   session: {
     access_token: session.access_token,
     refresh_token: session.refresh_token,
