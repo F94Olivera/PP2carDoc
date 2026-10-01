@@ -1,13 +1,12 @@
-import { eq, inArray } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import pino from "pino";
 
-import { getDatabase, initializeDatabase } from "../apps/back/src/database.js";
+import { closeDatabase, getDatabase, initializeDatabase } from "../apps/back/src/database.js";
 import { customers } from "../apps/back/src/models/customer.js";
 import { vehicles } from "../apps/back/src/models/vehicle.js";
 import { workOrderItems } from "../apps/back/src/models/work-order-item.js";
 import { workOrderRecommendations } from "../apps/back/src/models/work-order-recommendation.js";
 import { workOrders } from "../apps/back/src/models/work-order.js";
-import { users } from "../apps/back/src/models/user.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
@@ -33,11 +32,6 @@ const superheroes = [
   { firstName: "Oliver", lastName: "Queen", alias: "Green Arrow" },
   { firstName: "Jean", lastName: "Grey", alias: "Phoenix" },
 ] as const;
-
-const testUser = {
-  email: "test@test.com",
-  password: "123qwe",
-} as const;
 
 const vehicleAssignments: Record<number, { make: string; model: string; year: number }[]> = {
   0: [],
@@ -206,12 +200,6 @@ const seedSuperheroes = async () => {
     let itemCount = 0;
     let recommendationCount = 0;
 
-    await tx.delete(users).where(eq(users.email, testUser.email));
-    await tx.insert(users).values({
-      email: testUser.email,
-      passwordHash: testUser.password,
-    });
-
     for (const [customerIndex, superhero] of superheroes.entries()) {
       const documentNumber = customerDocumentNumbers[customerIndex]!;
       const [createdCustomer] = await tx
@@ -334,14 +322,20 @@ const seedSuperheroes = async () => {
   logger.info(totals, "Seeded superhero demo data");
 };
 
-try {
-  await seedSuperheroes();
-} catch (error) {
-  logger.error(
-    {
-      error: error instanceof Error ? { message: error.message, stack: error.stack } : error,
-    },
-    "Failed to seed superhero demo data",
-  );
-  process.exitCode = 1;
-}
+const main = async () => {
+  try {
+    await seedSuperheroes();
+  } catch (error) {
+    logger.error(
+      {
+        error: error instanceof Error ? { message: error.message, stack: error.stack } : error,
+      },
+      "Failed to seed superhero demo data",
+    );
+    process.exitCode = 1;
+  } finally {
+    await closeDatabase();
+  }
+};
+
+void main();

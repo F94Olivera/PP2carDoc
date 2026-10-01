@@ -1,5 +1,14 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, pgTable, real, serial, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  check,
+  index,
+  integer,
+  numeric,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 import { workOrders } from "./work-order.js";
 
@@ -12,7 +21,7 @@ export const workOrderItems = pgTable(
       .references(() => workOrders.id, { onDelete: "cascade" }),
     description: text("description").notNull(),
     category: text("category", { enum: ["labor", "part", "other"] }).notNull(),
-    quantity: real("quantity").notNull(),
+    quantity: numeric("quantity", { precision: 10, scale: 2, mode: "number" }).notNull(),
     unitPrice: integer("unit_price").notNull(),
     createdAt: timestamp("created_at")
       .notNull()
