@@ -1,12 +1,21 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  boolean,
+  check,
+  index,
+  integer,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 import { customers } from "./customer.js";
 
-export const vehicles = sqliteTable(
+export const vehicles = pgTable(
   "vehicles",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     customerId: integer("customer_id")
       .notNull()
       .references(() => customers.id, { onDelete: "restrict" }),
@@ -16,13 +25,13 @@ export const vehicles = sqliteTable(
     year: integer("year"),
     initialOdometer: integer("initial_odometer"),
     odometerUnit: text("odometer_unit", { enum: ["km", "mi"] }).notNull(),
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-    createdAt: integer("created_at", { mode: "timestamp" })
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at")
       .notNull()
-      .default(sql`(unixepoch())`),
-    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .default(sql`now()`),
+    updatedAt: timestamp("updated_at")
       .notNull()
-      .default(sql`(unixepoch())`)
+      .default(sql`now()`)
       .$onUpdate(() => new Date()),
   },
   (table) => [

@@ -1,24 +1,24 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 
 import { users } from "./user.js";
 
-export const sessions = sqliteTable(
+export const sessions = pgTable(
   "sessions",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     userId: integer("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     tokenHash: text("token_hash").notNull().unique(),
-    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
-    revokedAt: integer("revoked_at", { mode: "timestamp" }),
-    createdAt: integer("created_at", { mode: "timestamp" })
+    expiresAt: timestamp("expires_at").notNull(),
+    revokedAt: timestamp("revoked_at"),
+    createdAt: timestamp("created_at")
       .notNull()
-      .default(sql`(unixepoch())`),
-    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .default(sql`now()`),
+    updatedAt: timestamp("updated_at")
       .notNull()
-      .default(sql`(unixepoch())`)
+      .default(sql`now()`)
       .$onUpdate(() => new Date()),
   },
   (table) => [index("sessions_user_id_idx").on(table.userId)],

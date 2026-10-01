@@ -2,4 +2,5 @@ node_modules/
 dist/
 db/
 drizzle/
-
+!apps/back/drizzle/
+!apps/back/drizzle/**

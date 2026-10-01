@@ -1,10 +1,9 @@
-import Database from "better-sqlite3";
-import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
 import pino from "pino";
+import postgres from "postgres";
 
 import { customers } from "./models/customer.js";
 import { sessions } from "./models/session.js";
@@ -17,38 +16,45 @@ import { workOrders } from "./models/work-order.js";
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 const backendDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-const createDatabase = () => {
-  const databasePath = path.resolve(
-    backendDirectory,
-    process.env.DATABASE_URL ?? "db/cardoc.sqlite",
-  );
-  mkdirSync(path.dirname(databasePath), { recursive: true });
-  const sqlite = new Database(databasePath);
+const schema = {
+  customers,
+  sessions,
+  users,
+  vehicles,
+  workOrderItems,
+  workOrderRecommendations,
+  workOrders,
+};
 
-  sqlite.pragma("foreign_keys = ON");
-  sqlite.pragma("journal_mode = DELETE");
+const createDatabase = async () => {
+  const databaseUrl = process.env.DATABASE_URL;
 
-  const database = drizzle(sqlite, {
-    schema: {
-      customers,
-      sessions,
-      users,
-      vehicles,
-      workOrderItems,
-      workOrderRecommendations,
-      workOrders,
-    },
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL is required to connect to Postgres");
+  }
+
+  queryClient = postgres(databaseUrl, {
+    max: 1,
+    prepare: false,
+    ssl: process.env.DATABASE_SSL === "false" ? false : "require",
   });
-  migrate(database, { migrationsFolder: path.join(backendDirectory, "drizzle") });
-  logger.info({ databasePath }, "Database initialized");
+
+  const database = drizzle(queryClient, {
+    schema,
+  });
+  await migrate(database, { migrationsFolder: path.join(backendDirectory, "drizzle") });
+  logger.info("Postgres database initialized");
 
   return database;
 };
 
-let database: ReturnType<typeof createDatabase> | undefined;
+let database: Awaited<ReturnType<typeof createDatabase>> | undefined;
+let queryClient: postgres.Sql | undefined;
+let initialization: ReturnType<typeof createDatabase> | undefined;
 
-export const initializeDatabase = () => {
-  database ??= createDatabase();
+export const initializeDatabase = async () => {
+  initialization ??= createDatabase();
+  database = await initialization;
 
   return database;
 };
@@ -59,4 +65,11 @@ export const getDatabase = () => {
   }
 
   return database;
+};
+
+export const closeDatabase = async () => {
+  await queryClient?.end();
+  queryClient = undefined;
+  database = undefined;
+  initialization = undefined;
 };

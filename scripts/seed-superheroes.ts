@@ -152,74 +152,69 @@ const workOrderCountForVehicle = (customerIndex: number, vehicleIndex: number) =
   return 2 + ((customerIndex + vehicleIndex) % 3);
 };
 
-const clearPreviousSuperheroSeed = () => {
+const clearPreviousSuperheroSeed = async () => {
   const database = getDatabase();
 
-  database.transaction((tx) => {
-    const seededCustomers = tx
+  await database.transaction(async (tx) => {
+    const seededCustomers = await tx
       .select({ id: customers.id })
       .from(customers)
-      .where(inArray(customers.documentNumber, customerDocumentNumbers))
-      .all();
+      .where(inArray(customers.documentNumber, customerDocumentNumbers));
     const customerIds = seededCustomers.map((customer) => customer.id);
 
     if (customerIds.length === 0) {
       return;
     }
 
-    const seededVehicles = tx
+    const seededVehicles = await tx
       .select({ id: vehicles.id })
       .from(vehicles)
-      .where(inArray(vehicles.customerId, customerIds))
-      .all();
+      .where(inArray(vehicles.customerId, customerIds));
     const vehicleIds = seededVehicles.map((vehicle) => vehicle.id);
 
     if (vehicleIds.length > 0) {
-      const seededWorkOrders = tx
+      const seededWorkOrders = await tx
         .select({ id: workOrders.id })
         .from(workOrders)
-        .where(inArray(workOrders.vehicleId, vehicleIds))
-        .all();
+        .where(inArray(workOrders.vehicleId, vehicleIds));
       const workOrderIds = seededWorkOrders.map((workOrder) => workOrder.id);
 
       if (workOrderIds.length > 0) {
-        tx.delete(workOrderItems).where(inArray(workOrderItems.workOrderId, workOrderIds)).run();
-        tx.delete(workOrderRecommendations)
-          .where(inArray(workOrderRecommendations.workOrderId, workOrderIds))
-          .run();
-        tx.delete(workOrders).where(inArray(workOrders.id, workOrderIds)).run();
+        await tx.delete(workOrderItems).where(inArray(workOrderItems.workOrderId, workOrderIds));
+        await tx
+          .delete(workOrderRecommendations)
+          .where(inArray(workOrderRecommendations.workOrderId, workOrderIds));
+        await tx.delete(workOrders).where(inArray(workOrders.id, workOrderIds));
       }
 
-      tx.delete(vehicles).where(inArray(vehicles.id, vehicleIds)).run();
+      await tx.delete(vehicles).where(inArray(vehicles.id, vehicleIds));
     }
 
-    tx.delete(customers).where(inArray(customers.id, customerIds)).run();
+    await tx.delete(customers).where(inArray(customers.id, customerIds));
   });
 };
 
-const seedSuperheroes = () => {
-  initializeDatabase();
-  clearPreviousSuperheroSeed();
+const seedSuperheroes = async () => {
+  await initializeDatabase();
+  await clearPreviousSuperheroSeed();
 
   const database = getDatabase();
 
-  const totals = database.transaction((tx) => {
+  const totals = await database.transaction(async (tx) => {
     let vehicleCount = 0;
     let workOrderCount = 0;
     let itemCount = 0;
     let recommendationCount = 0;
 
-    tx.delete(users).where(eq(users.email, testUser.email)).run();
-    tx.insert(users)
-      .values({
-        email: testUser.email,
-        passwordHash: testUser.password,
-      })
-      .run();
+    await tx.delete(users).where(eq(users.email, testUser.email));
+    await tx.insert(users).values({
+      email: testUser.email,
+      passwordHash: testUser.password,
+    });
 
-    superheroes.forEach((superhero, customerIndex) => {
+    for (const [customerIndex, superhero] of superheroes.entries()) {
       const documentNumber = customerDocumentNumbers[customerIndex]!;
-      const [createdCustomer] = tx
+      const [createdCustomer] = await tx
         .insert(customers)
         .values({
           firstName: superhero.firstName,
@@ -230,15 +225,14 @@ const seedSuperheroes = () => {
           documentNumber,
           notes: `Cliente seed: ${superhero.alias}`,
         })
-        .returning({ id: customers.id })
-        .all();
+        .returning({ id: customers.id });
 
       const assignedVehicles = vehicleAssignments[customerIndex] ?? [];
 
-      assignedVehicles.forEach((assignedVehicle, vehicleIndex) => {
+      for (const [vehicleIndex, assignedVehicle] of assignedVehicles.entries()) {
         vehicleCount += 1;
 
-        const [createdVehicle] = tx
+        const [createdVehicle] = await tx
           .insert(vehicles)
           .values({
             customerId: createdCustomer!.id,
@@ -251,12 +245,11 @@ const seedSuperheroes = () => {
             initialOdometer: 12000 + customerIndex * 3500 + vehicleIndex * 8700,
             odometerUnit: "km",
           })
-          .returning({ id: vehicles.id })
-          .all();
+          .returning({ id: vehicles.id });
 
         const orderCount = workOrderCountForVehicle(customerIndex, vehicleIndex);
 
-        Array.from({ length: orderCount }).forEach((_, orderIndex) => {
+        for (const orderIndex of Array.from({ length: orderCount }, (_, index) => index)) {
           const entryDate = createDate(
             1 + ((customerIndex + orderIndex) % 6),
             3 + ((customerIndex * 2 + orderIndex * 5) % 24),
@@ -266,7 +259,7 @@ const seedSuperheroes = () => {
             orderIndex % 2 === 0
               ? createDate(entryDate.getUTCMonth() + 1, entryDate.getUTCDate(), 17)
               : null;
-          const [createdWorkOrder] = tx
+          const [createdWorkOrder] = await tx
             .insert(workOrders)
             .values({
               vehicleId: createdVehicle!.id,
@@ -279,8 +272,7 @@ const seedSuperheroes = () => {
               notes: `Orden seed para ${superhero.alias}, vehiculo ${vehicleIndex + 1}`,
               diagnosis: diagnoses[(customerIndex + orderIndex) % diagnoses.length]!,
             })
-            .returning({ id: workOrders.id })
-            .all();
+            .returning({ id: workOrders.id });
 
           workOrderCount += 1;
 
@@ -299,7 +291,7 @@ const seedSuperheroes = () => {
             },
           );
 
-          tx.insert(workOrderItems).values(items).run();
+          await tx.insert(workOrderItems).values(items);
           itemCount += items.length;
 
           const recommendations = Array.from({ length: (customerIndex + orderIndex) % 3 }).map(
@@ -323,12 +315,12 @@ const seedSuperheroes = () => {
           );
 
           if (recommendations.length > 0) {
-            tx.insert(workOrderRecommendations).values(recommendations).run();
+            await tx.insert(workOrderRecommendations).values(recommendations);
             recommendationCount += recommendations.length;
           }
-        });
-      });
-    });
+        }
+      }
+    }
 
     return {
       customers: superheroes.length,
@@ -343,7 +335,7 @@ const seedSuperheroes = () => {
 };
 
 try {
-  seedSuperheroes();
+  await seedSuperheroes();
 } catch (error) {
   logger.error(
     {

@@ -1,12 +1,12 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { check, index, integer, pgTable, real, serial, text, timestamp } from "drizzle-orm/pg-core";
 
 import { workOrders } from "./work-order.js";
 
-export const workOrderItems = sqliteTable(
+export const workOrderItems = pgTable(
   "work_order_items",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     workOrderId: integer("work_order_id")
       .notNull()
       .references(() => workOrders.id, { onDelete: "cascade" }),
@@ -14,12 +14,12 @@ export const workOrderItems = sqliteTable(
     category: text("category", { enum: ["labor", "part", "other"] }).notNull(),
     quantity: real("quantity").notNull(),
     unitPrice: integer("unit_price").notNull(),
-    createdAt: integer("created_at", { mode: "timestamp" })
+    createdAt: timestamp("created_at")
       .notNull()
-      .default(sql`(unixepoch())`),
-    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .default(sql`now()`),
+    updatedAt: timestamp("updated_at")
       .notNull()
-      .default(sql`(unixepoch())`)
+      .default(sql`now()`)
       .$onUpdate(() => new Date()),
   },
   (table) => [

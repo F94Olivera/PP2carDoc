@@ -1,8 +1,8 @@
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { boolean, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 
-export const customers = sqliteTable("customers", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const customers = pgTable("customers", {
+  id: serial("id").primaryKey(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name"),
   email: text("email"),
@@ -10,13 +10,13 @@ export const customers = sqliteTable("customers", {
   address: text("address"),
   documentNumber: text("document_number").unique(),
   notes: text("notes"),
-  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at")
     .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .default(sql`now()`),
+  updatedAt: timestamp("updated_at")
     .notNull()
-    .default(sql`(unixepoch())`)
+    .default(sql`now()`)
     .$onUpdate(() => new Date()),
 });
 
