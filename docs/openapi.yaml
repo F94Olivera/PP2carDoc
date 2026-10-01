@@ -1,0 +1,80 @@
+openapi: 3.0.3
+info:
+  title: carDoc API
+  version: 0.1.0
+paths:
+  /ping:
+    get:
+      responses:
+        "200":
+          description: Backend is running
+  /login:
+    post:
+      summary: Authenticate with Supabase using email and password
+      description: Returns a Supabase session for Bearer authentication.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Authenticated; Cache-Control is no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          description: Invalid JSON or body
+        "401":
+          description: Invalid credentials or unavailable account
+        "413":
+          description: Body exceeds 8 KB
+        "429":
+          description: Supabase rate limit exceeded
+        "503":
+          description: Authentication unavailable or unconfigured
+components:
+  schemas:
+    LoginInput:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 1
+          maxLength: 4096
+    LoginResponse:
+      type: object
+      required: [user, session]
+      properties:
+        user:
+          type: object
+          required: [id, email]
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              nullable: true
+        session:
+          type: object
+          required: [access_token, refresh_token, token_type, expires_in]
+          properties:
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+            token_type:
+              type: string
+            expires_in:
+              type: integer
+            expires_at:
+              type: integer

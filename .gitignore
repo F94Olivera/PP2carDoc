@@ -7,3 +7,7 @@ db/
 drizzle/
 !apps/back/drizzle/
 !apps/back/drizzle/**
+
+# Supabase local runtime state
+/supabase/.branches/
+/supabase/.temp/

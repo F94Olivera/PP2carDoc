@@ -1,0 +1,34 @@
+import type { RequestHandler } from "express";
+import pino from "pino";
+import { loginSchema } from "../schemas/auth.js";
+import { login } from "../services/auth-service.js";
+
+const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
+
+export const loginController: RequestHandler = async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const parsed = loginSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Expected only a valid email and a nonempty password." });
+    return;
+  }
+  try {
+    const result = await login(parsed.data);
+    switch (result.outcome) {
+      case "success":
+        res.json(result.response);
+        return;
+      case "unauthorized":
+        res.status(401).json({ error: "Invalid credentials or account unavailable." });
+        return;
+      case "rate_limited":
+        res.status(429).json({ error: "Too many login attempts. Try again later." });
+        return;
+      case "unavailable":
+        res.status(503).json({ error: "Authentication service unavailable." });
+    }
+  } catch {
+    logger.error("Login failed because authentication is unavailable");
+    res.status(503).json({ error: "Authentication service unavailable." });
+  }
+};
