@@ -1,7 +1,11 @@
 import express from "express";
+import pino from "pino";
+
+import { closeDatabase, initializeDatabase } from "./database.js";
 
 const app = express();
 const port = process.env.PORT_BACK ?? "3001";
+const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
 // app.post("/login", loginRateLimit, loginController);
 // app.post("/logout", logoutController);
@@ -30,4 +34,36 @@ app.get("/ping", (_req, res) => {
   res.json({ pong: true });
 });
 
-app.listen(port);
+const startServer = async () => {
+  await initializeDatabase();
+
+  const server = app.listen(port, () => {
+    logger.info({ port }, "Backend server listening");
+  });
+
+  const shutdown = (signal: NodeJS.Signals) => {
+    logger.info({ signal }, "Shutting down backend server");
+
+    server.close((error) => {
+      void (async () => {
+        if (error) {
+          logger.error({ error }, "Failed to close backend server");
+        }
+
+        await closeDatabase();
+        process.exit(error ? 1 : 0);
+      })();
+    });
+  };
+
+  process.once("SIGINT", shutdown);
+  process.once("SIGTERM", shutdown);
+};
+
+void startServer().catch((error) => {
+  logger.fatal(
+    { error: error instanceof Error ? { message: error.message, stack: error.stack } : error },
+    "Failed to start backend server",
+  );
+  process.exit(1);
+});

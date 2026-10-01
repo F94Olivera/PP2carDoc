@@ -7,7 +7,9 @@
 
 ## Database initialization
 
-1. Backend code calls `initializeDatabase()`.
+1. `src/index.ts` starts the backend by calling `initializeDatabase()` before `app.listen()`.
 2. The database module reads `DATABASE_URL` and opens a Postgres connection. In local development, `DATABASE_URL` points to the Supabase Postgres instance at `127.0.0.1:54322` and `DATABASE_SSL=false` disables SSL for that local connection.
 3. Drizzle initializes the database client with the backend models as its schema.
 4. The initialized Drizzle database is available through `getDatabase()`.
+5. If the database connection fails, the backend logs a fatal startup error and exits instead of listening without persistence.
+6. On `SIGINT` or `SIGTERM`, the backend stops accepting HTTP requests and closes the database connection.
