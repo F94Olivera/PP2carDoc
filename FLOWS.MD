@@ -22,6 +22,15 @@
 4. Supabase Auth checks the credentials and applies its own rate limits; carDoc does not store passwords or issue its own JWT.
 5. The mapper returns only the user ID/email and session tokens/expiration. Login responses use Cache-Control: no-store.
 6. Invalid credentials or an unconfirmed email return a generic 401; upstream rate limiting returns 429; configuration/provider failures return 503 without exposing provider details or credentials.
-7. The client owns session storage and renewal using Supabase Auth. /logout and /auth/me are pending and are not registered yet.
+7. The client owns session storage and renewal using Supabase Auth. /auth/me is pending and is not registered yet.
 
 There is no local login rate limiter. Supabase normally sees the backend IP, so its upstream limit is shared across users unless supported IP forwarding is configured.
+
+## Logout
+
+1. A client sends `POST /logout` with `Authorization: Bearer <access_token>`; no body is used.
+2. The auth controller validates the authorization header with the shared auth schema. Missing or malformed headers return 401 with `WWW-Authenticate: Bearer`.
+3. The auth service calls the auth repository, which creates an isolated Supabase client using the root environment configuration and calls `auth.admin.signOut(accessToken, "local")`. No service-role key is required; Supabase authorizes the request using the user's token.
+4. Supabase revokes the refresh tokens for the current session only. Other sessions remain active. Success returns 204 with no body.
+5. Invalid or expired tokens return 401; provider rate limits return 429; configuration or provider failures return 503 without exposing credentials or provider details. Responses use `Cache-Control: no-store`.
+6. The client deletes its stored access and refresh tokens. An issued access token remains valid until expiration; logout does not immediately invalidate JWTs.

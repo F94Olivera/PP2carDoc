@@ -6,3 +6,8 @@ export const loginSchema = z.strictObject({
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
+
+export const bearerTokenSchema = z
+  .string()
+  .regex(/^Bearer [A-Za-z0-9._~+/-]+=*$/i)
+  .transform((authorization) => authorization.slice(7));

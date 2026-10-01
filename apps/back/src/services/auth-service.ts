@@ -1,4 +1,4 @@
-import { signInWithPassword } from "../repositories/auth-repository.js";
+import { revokeSession, signInWithPassword } from "../repositories/auth-repository.js";
 import { toLoginResponse } from "../mappers/auth-mapper.js";
 import type { LoginInput } from "../schemas/auth.js";
 
@@ -13,4 +13,14 @@ export const login = async (credentials: LoginInput) => {
   }
   if (!data.user || !data.session) return { outcome: "unavailable" } as const;
   return { outcome: "success", response: toLoginResponse(data.user, data.session) } as const;
+};
+
+export const logout = async (accessToken: string) => {
+  const { error } = await revokeSession(accessToken);
+  if (!error) return { outcome: "success" } as const;
+  if (error.status === 429) return { outcome: "rate_limited" } as const;
+  if (error.status === 401 || error.status === 403 || error.status === 404) {
+    return { outcome: "unauthorized" } as const;
+  }
+  return { outcome: "unavailable" } as const;
 };

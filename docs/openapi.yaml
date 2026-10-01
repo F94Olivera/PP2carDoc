@@ -35,7 +35,31 @@ paths:
           description: Supabase rate limit exceeded
         "503":
           description: Authentication unavailable or unconfigured
+  /logout:
+    post:
+      summary: Sign out the current Supabase session
+      description: |
+        Requires an access token in Authorization. Revokes only the current session's
+        refresh tokens. Other sessions remain active. The access token remains valid
+        until expiration; the client must delete its locally stored session tokens.
+        No request body is used.
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Session signed out; no body; Cache-Control is no-store
+        "401":
+          description: Missing, malformed, invalid or expired Bearer token
+        "429":
+          description: Supabase rate limit exceeded
+        "503":
+          description: Authentication unavailable or unconfigured
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     LoginInput:
       type: object
