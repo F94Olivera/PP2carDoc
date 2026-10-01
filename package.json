@@ -7,6 +7,9 @@
     "dev": "pnpm --filter @cardoc/back dev",
     "build": "pnpm --filter @cardoc/back build",
     "start": "pnpm --filter @cardoc/back start",
+    "supabase": "supabase",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
     "db:generate": "pnpm --filter @cardoc/back db:generate",
     "seed:superheroes": "pnpm --filter @cardoc/back seed:superheroes",
     "lint": "pnpm --recursive --if-present --no-bail lint",
@@ -21,6 +24,7 @@
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.7.0",
     "prettier": "^3.9.4",
+    "supabase": "^2.118.0",
     "typescript-eslint": "^8.62.1"
   }
 }

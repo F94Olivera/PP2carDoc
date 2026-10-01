@@ -1,6 +1,9 @@
 node_modules/
 dist/
 db/
+.env
+.env.*
+!.env.example
 drizzle/
 !apps/back/drizzle/
 !apps/back/drizzle/**
