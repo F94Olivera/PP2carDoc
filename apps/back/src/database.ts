@@ -1,25 +1,17 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
 import pino from "pino";
 import postgres from "postgres";
 
 import { customers } from "./models/customer.js";
-import { sessions } from "./models/session.js";
-import { users } from "./models/user.js";
 import { vehicles } from "./models/vehicle.js";
 import { workOrderItems } from "./models/work-order-item.js";
 import { workOrderRecommendations } from "./models/work-order-recommendation.js";
 import { workOrders } from "./models/work-order.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
-const backendDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const schema = {
   customers,
-  sessions,
-  users,
   vehicles,
   workOrderItems,
   workOrderRecommendations,
@@ -42,7 +34,6 @@ const createDatabase = async () => {
   const database = drizzle(queryClient, {
     schema,
   });
-  await migrate(database, { migrationsFolder: path.join(backendDirectory, "drizzle") });
   logger.info("Postgres database initialized");
 
   return database;

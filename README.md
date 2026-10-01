@@ -37,10 +37,6 @@ PORT_BACK=3001
 
 `DATABASE_SSL=false` es necesario porque el Postgres local de Supabase no usa SSL. El archivo `.env` esta ignorado por Git y no debe commitearse.
 
-### Migraciones
-
-Las migraciones actuales del backend viven en `apps/back/drizzle` y se ejecutan al inicializar la aplicacion. No se duplican en `supabase/migrations` para evitar que el backend intente crear tablas ya existentes.
-
 ### Levantar el backend
 
 Con Supabase corriendo:

@@ -27,7 +27,7 @@ const port = process.env.PORT_BACK ?? "3001";
 // app.put("/vehicles/:vehicleId/work-orders/:workOrderId", requireAuth, replaceWorkOrderController);
 
 app.get("/ping", (_req, res) => {
-    res.json({ pong: true });
+  res.json({ pong: true });
 });
 
 app.listen(port);
