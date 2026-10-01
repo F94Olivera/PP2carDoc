@@ -26,18 +26,25 @@
 
 There is no local login rate limiter. Supabase normally sees the backend IP, so its upstream limit is shared across users unless supported IP forwarding is configured.
 
+## Protected routes
+
+1. `/login` and `/ping` are registered as public routes before the protected router.
+2. The protected router runs `requireAuth` before `/auth/me`, `/logout`, and every future endpoint registered in that router.
+3. The middleware validates `Authorization: Bearer <access_token>` using the shared auth schema. Missing or malformed headers return 401 with `WWW-Authenticate: Bearer`.
+4. The auth service calls the repository's `auth.getUser(accessToken)` with an isolated Supabase client. Invalid or expired tokens and missing users return 401; provider rate limits return 429; configuration or provider failures return 503. Protected responses use `Cache-Control: no-store`.
+5. On success, the middleware stores the mapped user in typed `res.locals.user` and the token in `res.locals.accessToken`, then calls `next()`. It never logs tokens or provider details.
+6. Authentication identifies the caller. Resource permissions must be enforced separately in the application services; direct Drizzle queries do not automatically inherit the Supabase user's identity.
+
 ## Current authenticated user
 
-1. A client sends `GET /auth/me` with `Authorization: Bearer <access_token>`; no body is used.
-2. The auth controller validates the authorization header with the shared auth schema. Missing or malformed headers return 401 with `WWW-Authenticate: Bearer`.
-3. The auth service calls the auth repository, which creates an isolated Supabase client and calls `auth.getUser(accessToken)` to validate the token with Supabase Auth and retrieve the current user.
-4. The shared user mapper returns `{ "user": { "id": "<user_id>", "email": "<email_or_null>" } }`. Session tokens and user metadata are not included.
-5. Invalid or expired tokens and missing users return 401 with `WWW-Authenticate: Bearer`; provider rate limits return 429; configuration or provider failures return 503 without exposing provider details. All responses use `Cache-Control: no-store`.
+1. A client sends `GET /auth/me` with a Bearer access token; no body is used.
+2. `requireAuth` validates the token before the controller runs.
+3. The controller returns `{ "user": { "id": "<user_id>", "email": "<email_or_null>" } }` from `res.locals.user`, without a second Auth lookup. Session tokens and user metadata are not included.
 
 ## Logout
 
 1. A client sends `POST /logout` with `Authorization: Bearer <access_token>`; no body is used.
-2. The auth controller validates the authorization header with the shared auth schema. Missing or malformed headers return 401 with `WWW-Authenticate: Bearer`.
+2. `requireAuth` validates the Bearer token with Supabase Auth and stores it in `res.locals.accessToken`; the controller passes that validated token to the logout service.
 3. The auth service calls the auth repository, which creates an isolated Supabase client using the root environment configuration and calls `auth.admin.signOut(accessToken, "local")`. No service-role key is required; Supabase authorizes the request using the user's token.
 4. Supabase revokes the refresh tokens for the current session only. Other sessions remain active. Success returns 204 with no body.
 5. Invalid or expired tokens return 401; provider rate limits return 429; configuration or provider failures return 503 without exposing credentials or provider details. Responses use `Cache-Control: no-store`.

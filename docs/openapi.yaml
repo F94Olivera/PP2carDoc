@@ -38,7 +38,7 @@ paths:
   /auth/me:
     get:
       summary: Retrieve the current authenticated user
-      description: Validates the Bearer access token with Supabase Auth. No request body is used.
+      description: The shared requireAuth middleware validates the Bearer access token with Supabase Auth; the controller returns the verified user without another lookup. No request body is used.
       security:
         - bearerAuth: []
       responses:
@@ -75,7 +75,8 @@ paths:
     post:
       summary: Sign out the current Supabase session
       description: |
-        Requires an access token in Authorization. Revokes only the current session's
+        The shared requireAuth middleware validates the access token in Authorization
+        before logout runs. Revokes only the current session's
         refresh tokens. Other sessions remain active. The access token remains valid
         until expiration; the client must delete its locally stored session tokens.
         No request body is used.
