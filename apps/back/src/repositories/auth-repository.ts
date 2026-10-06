@@ -3,9 +3,12 @@ import type { LoginInput } from "../schemas/auth.js";
 
 const createAuthClient = () => {
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+  // Edge injects these for the current project, including the local Docker network.
+  const keys = process.env.SUPABASE_PUBLISHABLE_KEYS;
+  const key = (keys ? JSON.parse(keys).default : undefined) ?? process.env.SUPABASE_ANON_KEY;
+
   if (!url || !key) {
-    throw new Error("SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are required");
+    throw new Error("Supabase runtime URL and public key are required");
   }
   // Each request gets an isolated client: never share user sessions.
   return createClient(url, key, {

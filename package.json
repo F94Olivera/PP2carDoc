@@ -18,7 +18,11 @@
     "lint:fix": "pnpm lint --fix",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "typecheck": "pnpm --recursive --if-present typecheck"
+    "typecheck": "pnpm --recursive --if-present typecheck",
+    "dev": "pnpm dev:api",
+    "start": "pnpm start:api",
+    "build": "dotenv -e .env -- sh -c 'NODE_ENV=production pnpm --recursive --if-present build'",
+    "deploy:api": "pnpm --filter @cardoc/back build && pnpm supabase functions deploy api"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
