@@ -4,9 +4,12 @@
   "private": true,
   "packageManager": "pnpm@11.7.0",
   "scripts": {
-    "dev": "pnpm --filter @cardoc/back dev",
-    "build": "dotenv -e .env -- sh -c 'NODE_ENV=production pnpm --recursive --if-present build'",
-    "start": "pnpm --filter @cardoc/back start",
+    "dev:api": "pnpm --filter @cardoc/back dev",
+    "dev:web": "dotenv -e .env -- sh -c 'NODE_ENV=development pnpm --filter @cardoc/front dev'",
+    "build:api": "pnpm --filter @cardoc/back... --recursive build",
+    "build:web": "dotenv -e .env -- sh -c 'NODE_ENV=production pnpm --filter @cardoc/front... --recursive build'",
+    "start:api": "pnpm --filter @cardoc/back start",
+    "start:web": "dotenv -e .env -- sh -c 'NODE_ENV=production pnpm --filter @cardoc/front start'",
     "supabase": "supabase",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
@@ -15,20 +18,16 @@
     "lint:fix": "pnpm lint --fix",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "typecheck": "pnpm --recursive --if-present typecheck",
-    "dev:web": "dotenv -e .env -- sh -c 'NODE_ENV=development pnpm --filter @cardoc/front dev'",
-    "dev:api": "pnpm --filter @cardoc/back dev",
-    "build:web": "dotenv -e .env -- sh -c 'NODE_ENV=production pnpm --filter @cardoc/front build'",
-    "start:web": "dotenv -e .env -- sh -c 'NODE_ENV=production pnpm --filter @cardoc/front start'"
+    "typecheck": "pnpm --recursive --if-present typecheck"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^10.6.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.7.0",
     "prettier": "^3.9.4",
     "supabase": "^2.118.0",
-    "typescript-eslint": "^8.62.1",
-    "dotenv-cli": "^11.0.0"
+    "typescript-eslint": "^8.62.1"
   }
 }
