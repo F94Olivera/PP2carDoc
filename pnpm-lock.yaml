@@ -34,6 +34,9 @@ importers:
 
   apps/back:
     dependencies:
+      "@cardoc/types":
+        specifier: workspace:*
+        version: link:../../packages/types
       "@supabase/supabase-js":
         specifier: 2.117.2
         version: 2.117.2

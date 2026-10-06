@@ -4,14 +4,17 @@ import type {
   PaginatedResponse,
   VehicleResponse,
 } from "@cardoc/types";
-import { apiUrl, getErrorMessage, handleUnauthorizedResponse } from "../../lib/auth-client";
+import {
+  fetchAuthenticated,
+  getErrorMessage,
+  handleUnauthorizedResponse,
+} from "../../lib/auth-client";
 
 export const getCustomerName = (customer: Pick<CustomerResponse, "firstName" | "lastName">) =>
   [customer.firstName, customer.lastName].filter(Boolean).join(" ");
 
 const requestJson = async <T>(path: string, fallbackError: string, init?: RequestInit) => {
-  const response = await fetch(`${apiUrl}${path}`, {
-    credentials: "include",
+  const response = await fetchAuthenticated(path, {
     headers: {
       Accept: "application/json",
       ...(init?.body ? { "Content-Type": "application/json" } : {}),
@@ -70,8 +73,7 @@ export const archiveCustomer = (customerId: number, isActive: boolean, fallbackE
   });
 
 export const deleteCustomer = async (customerId: number, fallbackError: string) => {
-  const response = await fetch(`${apiUrl}/customers/${customerId}`, {
-    credentials: "include",
+  const response = await fetchAuthenticated(`/customers/${customerId}`, {
     headers: {
       Accept: "application/json",
     },

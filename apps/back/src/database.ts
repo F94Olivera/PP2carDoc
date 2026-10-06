@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import pino from "pino";
 import postgres from "postgres";
+import { supabaseDatabaseCa } from "./supabase-ca.js";
 
 import { customers } from "./models/customer.js";
 import { vehicles } from "./models/vehicle.js";
@@ -31,7 +32,13 @@ const createDatabase = async () => {
     idle_timeout: 20,
     connect_timeout: 10,
     prepare: false,
-    ssl: process.env.DATABASE_SSL === "false" ? false : "require",
+    ssl:
+      process.env.DATABASE_SSL === "false"
+        ? false
+        : {
+            ca: process.env.DATABASE_SSL_CA?.replace(/\\n/g, "\n") ?? supabaseDatabaseCa,
+            rejectUnauthorized: true,
+          },
   });
 
   const database = drizzle(queryClient, {

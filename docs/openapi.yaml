@@ -78,6 +78,71 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthError"
+  /customers:
+    get:
+      summary: List customers
+      description: |
+        Returns the shared customer list for authenticated users, ordered by ID ascending.
+        Archived customers are excluded unless includeArchived=true.
+        Unknown or repeated query parameters are rejected. Pages beyond the last page
+        return an empty data array and the requested page metadata.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 9007199254740991
+            default: 1
+          description: The calculated offset must also be a safe integer.
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - in: query
+          name: includeArchived
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Paginated customers; Cache-Control is no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerListResponse"
+        "400":
+          description: Invalid, unknown or repeated query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthError"
+        "401":
+          description: Missing, malformed, invalid or expired Bearer token
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+                enum: [Bearer]
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthError"
+        "429":
+          description: Supabase authentication rate limit exceeded
+        "500":
+          description: Database unavailable or unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthError"
+        "503":
+          description: Authentication unavailable or unconfigured
   /logout:
     post:
       summary: Sign out the current Supabase session
@@ -105,6 +170,87 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    CustomerResponse:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          firstName,
+          lastName,
+          email,
+          phone,
+          address,
+          documentNumber,
+          notes,
+          isActive,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        documentNumber:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PaginationMeta:
+      type: object
+      additionalProperties: false
+      required: [page, pageSize, total, totalPages, hasNextPage, hasPreviousPage]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+        hasNextPage:
+          type: boolean
+        hasPreviousPage:
+          type: boolean
+    CustomerListResponse:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerResponse"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
     AuthError:
       type: object
       additionalProperties: false

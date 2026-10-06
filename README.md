@@ -60,7 +60,8 @@ cuando un repositorio llama a `initializeDatabase()`, sin bloquear los endpoints
 Puede usarse `EDGE_DATABASE_URL` como override del pooler de producción; por defecto se usa
 `SUPABASE_DB_URL` del runtime. `DATABASE_URL` queda como fallback para herramientas ejecutadas
 fuera de Docker, como el seed. En local, `DATABASE_SSL=false`; en remoto, SSL está activado
-por defecto. No subir el `.env` local completo como secretos remotos.
+por defecto, validando el certificado con la CA pública de Supabase incluida en el backend.
+`DATABASE_SSL_CA` permite configurar otra CA PEM cuando sea necesario. No subir el `.env` local completo como secretos remotos.
 
 Los usuarios y datos locales son independientes de los remotos. Las migraciones de base de
 datos se aplican por separado; desplegar la función no crea tablas ni copia usuarios/datos.
@@ -68,10 +69,10 @@ El seed de superhéroes requiere que el esquema correspondiente ya exista.
 
 ## Autenticación y contratos
 
-La API ofrece `POST /login`, `GET /ping`, `GET /auth/me` y `POST /logout`, relativos a la URL
+La API ofrece `POST /login`, `GET /ping`, `GET /auth/me`, `POST /logout` y `GET /customers`, relativos a la URL
 base. El contrato está en `docs/openapi.yaml`.
 
-`/login` recibe solamente email y password. `/auth/me` y `/logout` requieren
+`/login` recibe solamente email y password. `/auth/me`, `/logout` y `/customers` requieren
 `Authorization: Bearer <access_token>`. La función tiene `verify_jwt=false` para permitir
 login sin sesión; todas las rutas protegidas verifican el token en `requireAuth` con
 `auth.getUser`. No se confía en claims enviados por el cliente ni se usa una clave admin.
@@ -83,9 +84,12 @@ cookies y renovación. No necesita cambiar a `/login` del backend. Ambos deben a
 mismo proyecto. Cerrar sesión revoca el refresh token de esa sesión; un access token emitido
 puede seguir siendo válido hasta su vencimiento.
 
-Los endpoints de clientes, vehículos, órdenes, finanzas y PDF siguen pendientes. Las
-pantallas importadas conservan contratos anteriores; esta migración de runtime no los
-implementa. Drizzle no hereda automáticamente la identidad del usuario: el aislamiento por
+El listado de clientes ya consume `GET /customers` con Bearer y devuelve `{ data, meta }`,
+con paginación y filtro de archivados. Los demás endpoints de clientes, vehículos, órdenes,
+finanzas y PDF siguen pendientes. Para leer la base remota desde Docker, configurar
+`EDGE_DATABASE_URL` con la URL del Transaction pooler de Supabase Connect, puerto 6543
+y usuario `postgres.<project-ref>`, y mantener `DATABASE_SSL=true`. La conexión directa
+puede requerir IPv6 que Docker no tiene disponible. Drizzle no hereda automáticamente la identidad del usuario: el aislamiento por
 taller requiere autorización explícita.
 
 ## Verificación de login local y remoto
