@@ -3,7 +3,10 @@ import pino from "pino";
 
 import { loginController, logoutController, meController } from "./controllers/auth-controller.js";
 
-import { listCustomersController } from "./controllers/customer-controller.js";
+import {
+  customerByIdController,
+  listCustomersController,
+} from "./controllers/customer-controller.js";
 
 import { requireAuth } from "./middlewares/auth-middleware.js";
 
@@ -30,7 +33,7 @@ protectedRouter.get("/auth/me", meController);
 // protectedRouter.get("/finances", financesController);
 // protectedRouter.post("/customers", createCustomerController);
 protectedRouter.get("/customers", listCustomersController);
-// protectedRouter.get("/customers/:customerId", customerByIdController);
+protectedRouter.get("/customers/:customerId", customerByIdController);
 // protectedRouter.patch("/customers/:customerId/archive", archiveCustomerController);
 // protectedRouter.delete("/customers/:customerId", deleteCustomerController);
 // protectedRouter.post("/vehicles", createVehicleController);

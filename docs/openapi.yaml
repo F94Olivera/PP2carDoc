@@ -143,6 +143,57 @@ paths:
                 $ref: "#/components/schemas/AuthError"
         "503":
           description: Authentication unavailable or unconfigured
+  /customers/{customerId}:
+    get:
+      summary: Retrieve a customer by ID
+      description: Returns an active or archived customer from the shared customer dataset. No query parameters or request body are used.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: customerId
+          required: true
+          description: Positive decimal integer without leading zeros.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2147483647
+      responses:
+        "200":
+          description: Customer; Cache-Control is no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerResponse"
+        "400":
+          description: Invalid customer ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthError"
+        "401":
+          description: Missing, malformed, invalid or expired Bearer token
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+                enum: [Bearer]
+        "404":
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthError"
+        "429":
+          description: Supabase authentication rate limit exceeded
+        "500":
+          description: Database unavailable or unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthError"
+        "503":
+          description: Authentication unavailable or unconfigured
   /logout:
     post:
       summary: Sign out the current Supabase session
