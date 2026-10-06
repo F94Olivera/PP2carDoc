@@ -49,3 +49,20 @@ There is no local login rate limiter. Supabase normally sees the backend IP, so 
 4. Supabase revokes the refresh tokens for the current session only. Other sessions remain active. Success returns 204 with no body.
 5. Invalid or expired tokens return 401; provider rate limits return 429; configuration or provider failures return 503 without exposing credentials or provider details. Responses use `Cache-Control: no-store`.
 6. The client deletes its stored access and refresh tokens. An issued access token remains valid until expiration; logout does not immediately invalidate JWTs.
+
+## Integración del frontend
+
+## Acceso y autenticacion
+
+1. El frontend autentica con Supabase Auth mediante email y contraseña.
+2. `/login` permite iniciar sesión; una sesión válida redirecciona a `/budget`.
+3. `@supabase/ssr` guarda y renueva la sesión mediante cookies.
+4. El proxy de Next.js verifica los claims del token y renueva la sesión antes de servir rutas protegidas.
+5. El layout protegido vuelve a verificar los claims del usuario en el servidor.
+6. El guard del navegador valida el usuario con Supabase y escucha el cierre de sesión.
+7. El botón `Cerrar sesión` cierra la sesión local y redirecciona a `/login`.
+8. `/ok` consulta el usuario autenticado en Supabase.
+9. Clientes, vehículos, órdenes, finanzas y PDF mantienen sus integraciones anteriores; su migración a Supabase está pendiente.
+10. El aislamiento de datos por taller depende del backend y sus políticas; esta integración solo implementa autenticación.
+
+Las demás pantallas importadas conservan contratos anteriores pendientes de adaptar al backend actual.
