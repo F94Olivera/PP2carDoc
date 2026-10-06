@@ -53,3 +53,9 @@ inspector_port = 8083
 enabled = true
 port = 54327
 backend = "postgres"
+
+# Public login/ping; all other registered API routes use requireAuth (auth.getUser).
+[functions.api]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/api/index.ts"

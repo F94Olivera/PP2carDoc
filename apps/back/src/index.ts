@@ -5,14 +5,18 @@ import { loginController, logoutController, meController } from "./controllers/a
 
 import { requireAuth } from "./middlewares/auth-middleware.js";
 
-import { closeDatabase, initializeDatabase } from "./database.js";
+import { corsMiddleware } from "./middlewares/cors-middleware.js";
+import { errorMiddleware } from "./middlewares/error-middleware.js";
 
 const app = express();
-const port = process.env.PORT_BACK ?? "3001";
+const router = express.Router();
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
-app.post("/login", express.json({ limit: "8kb" }), loginController);
-app.get("/ping", (_req, res) => {
+app.disable("x-powered-by");
+app.use(corsMiddleware);
+
+router.post("/login", express.json({ limit: "8kb" }), loginController);
+router.get("/ping", (_req, res) => {
   res.json({ pong: true });
 });
 
@@ -40,38 +44,14 @@ protectedRouter.get("/auth/me", meController);
 // protectedRouter.get("/vehicles/:vehicleId/work-orders", workOrdersByVehicleController);
 // protectedRouter.put("/vehicles/:vehicleId/work-orders/:workOrderId", replaceWorkOrderController);
 
-app.use(protectedRouter);
+router.use(protectedRouter);
+app.use("/api", router);
+app.use((_req, res) => {
+  res.status(404).json({ error: "Not found." });
+});
+app.use(errorMiddleware);
 
-const startServer = async () => {
-  await initializeDatabase();
-
-  const server = app.listen(port, () => {
-    logger.info({ port }, "Backend server listening");
-  });
-
-  const shutdown = (signal: NodeJS.Signals) => {
-    logger.info({ signal }, "Shutting down backend server");
-
-    server.close((error) => {
-      void (async () => {
-        if (error) {
-          logger.error({ error }, "Failed to close backend server");
-        }
-
-        await closeDatabase();
-        process.exit(error ? 1 : 0);
-      })();
-    });
-  };
-
-  process.once("SIGINT", shutdown);
-  process.once("SIGTERM", shutdown);
-};
-
-void startServer().catch((error) => {
-  logger.fatal(
-    { error: error instanceof Error ? { message: error.message, stack: error.stack } : error },
-    "Failed to start backend server",
-  );
-  process.exit(1);
+// Supabase owns the worker lifecycle; do not install Node process signal handlers.
+app.listen(8000, "0.0.0.0", () => {
+  logger.info("carDoc Edge API listening");
 });

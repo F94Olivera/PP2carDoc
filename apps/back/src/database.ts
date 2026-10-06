@@ -19,7 +19,8 @@ const schema = {
 };
 
 const createDatabase = async () => {
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl =
+    process.env.EDGE_DATABASE_URL ?? process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL;
 
   if (!databaseUrl) {
     throw new Error("DATABASE_URL is required to connect to Postgres");
@@ -27,6 +28,8 @@ const createDatabase = async () => {
 
   queryClient = postgres(databaseUrl, {
     max: 1,
+    idle_timeout: 20,
+    connect_timeout: 10,
     prepare: false,
     ssl: process.env.DATABASE_SSL === "false" ? false : "require",
   });
