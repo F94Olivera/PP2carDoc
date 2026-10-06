@@ -16,3 +16,7 @@ export const listCustomersQuerySchema = z.strictObject({
 });
 
 export type ListCustomersQuery = z.infer<typeof listCustomersQuerySchema>;
+
+export const customerByIdParamsSchema = z.strictObject({
+  customerId: positiveInteger.pipe(z.number().max(2147483647)),
+});

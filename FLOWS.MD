@@ -72,7 +72,7 @@ There is no local login rate limiter. Supabase normally sees the backend IP, so 
 6. El guard del navegador valida el usuario con Supabase y escucha el cierre de sesión.
 7. El botón `Cerrar sesión` cierra la sesión local y redirecciona a `/login`.
 8. `/ok` consulta el usuario autenticado en Supabase.
-9. El listado de clientes consume `GET /customers` con el token Bearer de la sesión Supabase del navegador, sin enviar cookies a la API. El resto de endpoints de clientes, vehículos, órdenes, finanzas y PDF siguen pendientes de implementar.
+9. El listado de clientes consume `GET /customers` con el token Bearer de la sesión Supabase del navegador, sin enviar cookies a la API. El detalle está disponible mediante `GET /customers/:customerId`. El resto de endpoints de clientes, vehículos, órdenes, finanzas y PDF siguen pendientes de implementar.
 10. El aislamiento de datos por taller depende del backend y sus políticas; esta integración solo implementa autenticación.
 
 Las demás pantallas importadas conservan contratos anteriores pendientes de adaptar al backend actual.
@@ -98,3 +98,12 @@ Las demás pantallas importadas conservan contratos anteriores pendientes de ada
 9. The current customer model has no workshop or owner field: authenticated users can read the shared customer list. This endpoint does not implement data isolation between workshops. No schema, RLS policy or existing data is changed.
 10. Unexpected database failures reach the shared error middleware and return a generic 500 without exposing connection details. Authentication failures retain the existing 401/429/503 behavior.
 11. `pnpm --filter @cardoc/back test:customers` uses root .env credentials to verify authenticated listing, validation, archived filtering and pagination against database counts. It performs no customer writes and revokes its own test session afterward.
+
+## Customer detail
+
+1. A client sends `GET /customers/:customerId` with a Bearer access token. `requireAuth` runs first and disables response caching.
+2. `customerByIdController` validates the path using the customer schema. IDs must be positive decimal integers without leading zeros, at most 2147483647 (the PostgreSQL serial range); invalid IDs return 400 before database access. No query parameters or body are used.
+3. `getCustomerById` calls `findCustomerById`, which initializes Drizzle and selects one customer by primary key, including archived customers. Authenticated users have access to the same shared dataset as the list endpoint.
+4. Missing customers return 404 with `{ error: "Customer not found." }`. Existing customers return the shared `CustomerResponse` directly, with dates serialized by `toCustomerResponse`.
+5. Database errors reach the shared error middleware (500); authentication retains its 401/429/503 responses.
+6. The customer smoke test also checks detail authentication, invalid IDs, missing records and response parity for active and archived records when available, without customer writes.

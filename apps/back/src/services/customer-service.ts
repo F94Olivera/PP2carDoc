@@ -1,6 +1,6 @@
 import type { CustomerResponse, PaginatedResponse } from "@cardoc/types";
 import { toCustomerResponse } from "../mappers/customer-mapper.js";
-import { findCustomers } from "../repositories/customer-repository.js";
+import { findCustomerById, findCustomers } from "../repositories/customer-repository.js";
 import type { ListCustomersQuery } from "../schemas/customer.js";
 
 // The current domain has one shared customer list for authenticated users.
@@ -22,4 +22,9 @@ export const listCustomers = async (
       hasPreviousPage: query.page > 1,
     },
   };
+};
+
+export const getCustomerById = async (customerId: number): Promise<CustomerResponse | null> => {
+  const customer = await findCustomerById(customerId);
+  return customer ? toCustomerResponse(customer) : null;
 };

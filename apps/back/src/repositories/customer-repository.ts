@@ -24,3 +24,14 @@ export const findCustomers = async ({ page, pageSize, includeArchived }: ListCus
     { isolationLevel: "repeatable read", accessMode: "read only" },
   );
 };
+
+export const findCustomerById = async (customerId: number) => {
+  const database = await initializeDatabase();
+  const [customer] = await database
+    .select()
+    .from(customers)
+    .where(eq(customers.id, customerId))
+    .limit(1);
+
+  return customer;
+};
