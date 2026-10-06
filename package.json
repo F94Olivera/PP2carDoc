@@ -5,7 +5,7 @@
   "packageManager": "pnpm@11.7.0",
   "scripts": {
     "dev": "pnpm --filter @cardoc/back dev",
-    "build": "pnpm --filter @cardoc/back build",
+    "build": "dotenv -e .env -- sh -c 'NODE_ENV=production pnpm --recursive --if-present build'",
     "start": "pnpm --filter @cardoc/back start",
     "supabase": "supabase",
     "supabase:start": "supabase start",
@@ -15,7 +15,11 @@
     "lint:fix": "pnpm lint --fix",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "typecheck": "pnpm --filter @cardoc/back typecheck"
+    "typecheck": "pnpm --recursive --if-present typecheck",
+    "dev:web": "dotenv -e .env -- sh -c 'NODE_ENV=development pnpm --filter @cardoc/front dev'",
+    "dev:api": "pnpm --filter @cardoc/back dev",
+    "build:web": "dotenv -e .env -- sh -c 'NODE_ENV=production pnpm --filter @cardoc/front build'",
+    "start:web": "dotenv -e .env -- sh -c 'NODE_ENV=production pnpm --filter @cardoc/front start'"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -24,6 +28,7 @@
     "globals": "^17.7.0",
     "prettier": "^3.9.4",
     "supabase": "^2.118.0",
-    "typescript-eslint": "^8.62.1"
+    "typescript-eslint": "^8.62.1",
+    "dotenv-cli": "^11.0.0"
   }
 }
