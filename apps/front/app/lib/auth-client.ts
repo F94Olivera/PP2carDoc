@@ -4,7 +4,7 @@ import type { ApiErrorResponse } from "@cardoc/types";
 
 import { createClient } from "./supabase/client";
 
-export const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+export const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:54321/functions/v1/api";
 export const authenticatedHomePath = "/budget";
 export const loginPath = "/login";
 
@@ -13,7 +13,7 @@ const authExpiredEventName = "cardoc:auth-expired";
 export const getErrorMessage = async (response: Response, fallback: string) => {
   const payload = (await response.json().catch(() => null)) as ApiErrorResponse | null;
 
-  return payload?.message ?? fallback;
+  return payload?.message ?? (payload as { error?: string } | null)?.error ?? fallback;
 };
 
 export const fetchAuthenticatedUser = async () => {
@@ -40,4 +40,23 @@ export const onAuthExpired = (handler: () => void) => {
   window.addEventListener(authExpiredEventName, handler);
 
   return () => window.removeEventListener(authExpiredEventName, handler);
+};
+
+export const fetchAuthenticated = async (path: string, init?: RequestInit) => {
+  const { data, error } = await createClient().auth.getSession();
+  if (error || !data.session) {
+    notifyAuthExpired();
+    throw new Error("Authentication required.");
+  }
+
+  const headers = new Headers(init?.headers);
+  headers.set("Authorization", `Bearer ${data.session.access_token}`);
+  headers.set("Accept", "application/json");
+
+  return fetch(`${apiUrl}${path}`, {
+    ...init,
+    headers,
+    credentials: "omit",
+    cache: "no-store",
+  });
 };

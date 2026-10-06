@@ -18,9 +18,9 @@
 ## Database initialization
 
 1. Auth endpoints use Supabase Auth and do not require a Postgres connection at startup.
-2. A future persistence repository must call `initializeDatabase()` before `getDatabase()`. The initialization promise is reused within a worker.
+2. The customer repository calls `initializeDatabase()` before querying. The initialization promise is reused within a worker.
 3. Connection priority is `EDGE_DATABASE_URL` (optional pooler override), runtime `SUPABASE_DB_URL`, then `DATABASE_URL` (host-side tooling such as the seed script).
-4. Drizzle uses one connection per worker, `prepare: false`, a 10-second connect timeout and a 20-second idle timeout. Local `.env` sets `DATABASE_SSL=false`; hosted connections require SSL by default.
+4. Drizzle uses one connection per worker, `prepare: false`, a 10-second connect timeout and a 20-second idle timeout. Local `.env` sets `DATABASE_SSL=false`; hosted connections require SSL by default and verify certificates using the bundled public Supabase CA. `DATABASE_SSL_CA` can supply another PEM trust anchor (escaped newlines are decoded).
 5. `closeDatabase()` remains available to finite scripts; idle connections in Edge expire without relying on Node shutdown signals.
 6. Drizzle does not automatically inherit the caller's Supabase identity. Repositories/services must enforce resource authorization. Deploying the function neither migrates nor seeds database tables.
 
@@ -39,7 +39,7 @@ There is no local login rate limiter. Supabase normally sees the backend IP, so 
 ## Protected routes
 
 1. `/login` and `/ping` are registered as public routes before the protected router.
-2. The protected router runs `requireAuth` before `/auth/me`, `/logout`, and every future endpoint registered in that router.
+2. The protected router runs `requireAuth` before `/auth/me`, `/logout`, `/customers`, and every future endpoint registered in that router.
 3. The middleware validates `Authorization: Bearer <access_token>` using the shared auth schema. Missing or malformed headers return 401 with `WWW-Authenticate: Bearer`.
 4. The auth service calls the repository's `auth.getUser(accessToken)` with an isolated Supabase client. Invalid or expired tokens and missing users return 401; provider rate limits return 429; configuration or provider failures return 503. Protected responses use `Cache-Control: no-store`.
 5. On success, the middleware stores the mapped user in typed `res.locals.user` and the token in `res.locals.accessToken`, then calls `next()`. It never logs tokens or provider details.
@@ -72,7 +72,7 @@ There is no local login rate limiter. Supabase normally sees the backend IP, so 
 6. El guard del navegador valida el usuario con Supabase y escucha el cierre de sesión.
 7. El botón `Cerrar sesión` cierra la sesión local y redirecciona a `/login`.
 8. `/ok` consulta el usuario autenticado en Supabase.
-9. Clientes, vehículos, órdenes, finanzas y PDF mantienen sus integraciones anteriores; su migración a Supabase está pendiente.
+9. El listado de clientes consume `GET /customers` con el token Bearer de la sesión Supabase del navegador, sin enviar cookies a la API. El resto de endpoints de clientes, vehículos, órdenes, finanzas y PDF siguen pendientes de implementar.
 10. El aislamiento de datos por taller depende del backend y sus políticas; esta integración solo implementa autenticación.
 
 Las demás pantallas importadas conservan contratos anteriores pendientes de adaptar al backend actual.
@@ -84,3 +84,17 @@ Las demás pantallas importadas conservan contratos anteriores pendientes de ada
 3. Commit and push the source. `pnpm deploy:api --project-ref <project-ref>` rebuilds and deploys only `api`; custom secrets are configured separately. CLI login is required on the deploying machine.
 4. Run the same test with `TEST_API_URL=https://<project-ref>.supabase.co/functions/v1/api` and credentials belonging to that project. Local and remote Auth users are independent.
 5. Frontend deployment is separate. Its `NEXT_PUBLIC_API_URL` must point to the matching function URL and its Supabase Auth configuration to the same project.
+
+## Customer list
+
+1. The Customers page calls `listCustomers` on load and when pagination or the archived filter changes.
+2. The frontend reads the current Supabase session with `getSession()` to forward its access token (identity is validated by the backend). Requests send `Authorization: Bearer <access_token>`, omit cross-origin cookies and disable caching. Missing sessions or HTTP 401 notify the auth guard. Backend error strings are shown in the page.
+3. `NEXT_PUBLIC_API_URL` must point to the matching project's `/functions/v1/api` URL; the fallback is the local Edge gateway.
+4. `GET /customers` runs through `requireAuth`. The controller accepts only `page` (default 1), `pageSize` (default 10, maximum 100), and `includeArchived` (default false). Invalid, repeated or unknown query parameters and unsafe offsets return 400.
+5. The service calls `findCustomers`. The repository initializes Drizzle lazily and reads the count and rows in one read-only repeatable-read transaction. Results are ordered by customer ID and paginated with limit/offset; inactive customers are excluded by default.
+6. The mapper serializes dates to ISO strings and returns the shared `CustomerResponse` contract. The response is `{ data, meta }`, where meta contains page, pageSize, total, totalPages, hasNextPage and hasPreviousPage. Empty lists have totalPages=0; out-of-range pages return no rows.
+7. The existing table renders response.data and uses response.meta for pagination. Its current search filters up to 100 fetched customers in the browser; full-dataset search is not implemented.
+8. Local development can use hosted customer data by setting `EDGE_DATABASE_URL` to the hosted transaction pooler URL from Supabase Connect (port 6543 and pooled username), with `DATABASE_SSL=true`. The direct hosted connection can require IPv6 unavailable in Docker. Otherwise Edge uses its injected local `SUPABASE_DB_URL`; use `DATABASE_SSL=false` for that local database. API authentication still uses the runtime project.
+9. The current customer model has no workshop or owner field: authenticated users can read the shared customer list. This endpoint does not implement data isolation between workshops. No schema, RLS policy or existing data is changed.
+10. Unexpected database failures reach the shared error middleware and return a generic 500 without exposing connection details. Authentication failures retain the existing 401/429/503 behavior.
+11. `pnpm --filter @cardoc/back test:customers` uses root .env credentials to verify authenticated listing, validation, archived filtering and pagination against database counts. It performs no customer writes and revokes its own test session afterward.
