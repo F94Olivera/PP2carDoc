@@ -2,6 +2,13 @@ openapi: 3.0.3
 info:
   title: carDoc API
   version: 0.1.0
+servers:
+  - url: http://127.0.0.1:54321/functions/v1/api
+    description: Supabase Edge local
+  - url: https://lsbgegbghlgxkqxpmgyx.supabase.co/functions/v1/api
+    description: Supabase carDoc
+# OPTIONS is public and handled by the gateway or Express CORS middleware.
+# Bearer tokens authenticate protected routes; browser cookies are not used.
 paths:
   /ping:
     get:
