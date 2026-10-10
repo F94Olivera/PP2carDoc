@@ -63,9 +63,12 @@ fuera de Docker, como el seed. En local, `DATABASE_SSL=false`; en remoto, SSL es
 por defecto, validando el certificado con la CA pública de Supabase incluida en el backend.
 `DATABASE_SSL_CA` permite configurar otra CA PEM cuando sea necesario. No subir el `.env` local completo como secretos remotos.
 
-Los usuarios y datos locales son independientes de los remotos. Las migraciones de base de
-datos se aplican por separado; desplegar la función no crea tablas ni copia usuarios/datos.
-El seed de superhéroes requiere que el esquema correspondiente ya exista.
+Los usuarios y datos locales son independientes de los remotos. Para recrear un entorno con
+datos fake, ejecutar manualmente `supabase/schema.sql` en el proyecto correspondiente y
+luego `pnpm run seed:superheroes`. Ese SQL elimina y recrea los objetos de carDoc en una
+transacción; conserva las cuentas Auth, pero restablece sus perfiles y el seed restaura los
+roles demo. No se usan migraciones incrementales. Desplegar la función no crea tablas ni
+copia usuarios/datos, y el seed requiere que el esquema ya exista.
 
 ## Autenticación y contratos
 

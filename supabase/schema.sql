@@ -1,10 +1,21 @@
--- Demo data reset explicitly authorized: only carDoc application tables are recreated.
--- Supabase-managed auth/storage schemas are preserved.
-drop table if exists public.work_order_recommendations, public.work_order_items,
-  public.work_orders, public.vehicles, public.customers cascade;
+-- Destructive development/demo setup, not a migration history.
+-- Execute manually against the intended fake-data Supabase project, then run:
+-- pnpm run seed:superheroes
+-- Existing Auth accounts remain; profiles are reset to MECHANIC until the seed restores GOD.
+begin;
+
 create schema if not exists private;
 revoke all on schema private from public, anon;
 grant usage on schema private to authenticated;
+
+-- Reset only carDoc objects; preserve Supabase-managed Auth/Storage infrastructure.
+drop trigger if exists cardoc_user_profile on auth.users;
+drop table if exists public.work_order_recommendations, public.work_order_items,
+  public.work_orders, private.vehicle_plate_claims, public.vehicles, public.customers,
+  public.user_profiles cascade;
+drop function if exists private.can_access_mechanic(uuid), private.current_app_role(),
+  private.session_active(), private.sync_vehicle_plate(), private.sync_customer_plates(),
+  private.sync_profile_claim(), private.create_user_profile() cascade;
 
 create table public.user_profiles (
   id uuid primary key references auth.users(id) on delete restrict,
@@ -95,6 +106,8 @@ create function private.session_active() returns boolean
 language sql stable security definer set search_path = '' as $$
   select auth.uid() is not null
     and coalesce((auth.jwt()->>'exp')::bigint > extract(epoch from now()), false)
+    and coalesce((auth.jwt()->>'iat')::bigint + 900 > extract(epoch from now()), false)
+    and coalesce((auth.jwt()->>'iat')::bigint <= extract(epoch from now()) + 30, false)
     and exists (select 1 from auth.sessions s
       where s.id = nullif(auth.jwt()->>'session_id', '')::uuid and s.user_id = auth.uid()
       and (s.not_after is null or s.not_after > now()));
@@ -165,3 +178,20 @@ alter table public.work_order_recommendations enable row level security;
 create policy recommendations_access on public.work_order_recommendations for all to authenticated
 using (exists(select 1 from public.work_orders w where w.id = work_order_id))
 with check (exists(select 1 from public.work_orders w where w.id = work_order_id));
+
+-- Only GOD can administratively change roles; immutable profile identity and timestamps are not writable.
+grant update(role) on public.user_profiles to authenticated;
+create policy profiles_update on public.user_profiles for update to authenticated
+using (private.current_app_role() = 'GOD')
+with check (private.current_app_role() = 'GOD');
+
+-- Existing hosted helper is an event trigger, not an application RPC.
+-- It is absent on some fresh local installations.
+do $$
+begin
+  if to_regprocedure('public.rls_auto_enable()') is not null then
+    revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
+  end if;
+end $$;
+
+commit;

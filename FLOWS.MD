@@ -31,7 +31,7 @@
 6. Private helpers read protected Auth sessions/profiles with narrow security-definer access and fixed empty search paths. They derive caller identity from `auth.uid()`, are not exposed by the Data API and revoke PUBLIC/anon execute permissions. Trigger functions cannot be invoked as public RPCs.
 7. Document uniqueness is scoped by `(mechanic_id, document_number)`. Vehicle plate uniqueness is case-insensitive and trimmed per mechanic. A private derived plate index is maintained by triggers, with a database unique constraint protecting concurrent writes; `vehicles` has no duplicated owner column. Parent locks serialize vehicle assignment with customer transfers.
 8. A GOD ownership transfer changes access to the entire descendant history atomically. Existing document/plate conflicts reject and roll back the transfer. Vehicle/order parent associations require access to both existing and resulting parent.
-9. Migrations recreate only the carDoc demo application tables; Supabase-managed Auth/Storage infrastructure is preserved. Apply them to a matching project before running the seed or deploying the API. Source migrations are tracked alongside the model changes.
+9. `supabase/schema.sql` is the single destructive demo setup, without incremental migrations. Run it manually against the intended fake-data project only when recreating the schema, then run `pnpm run seed:superheroes`. It resets carDoc tables, profiles, functions and policies atomically while preserving Supabase-managed Auth/Storage infrastructure. Existing accounts are initially MECHANIC; the seed restores the three demo roles. Neither deployment nor the seed runs this SQL automatically. Removing the former migration files does not change the deployed database or its existing history.
 
 ## Customer HTTP endpoints
 
@@ -66,3 +66,14 @@
 3. `test:authorization` uses the three seeded accounts against the configured API, Supabase Auth, direct Data API and restricted Postgres transactions. It checks API CRUD, ownership/count isolation, concurrent requests, all five domain tables, cross-parent writes, role escalation attempts, stale role claims, owner transfer, concurrent plate uniqueness, token alteration, lifetime/session binding and logout.
 4. Tests clean up their temporary records, restore fixture roles/metadata and revoke their test sessions. Run them against the demo dataset, with matching project configuration in root `.env`.
 5. Before delivery, run focused formatting, lint, TypeScript, unit/integration tests, `pnpm build`, `git diff --check` and Supabase security advisors. No commit is required to review local changes.
+
+## Backend utility scripts
+
+There are five files in `apps/back/scripts`, including `seed-superheroes.ts`. The other four are:
+
+- `edge.mjs`: esbuild bundling for Supabase Edge. `build` produces the ignored bundle; `serve` watches source changes and starts the local Edge runtime through the CLI. Used by the backend build/dev/start commands.
+- `smoke-auth.mjs`: real HTTP integration checks for health, CORS, login validation, protected identity and logout/session rejection. Run with `pnpm --filter @cardoc/back test:auth`; uses the test credentials in root `.env` and revokes its test session.
+- `smoke-customers.mjs`: real HTTP customer list/detail checks against direct database expectations, including owner scope, pagination, archived filtering, validation and UTC timestamps. Run with `pnpm --filter @cardoc/back test:customers`; reads customer data and revokes its test session.
+- `smoke-authorization.mjs`: integration/security checks using the two demo mechanics and GOD across the HTTP API, Data API and restricted SQL transactions. Verifies cross-user denial, CRUD, inherited access, transfers, uniqueness under concurrency, role changes, token tampering and session revocation. Run with `pnpm --filter @cardoc/back test:authorization` against the demo dataset. It temporarily writes fixtures, modifies fixture roles/metadata, then cleans up records, restores roles/metadata and revokes sessions.
+
+The smoke scripts are integration tests; unit tests live in `apps/back/tests`. They do not execute during ordinary application requests.
