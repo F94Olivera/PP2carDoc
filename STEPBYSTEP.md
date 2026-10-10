@@ -1,0 +1,76 @@
+# Plan de implementación
+
+Prioridad: completar funcionalidades del monorepo. Las casillas representan trabajo pendiente; los criterios de salida no son resultados de pruebas. El detalle de cambios de código está en [TODO.md](TODO.md), las reglas en [REQUIREMENTS.md](REQUIREMENTS.md) y la verificación en [TESTING.md](TESTING.md).
+
+## Punto de partida — 17/10/2026
+
+Existe runtime Edge, autenticación, perfiles y RLS, CRUD HTTP de clientes, modelos de las cinco tablas de dominio, contratos compartidos y pantallas frontend. Hay ocho unitarios de autorización/validación en un archivo y tres suites de integración conservadas. Vehículos, órdenes, finanzas y PDF aún no tienen endpoints registrados. La conexión de las pantallas no está completa y hay diferencias con las reglas confirmadas.
+
+Esto surge de lectura del repositorio; no constituye validación funcional ni del despliegue remoto.
+
+## 1. Alinear propiedad, archivo y clientes
+
+- [ ] Prohibir transferencias de cliente en schemas, services y base; propietario siempre MECHANIC.
+- [ ] Alinear los contratos y unitarios que hoy permiten esa transferencia.
+- [ ] Definir recorridos operativos y de administración de archivados; impedir crear descendientes sobre padres no operativos.
+- [ ] Corregir el PATCH de archivo del frontend para usar la ruta existente y comprobar CRUD completo desde sus pantallas.
+- [ ] Actualizar OpenAPI y REQUIREMENTS al reflejar el comportamiento implementado.
+
+Salida: clientes funciona con las reglas confirmadas; unitarios aislados cubren permisos y validaciones. No ejecutar schema, seed ni integraciones sin autorización específica.
+
+## 2. Completar vehículos
+
+- [ ] Schema, controller, service, repository y mapper para listado, detalle, alta, edición, archivo/restauración y eliminación.
+- [ ] Validar padre activo, aislamiento heredado y patente única por mecánico; no permitir reasignación de cliente.
+- [ ] Conectar pantallas y selección/listado de clientes usando transporte Bearer.
+- [ ] Cubrir éxito, permisos, archivo, unicidad y conflicto por órdenes con unitarios y dobles.
+
+Salida: un mecánico puede gestionar sus vehículos y GOD los de cualquier mecánico; contratos y documentación coinciden. Los conflictos de base tienen respuesta controlada.
+
+## 3. Completar órdenes e hijos
+
+- [ ] Separar contratos de creación y edición para que toda orden nazca abierta y respete los obligatorios del modelo.
+- [ ] Implementar listado por vehículo, detalle, creación, edición/cierre/reapertura y eliminación.
+- [ ] Guardar orden, ítems y recomendaciones atómicamente; conservar cascada al eliminar.
+- [ ] Normalizar estados de recomendaciones en mappers, sin generar ítems automáticamente.
+- [ ] Conectar formularios con Bearer; revisar navegación por vehículo y paginación sin truncar resultados a los primeros 100.
+- [ ] Cubrir fechas, padres ajenos/inactivos, edición de cerradas, reapertura y eliminación con unitarios.
+
+Salida: recorrido vehículo → orden → edición/cierre/reapertura funciona, sin `isActive` de orden ni endpoint global de listado.
+
+## 4. Completar finanzas
+
+- [ ] Cerrar convención de fechas y tratamiento del historial archivado según REQUIREMENTS, sin introducir reglas contables nuevas.
+- [ ] Implementar suma de cantidad por precio solo en órdenes con salida y dentro del período de salida.
+- [ ] Aplicar alcance MECHANIC/GOD y evitar multiplicar ítems al unir recomendaciones.
+- [ ] Conectar filtros y total del frontend con Bearer y formato `$`.
+- [ ] Cubrir exclusión de abiertas, límites de fechas, cero resultados, reapertura y aislamiento con unitarios.
+
+Salida: total verificable con fixtures aislados, sin impuestos, conversiones ni registro de cobros.
+
+## 5. Completar presupuesto PDF
+
+- [ ] Validar contrato independiente de formulario y plantilla classic.
+- [ ] Implementar generación compatible con Edge y respuesta PDF con nombre de descarga; admitir los headers necesarios en CORS.
+- [ ] Conectar descarga autenticada, estado de generación y mensajes de error; no persistir PDFs.
+- [ ] Cubrir cálculos, validación y respuesta con pruebas aisladas; revisar visualmente un PDF con datos ficticios generado sin servicios externos.
+
+Salida: PDF legible descargable con importes y datos del formulario, independiente de clientes/órdenes almacenados.
+
+## 6. Cierre funcional y documental
+
+- [ ] Revisar todos los recorridos del frontend, autorización, estados vacíos y errores; no confundir compilación con verificación de flujo real.
+- [ ] Ejecutar formato enfocado, lint, typecheck, unitarios, build y diff-check según el cambio.
+- [ ] Actualizar OpenAPI, REQUIREMENTS, TESTING y TODO con el estado real y resultados fechados.
+- [ ] Solo ante autorización explícita, ejecutar las integraciones existentes. Pedir aprobación separada antes de crear nuevas integraciones.
+- [ ] Después de completar funcionalidades, evaluar optimizaciones justificadas por el informe de performance; no reducir controles de acceso para ganar tiempo.
+
+Salida: alcance implementado, comprobaciones registradas y limitaciones explícitas. No se requiere commit ni despliegue como parte de este plan.
+
+## Registro breve
+
+| Fecha      | Alcance y cambios                                                                                                | Verificación                                                                                                           | Pendiente                                                           |
+| ---------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| 17/10/2026 | Reorganización de Markdown; incorporación de reglas confirmadas; flujos integrados en REQUIREMENTS; plan y TODO. | Revisión estática y comprobaciones documentales; resultados en TESTING. Sin pruebas funcionales ni servicios externos. | Todo cambio de código listado en TODO y los incrementos anteriores. |
+
+Al completar un incremento, registrar solamente alcance final, cambios, verificaciones efectivamente realizadas y pendientes. No marcar terminado por haber escrito el plan o creado un test.

@@ -1,15 +1,39 @@
-# PP2 carDoc
+# carDoc
 
-Monorepo con frontend Next.js (`apps/front`), API Express ejecutada como Supabase Edge
-Function (`apps/back/src`) y contratos compartidos (`packages/types`).
+Sistema para mecánicos con clientes, vehículos, órdenes de trabajo, recomendaciones, finanzas y presupuestos PDF. Cada MECHANIC trabaja con sus propios datos; GOD puede operar sobre todos, respetando las reglas de negocio. Se usan exclusivamente datos ficticios.
+
+## Documentación
+
+| Archivo                                | Propósito                                                                   |
+| -------------------------------------- | --------------------------------------------------------------------------- |
+| [REQUIREMENTS.md](REQUIREMENTS.md)     | Alcance, reglas, flujos, criterios de aceptación y estado de los endpoints. |
+| [AGENTS.md](AGENTS.md)                 | Cómo trabajar en el repositorio y verificaciones obligatorias.              |
+| [STEPBYSTEP.md](STEPBYSTEP.md)         | Orden de implementación, avances y pendientes por incremento.               |
+| [TESTING.md](TESTING.md)               | Escenarios, comandos, resultados y límites de verificación.                 |
+| [TODO.md](TODO.md)                     | Cambios de código pendientes; ninguno se implementa por documentarlo.       |
+| [docs/openapi.yaml](docs/openapi.yaml) | Contrato técnico de los endpoints implementados.                            |
+
+Los flujos están integrados en REQUIREMENTS. El [informe de performance del 17/10/2026](docs/performance-2026-10-17.md) es evidencia histórica, no un listado vigente de tareas ni una garantía de tiempos actuales.
+
+## Estructura y estado
+
+- `apps/front`: Next.js, React y Tailwind; pantallas de clientes, vehículos, órdenes, finanzas y presupuesto. La existencia de una pantalla no significa que su API esté terminada.
+- `apps/back/src`: Express y TypeScript, compilados para una Supabase Edge Function; Drizzle y Postgres.js para persistencia, Zod para validación y Pino para logs.
+- `packages/types`: contratos compartidos entre frontend y backend.
+- `supabase`: configuración, esquema SQL y entrada de la función.
+- `scripts`: herramientas compartidas.
+
+Existen endpoints de salud, login, identidad, logout y CRUD de clientes. Los endpoints de vehículos, órdenes, finanzas y PDF siguen pendientes. Clientes también necesita ajustes para las reglas confirmadas de propietario y archivo; ver TODO.
 
 ## Desarrollo local
 
-Requisitos: Node.js compatible con el proyecto, pnpm y Docker en ejecución. Desde la raíz:
+Requisitos: Node.js y pnpm compatibles con los paquetes, Docker en ejecución y Supabase CLI instalada como dependencia del repositorio. `package.json` fija pnpm 11.7.0; todavía no declara una versión común de Node mediante `engines`.
+
+Desde la raíz:
 
 ```bash
 pnpm install
-# Crear el único .env a partir de .env.example y configurar los valores locales.
+# Crear el único .env a partir de .env.example y configurar sus valores.
 pnpm supabase:start
 pnpm dev
 ```
@@ -20,29 +44,20 @@ En otra terminal:
 pnpm dev:web
 ```
 
-- API: `http://127.0.0.1:54321/functions/v1/api`
-- Health: `http://127.0.0.1:54321/functions/v1/api/ping`
-- Studio: `http://127.0.0.1:54323`
-- Frontend: `http://localhost:3000`
+| Servicio        | Dirección local                              |
+| --------------- | -------------------------------------------- |
+| API             | http://127.0.0.1:54321/functions/v1/api      |
+| Salud           | http://127.0.0.1:54321/functions/v1/api/ping |
+| Supabase Studio | http://127.0.0.1:54323                       |
+| Frontend        | http://localhost:3000                        |
 
-`pnpm dev:api` es equivalente a `pnpm dev`. El backend ya no se sirve en el puerto 3001.
-La CLI ejecuta el runtime Edge local dentro de Docker. El script compila y observa el
-backend; cada cambio genera el bundle que recarga la función. Durante la recarga puede
-haber una respuesta transitoria 502: esperar a que el runtime esté listo antes de probar.
+`pnpm dev:api` equivale a `pnpm dev`. El backend habitual se sirve mediante Edge, no en el puerto 3001. Express escucha internamente en 8000 salvo override de `PORT_BACK`. El watcher reconstruye el bundle y el runtime recarga la función; durante la recarga puede aparecer un 502 transitorio.
 
-El código se mantiene en `apps/back/src`, incluidos controllers, services, repositories,
-schemas, mappers y models. El archivo `supabase/functions/api/index.ts` carga el bundle
-ignorado por Git en `supabase/functions/api/dist/index.js`. `pnpm --filter @cardoc/back build`
-lo regenera. No editar ni commitear ese archivo generado. Esbuild incluye el código propio
-y deja imports npm con las versiones exactas declaradas en el paquete backend; Supabase
-resuelve esas dependencias en Deno. Al cambiar dependencias, reiniciar `pnpm dev`.
+El código editable está en `apps/back/src`. `supabase/functions/api/index.ts` carga `supabase/functions/api/dist/index.js`, generado e ignorado por Git. No editarlo ni commitearlo. `pnpm --filter @cardoc/back build` lo regenera; al cambiar dependencias, reiniciar `pnpm dev`.
 
-## Configuración y datos
+## Configuración y base de datos
 
-Se usa solamente el `.env` de la raíz, ignorado por Git. La CLI lo recibe explícitamente
-mediante `--env-file .env`. Obtener las claves públicas locales con `pnpm supabase status`.
-
-El frontend necesita:
+Usar solamente el `.env` raíz, basado en [.env.example](.env.example). No subir credenciales ni tokens al repositorio. El frontend requiere estas variables públicas, todas del mismo proyecto que la API:
 
 ```dotenv
 NEXT_PUBLIC_API_URL=http://127.0.0.1:54321/functions/v1/api
@@ -50,106 +65,57 @@ NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<clave-publicable-local>
 ```
 
-El runtime Edge inyecta su propio `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEYS` (si está
-disponible), `SUPABASE_ANON_KEY` y `SUPABASE_DB_URL`. Las advertencias de la CLI que ignoran
-variables `SUPABASE_*` del `.env` son esperadas: el backend debe usar la dirección interna
-de Docker, no el `127.0.0.1` del navegador. No configurar claves secretas en `NEXT_PUBLIC_*`.
+La CLI recibe `.env` explícitamente. Edge inyecta su URL y claves públicas de Supabase; los avisos por variables `SUPABASE_*` ignoradas del archivo son esperados. Obtener las claves locales mediante `pnpm supabase status`. No poner secretos de base de datos ni claves administrativas en variables `NEXT_PUBLIC_*`.
 
-Drizzle y Postgres.js se conservan para los repositorios de datos. La conexión se inicializa
-cuando un repositorio llama a `initializeDatabase()`, sin bloquear los endpoints de Auth.
-Puede usarse `EDGE_DATABASE_URL` como override del pooler de producción; por defecto se usa
-`SUPABASE_DB_URL` del runtime. `DATABASE_URL` queda como fallback para herramientas ejecutadas
-fuera de Docker, como el seed. En local, `DATABASE_SSL=false`; en remoto, SSL está activado
-por defecto, validando el certificado con la CA pública de Supabase incluida en el backend.
-`DATABASE_SSL_CA` permite configurar otra CA PEM cuando sea necesario. No subir el `.env` local completo como secretos remotos.
+La conexión a Postgres se inicializa al usar un repositorio. Prioridad: `EDGE_DATABASE_URL`, `SUPABASE_DB_URL` del runtime y `DATABASE_URL` como fallback para herramientas fuera de Docker. En local, `DATABASE_SSL=false`; en remoto se valida SSL con la CA incluida o con `DATABASE_SSL_CA`. No subir el `.env` completo como secretos remotos.
 
-Los usuarios y datos locales son independientes de los remotos. Para recrear un entorno con
-datos fake, ejecutar manualmente `supabase/schema.sql` en el proyecto correspondiente y
-luego `pnpm run seed:superheroes`. Ese SQL elimina y recrea los objetos de carDoc en una
-transacción; conserva las cuentas Auth, pero restablece sus perfiles y el seed restaura los
-roles demo. No se usan migraciones incrementales. Desplegar la función no crea tablas ni
-copia usuarios/datos, y el seed requiere que el esquema ya exista.
+Para Edge remoto, configurar `EDGE_DATABASE_URL` con el Transaction pooler de Supabase Connect, puerto 6543 y usuario `postgres.<project-ref>`, manteniendo SSL. La conexión directa puede requerir IPv6 no disponible en Docker. Los repositorios instalan identidad y rol en una transacción para aplicar RLS; no dependen solo de filtros del frontend.
 
-## Autenticación y contratos
+### Preparación manual de datos ficticios
 
-La API ofrece `POST /login`, `GET /ping`, `GET /auth/me`, `POST /logout` y `GET /customers`, relativos a la URL
-base. El contrato está en `docs/openapi.yaml`.
+Ejecutar manualmente `supabase/schema.sql` únicamente en el proyecto de demo que se quiere recrear. **Es destructivo:** restablece tablas, perfiles, funciones y políticas de carDoc en una transacción, conservando las cuentas Auth y la infraestructura administrada de Supabase. No hay migraciones incrementales.
 
-`/login` recibe solamente email y password. `/auth/me`, `/logout` y `/customers` requieren
-`Authorization: Bearer <access_token>`. La función tiene `verify_jwt=false` para permitir
-login sin sesión; todas las rutas protegidas verifican el token en `requireAuth` con
-`auth.getUser`. No se confía en claims enviados por el cliente ni se usa una clave admin.
-CORS admite Bearer explícito, no cookies entre orígenes. Las respuestas de Auth usan
-`Cache-Control: no-store`.
-
-El frontend sigue autenticando directamente con Supabase Auth y `@supabase/ssr`, que gestiona
-cookies y renovación. No necesita cambiar a `/login` del backend. Ambos deben apuntar al
-mismo proyecto. Cerrar sesión revoca el refresh token de esa sesión; un access token emitido
-puede seguir siendo válido hasta su vencimiento.
-
-El listado de clientes ya consume `GET /customers` con Bearer y devuelve `{ data, meta }`,
-con paginación y filtro de archivados. Los demás endpoints de clientes, vehículos, órdenes,
-finanzas y PDF siguen pendientes. Para leer la base remota desde Docker, configurar
-`EDGE_DATABASE_URL` con la URL del Transaction pooler de Supabase Connect, puerto 6543
-y usuario `postgres.<project-ref>`, y mantener `DATABASE_SSL=true`. La conexión directa
-puede requerir IPv6 que Docker no tiene disponible. Drizzle no hereda automáticamente la identidad del usuario: el aislamiento por
-taller requiere autorización explícita.
-
-## Política de pruebas
-
-- Las pruebas nuevas serán unitarias por defecto, sin llamadas reales a Supabase, APIs ni bases de datos.
-- "Corre los tests" significa **solo unitarios**. Desde la raíz se pueden ejecutar con `pnpm test` o `pnpm test:unit`; los mismos comandos existen en `@cardoc/back`.
-- Se conservan las tres integraciones en `apps/back/tests/integration`. **Está prohibido ejecutarlas sin un pedido explícito del usuario**, tanto en local como en remoto, para evitar consumir el rate limit de Supabase. No forman parte de la verificación habitual, despliegues, hooks o CI; tampoco deben sustituirse por llamadas manuales equivalentes.
-- Si conviene agregar una integración, sola o junto con un unitario, primero comunicar "mira que conviene sumar el test como integracion tambien", explicar qué cubre y esperar aprobación. Aprobar su creación no autoriza su ejecución.
-- La regla para agentes está en `AGENTS.md`; los comandos y flujos están detallados en `FLOWS.MD`.
-
-## Verificación de login local y remoto
-
-Esta sección describe una prueba de integración. Ejecutarla **únicamente ante un pedido explícito del usuario**; no se incluye cuando se solicita correr los tests en general.
-
-Crear un usuario de prueba en Auth del entorno a verificar, y configurar en el `.env` raíz:
-
-```dotenv
-TEST_LOGIN_EMAIL=<email-de-prueba>
-TEST_LOGIN_PASSWORD=<contraseña-de-prueba>
-```
+Después de crear el esquema, configurar `SEED_DEMO_PASSWORD` de al menos 16 caracteres en `.env` y ejecutar explícitamente:
 
 ```bash
-pnpm --filter @cardoc/back test:auth
+pnpm run seed:superheroes
 ```
 
-La prueba verifica ping, preflight CORS, validación de JSON y tamaño, rechazo de campos extra,
-credenciales inválidas y solicitudes sin token, login real, `/auth/me` y logout. No imprime
-contraseñas ni tokens y revoca su propia sesión al terminar.
+El seed prepara Mateo y Lucia como MECHANIC y `god.cardoc@example.test` como GOD. Las otras cuentas son `mateo.cardoc.20261006@example.test` y `lucia.cardoc.20261006@example.test`. Sus contraseñas vienen del entorno y no se imprimen. Se recrean 20 clientes, 19 vehículos, 48 órdenes, 143 ítems y 47 recomendaciones de muestra. Reejecutarlo restablece credenciales/roles de estas cuentas y revoca sus sesiones.
 
-Para remoto, usar credenciales pertenecientes al proyecto remoto y ejecutar:
+El seed usa acceso privilegiado para fixtures, sin registro público ni SMTP. Desplegar la función no crea tablas, no ejecuta el esquema y no copia usuarios o datos. Local y remoto son entornos independientes. Los comandos de este apartado son instrucciones de preparación manual, no pasos automáticos de verificación.
 
-```bash
-TEST_API_URL=https://lsbgegbghlgxkqxpmgyx.supabase.co/functions/v1/api pnpm --filter @cardoc/back test:auth
-```
+## Autenticación y uso de la API
 
-## Desplegar solamente el backend
+Las rutas de OpenAPI son relativas a la URL base. `/login` recibe email/password; las rutas protegidas requieren `Authorization: Bearer <access_token>`. La función tiene `verify_jwt=false` para permitir login público; `requireAuth` protege las rutas privadas y consulta Auth, sesión y rol actual. La aplicación limita la antigüedad del token a 15 minutos. Logout revoca la sesión actual y las comprobaciones de sesión rechazan sus tokens en requests posteriores.
 
-Primero verificar y pushear los cambios:
+El frontend inicia sesión directamente con Supabase Auth y `@supabase/ssr`, que gestiona cookies y renovación. Para la API debe enviar Bearer explícito; el transporte autenticado ya se usa en clientes, pero falta extenderlo a otros módulos. Las cookies entre frontend y API no reemplazan ese token.
 
-```bash
-pnpm lint
-pnpm typecheck
-pnpm build
-# Ejecutar también el formato enfocado y git diff --check antes del commit.
-```
+El transporte actual agrega `x-region: us-west-2` para acercar Edge remoto a Postgres; CORS lo admite y expone `x-sb-edge-region`. Esto no modifica llamadas directas a Auth ni ofrece failover regional automático. No usar el diagnóstico histórico como prueba de una nueva medición.
 
-Con la CLI autenticada mediante `pnpm supabase login`, desplegar:
+## Comandos de desarrollo y validación
+
+Desde la raíz:
+
+| Comando                                 | Alcance                                               |
+| --------------------------------------- | ----------------------------------------------------- |
+| `pnpm dev` / `pnpm dev:api`             | Backend Edge local.                                   |
+| `pnpm dev:web`                          | Frontend.                                             |
+| `pnpm build:api` / `pnpm build:web`     | Build del workspace y dependencias correspondientes.  |
+| `pnpm build`                            | Build de todos los workspaces con script configurado. |
+| `pnpm lint` / `pnpm typecheck`          | Comprobaciones de los workspaces.                     |
+| `pnpm test` / `pnpm test:unit`          | Solo unitarios sin servicios externos.                |
+| `pnpm exec prettier <archivos> --check` | Formato enfocado.                                     |
+| `git diff --check`                      | Errores de whitespace en el diff.                     |
+
+Las tres integraciones requieren un pedido explícito para ejecutarse. Ver [TESTING.md](TESTING.md); no forman parte de la verificación habitual, hooks o CI.
+
+## Despliegue
+
+Revisar los cambios y completar las verificaciones de AGENTS antes de un commit. El proyecto remoto actualmente referenciado es `lsbgegbghlgxkqxpmgyx`. Con la CLI autenticada mediante `pnpm supabase login`, el despliegue explícito del backend usa:
 
 ```bash
 pnpm deploy:api --project-ref lsbgegbghlgxkqxpmgyx
 ```
 
-El comando reconstruye el mismo bundle probado localmente y despliega únicamente `api`.
-No despliega el frontend, no migra la base y no publica el `.env`. Los secretos personalizados,
-si se necesitan, se configuran en el dashboard del proyecto. La prueba de login remoto
-solo se ejecuta si el usuario la pide expresamente. En CI se necesita
-`SUPABASE_ACCESS_TOKEN` como secreto del pipeline.
-
-El frontend se publica por separado en un hosting para Next.js, con la URL remota de la API
-y las claves públicas del mismo proyecto Supabase.
+El comando reconstruye y despliega solo `api`. Los secretos personalizados se configuran por separado; no ejecuta schema ni seed. En CI se necesita `SUPABASE_ACCESS_TOKEN` como secreto. El frontend se publica por separado en un hosting compatible con Next.js, configurado para el mismo proyecto Supabase. Un despliegue no autoriza integraciones ni llamadas manuales equivalentes.
