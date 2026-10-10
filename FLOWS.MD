@@ -1,5 +1,9 @@
 # Application flows
 
+## API execution region
+
+1. Frontend API requests use the shared `fetchApi` transport with `x-region: us-west-2`, placing hosted Edge execution near Postgres. This header does not change direct Supabase Auth requests. CORS permits `x-region` and exposes `x-sb-edge-region` for verification; deploy the backend CORS update before publishing the frontend. Local API execution ignores regional routing. Explicit regional invocations do not automatically fail over to another region.
+
 ## Health check
 
 1. A client sends `GET /ping`.

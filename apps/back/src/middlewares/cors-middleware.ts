@@ -6,9 +6,9 @@ export const corsMiddleware: RequestHandler = (req, res, next) => {
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "authorization, apikey, content-type, x-client-info",
+    "authorization, apikey, content-type, x-client-info, x-region",
   );
-  res.setHeader("Access-Control-Expose-Headers", "WWW-Authenticate");
+  res.setHeader("Access-Control-Expose-Headers", "WWW-Authenticate, x-sb-edge-region");
   if (req.method === "OPTIONS") {
     res.status(204).end();
     return;

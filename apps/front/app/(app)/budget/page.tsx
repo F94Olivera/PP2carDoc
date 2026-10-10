@@ -3,7 +3,7 @@
 import type { BudgetPdfTemplateId, CreateBudgetPdfRequest } from "@cardoc/types";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "../../i18n/use-i18n";
-import { apiUrl, getErrorMessage, handleUnauthorizedResponse } from "../../lib/auth-client";
+import { fetchApi, getErrorMessage, handleUnauthorizedResponse } from "../../lib/auth-client";
 
 type BudgetItem = {
   id: number;
@@ -178,7 +178,7 @@ export default function BudgetPage() {
     };
 
     try {
-      const response = await fetch(`${apiUrl}/budgets/pdf`, {
+      const response = await fetchApi(`/budgets/pdf`, {
         body: JSON.stringify(payload),
         credentials: "include",
         headers: {

@@ -2,6 +2,12 @@ openapi: 3.0.3
 info:
   title: carDoc API
   version: 0.1.0
+  description: >-
+    Browser API requests send x-region: us-west-2 to execute the hosted Edge Function
+    near Postgres. This optional Supabase routing header is ignored locally.
+    CORS allows x-region and exposes the x-sb-edge-region response header for
+    execution-region verification. Explicit regional routing disables automatic
+    cross-region failover.
 servers:
   - url: http://127.0.0.1:54321/functions/v1/api
     description: Supabase Edge local

@@ -5,10 +5,10 @@ import type {
   VehicleResponse,
   WorkOrderResponse,
 } from "@cardoc/types";
-import { apiUrl, getErrorMessage, handleUnauthorizedResponse } from "../../lib/auth-client";
+import { fetchApi, getErrorMessage, handleUnauthorizedResponse } from "../../lib/auth-client";
 
 const requestJson = async <T>(path: string, fallbackError: string, init?: RequestInit) => {
-  const response = await fetch(`${apiUrl}${path}`, {
+  const response = await fetchApi(path, {
     credentials: "include",
     headers: {
       Accept: "application/json",
@@ -75,7 +75,7 @@ export const archiveVehicle = (vehicleId: number, isActive: boolean, fallbackErr
   });
 
 export const deleteVehicle = async (vehicleId: number, fallbackError: string) => {
-  const response = await fetch(`${apiUrl}/vehicles/${vehicleId}`, {
+  const response = await fetchApi(`/vehicles/${vehicleId}`, {
     credentials: "include",
     headers: {
       Accept: "application/json",
@@ -142,7 +142,7 @@ export const updateWorkOrder = (
   );
 
 export const deleteWorkOrder = async (workOrderId: number, fallbackError: string) => {
-  const response = await fetch(`${apiUrl}/work-orders/${workOrderId}`, {
+  const response = await fetchApi(`/work-orders/${workOrderId}`, {
     credentials: "include",
     headers: {
       Accept: "application/json",

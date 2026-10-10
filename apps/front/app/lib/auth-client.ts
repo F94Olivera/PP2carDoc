@@ -5,6 +5,14 @@ import type { ApiErrorResponse } from "@cardoc/types";
 import { createClient } from "./supabase/client";
 
 export const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:54321/functions/v1/api";
+// Keep Edge execution close to Postgres to avoid repeated cross-region database calls.
+export const fetchApi = (path: string, init?: RequestInit) => {
+  const headers = new Headers(init?.headers);
+  headers.set("x-region", "us-west-2");
+
+  return fetch(`${apiUrl}${path}`, { ...init, headers });
+};
+
 export const authenticatedHomePath = "/budget";
 export const loginPath = "/login";
 
@@ -53,7 +61,7 @@ export const fetchAuthenticated = async (path: string, init?: RequestInit) => {
   headers.set("Authorization", `Bearer ${data.session.access_token}`);
   headers.set("Accept", "application/json");
 
-  return fetch(`${apiUrl}${path}`, {
+  return fetchApi(path, {
     ...init,
     headers,
     credentials: "omit",
