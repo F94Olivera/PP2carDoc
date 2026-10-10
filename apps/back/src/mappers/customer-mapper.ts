@@ -3,6 +3,7 @@ import type { Customer } from "../models/customer.js";
 
 export const toCustomerResponse = (customer: Customer): CustomerResponse => ({
   id: customer.id,
+  mechanicId: customer.mechanicId,
   firstName: customer.firstName,
   lastName: customer.lastName,
   email: customer.email,

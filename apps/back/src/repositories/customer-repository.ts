@@ -1,15 +1,23 @@
-import { asc, count, eq } from "drizzle-orm";
-import { initializeDatabase } from "../database.js";
-import { customers } from "../models/customer.js";
-import type { ListCustomersQuery } from "../schemas/customer.js";
+import { and, asc, count, eq } from "drizzle-orm";
+import { withUserDatabase } from "../database.js";
+import { customers, type NewCustomer } from "../models/customer.js";
+import type { AuthorizationContext } from "../schemas/authorization.js";
+import type { ListCustomersQuery, UpdateCustomerInput } from "../schemas/customer.js";
 
-export const findCustomers = async ({ page, pageSize, includeArchived }: ListCustomersQuery) => {
-  const database = await initializeDatabase();
-  const filter = includeArchived ? undefined : eq(customers.isActive, true);
+const ownershipFilter = (context: AuthorizationContext) =>
+  context.role === "GOD" ? undefined : eq(customers.mechanicId, context.userId);
 
-  // Keep rows and pagination totals consistent within the same database snapshot.
-  return database.transaction(
+export const findCustomers = (
+  context: AuthorizationContext,
+  { page, pageSize, includeArchived }: ListCustomersQuery,
+) =>
+  withUserDatabase(
+    context,
     async (transaction) => {
+      const filter = and(
+        ownershipFilter(context),
+        includeArchived ? undefined : eq(customers.isActive, true),
+      );
       const [summary] = await transaction.select({ total: count() }).from(customers).where(filter);
       const rows = await transaction
         .select()
@@ -18,20 +26,50 @@ export const findCustomers = async ({ page, pageSize, includeArchived }: ListCus
         .orderBy(asc(customers.id))
         .limit(pageSize)
         .offset((page - 1) * pageSize);
-
-      return { rows, total: summary.total };
+      return { rows, total: summary!.total };
     },
-    { isolationLevel: "repeatable read", accessMode: "read only" },
+    true,
   );
-};
 
-export const findCustomerById = async (customerId: number) => {
-  const database = await initializeDatabase();
-  const [customer] = await database
-    .select()
-    .from(customers)
-    .where(eq(customers.id, customerId))
-    .limit(1);
+export const findCustomerById = (context: AuthorizationContext, customerId: number) =>
+  withUserDatabase(
+    context,
+    async (transaction) => {
+      const [customer] = await transaction
+        .select()
+        .from(customers)
+        .where(and(eq(customers.id, customerId), ownershipFilter(context)))
+        .limit(1);
+      return customer;
+    },
+    true,
+  );
 
-  return customer;
-};
+export const insertCustomer = (context: AuthorizationContext, input: NewCustomer) =>
+  withUserDatabase(context, async (transaction) => {
+    const [customer] = await transaction.insert(customers).values(input).returning();
+    return customer!;
+  });
+
+export const updateCustomerById = (
+  context: AuthorizationContext,
+  customerId: number,
+  input: UpdateCustomerInput,
+) =>
+  withUserDatabase(context, async (transaction) => {
+    const [customer] = await transaction
+      .update(customers)
+      .set(input)
+      .where(and(eq(customers.id, customerId), ownershipFilter(context)))
+      .returning();
+    return customer;
+  });
+
+export const deleteCustomerById = (context: AuthorizationContext, customerId: number) =>
+  withUserDatabase(context, async (transaction) => {
+    const [customer] = await transaction
+      .delete(customers)
+      .where(and(eq(customers.id, customerId), ownershipFilter(context)))
+      .returning({ id: customers.id });
+    return customer;
+  });

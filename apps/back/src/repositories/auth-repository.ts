@@ -5,7 +5,10 @@ const createAuthClient = () => {
   const url = process.env.SUPABASE_URL;
   // Edge injects these for the current project, including the local Docker network.
   const keys = process.env.SUPABASE_PUBLISHABLE_KEYS;
-  const key = (keys ? JSON.parse(keys).default : undefined) ?? process.env.SUPABASE_ANON_KEY;
+  const key =
+    (keys ? JSON.parse(keys).default : undefined) ??
+    process.env.SUPABASE_PUBLISHABLE_KEY ??
+    process.env.SUPABASE_ANON_KEY;
 
   if (!url || !key) {
     throw new Error("Supabase runtime URL and public key are required");

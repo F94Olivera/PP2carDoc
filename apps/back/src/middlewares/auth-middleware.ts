@@ -4,7 +4,10 @@ import type { toUserResponse } from "../mappers/auth-mapper.js";
 import { bearerTokenSchema } from "../schemas/auth.js";
 import { getCurrentUser } from "../services/auth-service.js";
 
+import type { AuthorizationContext } from "../schemas/authorization.js";
+
 type AuthenticatedLocals = {
+  authorization: AuthorizationContext;
   user: ReturnType<typeof toUserResponse>;
   accessToken: string;
 };
@@ -33,6 +36,7 @@ export const requireAuth: AuthenticatedHandler = async (req, res, next) => {
     switch (result.outcome) {
       case "success":
         res.locals.user = result.response.user;
+        res.locals.authorization = result.authorization;
         res.locals.accessToken = parsed.data;
         break;
       case "unauthorized":

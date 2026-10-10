@@ -1,4 +1,5 @@
 export type CreateCustomerRequest = {
+  mechanicId?: string;
   firstName: string;
   lastName?: string | null;
   email?: string | null;
@@ -8,7 +9,10 @@ export type CreateCustomerRequest = {
   notes?: string | null;
 };
 
+export type UpdateCustomerRequest = Partial<CreateCustomerRequest> & { isActive?: boolean };
+
 export type CustomerResponse = {
+  mechanicId: string;
   id: number;
   firstName: string;
   lastName: string | null;

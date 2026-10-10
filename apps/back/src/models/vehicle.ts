@@ -19,7 +19,7 @@ export const vehicles = pgTable(
     customerId: integer("customer_id")
       .notNull()
       .references(() => customers.id, { onDelete: "restrict" }),
-    licensePlate: text("license_plate").notNull().unique(),
+    licensePlate: text("license_plate").notNull(),
     make: text("make").notNull(),
     model: text("model").notNull(),
     year: integer("year"),
@@ -35,6 +35,8 @@ export const vehicles = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
+    // Per-mechanic plate uniqueness is maintained by private SQL triggers/index.
+    check("vehicles_license_plate_check", sql`length(trim(${table.licensePlate})) > 0`),
     index("vehicles_customer_id_idx").on(table.customerId),
     check("vehicles_year_check", sql`${table.year} IS NULL OR ${table.year} >= 1886`),
     check(

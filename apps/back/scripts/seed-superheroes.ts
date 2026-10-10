@@ -1,0 +1,393 @@
+import { inArray, sql } from "drizzle-orm";
+import pino from "pino";
+
+import { closeDatabase, getDatabase, initializeDatabase } from "../src/database.js";
+import { customers } from "../src/models/customer.js";
+import { vehicles } from "../src/models/vehicle.js";
+import { workOrderItems } from "../src/models/work-order-item.js";
+import { workOrderRecommendations } from "../src/models/work-order-recommendation.js";
+import { workOrders } from "../src/models/work-order.js";
+
+const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
+
+const superheroes = [
+  { firstName: "Clark", lastName: "Kent", alias: "Superman" },
+  { firstName: "Bruce", lastName: "Wayne", alias: "Batman" },
+  { firstName: "Diana", lastName: "Prince", alias: "Wonder Woman" },
+  { firstName: "Peter", lastName: "Parker", alias: "Spider-Man" },
+  { firstName: "Tony", lastName: "Stark", alias: "Iron Man" },
+  { firstName: "Steve", lastName: "Rogers", alias: "Captain America" },
+  { firstName: "Natasha", lastName: "Romanoff", alias: "Black Widow" },
+  { firstName: "Barry", lastName: "Allen", alias: "The Flash" },
+  { firstName: "Hal", lastName: "Jordan", alias: "Green Lantern" },
+  { firstName: "Arthur", lastName: "Curry", alias: "Aquaman" },
+  { firstName: "Wanda", lastName: "Maximoff", alias: "Scarlet Witch" },
+  { firstName: "T'Challa", lastName: null, alias: "Black Panther" },
+  { firstName: "Carol", lastName: "Danvers", alias: "Captain Marvel" },
+  { firstName: "Logan", lastName: null, alias: "Wolverine" },
+  { firstName: "Matt", lastName: "Murdock", alias: "Daredevil" },
+  { firstName: "Stephen", lastName: "Strange", alias: "Doctor Strange" },
+  { firstName: "Scott", lastName: "Lang", alias: "Ant-Man" },
+  { firstName: "Bruce", lastName: "Banner", alias: "Hulk" },
+  { firstName: "Oliver", lastName: "Queen", alias: "Green Arrow" },
+  { firstName: "Jean", lastName: "Grey", alias: "Phoenix" },
+] as const;
+
+const vehicleAssignments: Record<number, { make: string; model: string; year: number }[]> = {
+  0: [],
+  1: [
+    { make: "WayneTech", model: "Tumbler", year: 2024 },
+    { make: "WayneTech", model: "Batmobile Classic", year: 1989 },
+  ],
+  2: [{ make: "Mercedes-Benz", model: "AMG GT", year: 2023 }],
+  3: [],
+  4: [
+    { make: "Audi", model: "R8", year: 2022 },
+    { make: "Stark Industries", model: "Arc Reactor Roadster", year: 2025 },
+  ],
+  5: [{ make: "Harley-Davidson", model: "WLA", year: 1942 }],
+  6: [{ make: "Chevrolet", model: "Corvette Stingray", year: 2021 }],
+  7: [],
+  8: [{ make: "Ford", model: "Mustang Mach-E", year: 2024 }],
+  9: [{ make: "Jeep", model: "Wrangler", year: 2020 }],
+  10: [],
+  11: [
+    { make: "Lexus", model: "LC 500", year: 2023 },
+    { make: "Wakanda Design Group", model: "Kimoyo Cruiser", year: 2026 },
+  ],
+  12: [{ make: "Nissan", model: "GT-R", year: 2021 }],
+  13: [{ make: "Dodge", model: "Charger", year: 1970 }],
+  14: [],
+  15: [{ make: "Tesla", model: "Model S Plaid", year: 2022 }],
+  16: [{ make: "Volkswagen", model: "ID. Buzz", year: 2024 }],
+  17: [],
+  18: [
+    { make: "Aston Martin", model: "DB11", year: 2023 },
+    { make: "Queen Industries", model: "Arrow Van", year: 2022 },
+  ],
+  19: [
+    { make: "Porsche", model: "Taycan", year: 2024 },
+    { make: "Land Rover", model: "Defender", year: 2021 },
+  ],
+};
+
+const reportedProblems = [
+  "Ruido al frenar en ciudad",
+  "Vibracion en ruta a velocidad constante",
+  "Service preventivo completo",
+  "Revision por perdida de aceite",
+  "Chequeo electrico general",
+  "Temperatura elevada en trafico",
+  "Cambio de neumaticos y alineacion",
+  "Diagnostico por testigo de motor",
+];
+
+const diagnoses = [
+  "Pastillas delanteras cristalizadas y discos con desgaste moderado",
+  "Desbalanceo en ruedas delanteras y bujes con juego leve",
+  "Mantenimiento realizado segun kilometraje",
+  "Junta de tapa con transpiracion leve, sin goteo activo",
+  "Bateria con baja retencion y bornes sulfatados",
+  "Electroventilador con activacion tardia",
+  "Cubiertas fuera de rango de desgaste parejo",
+  "Sensor con lectura intermitente registrada en scanner",
+];
+
+const itemCatalog = [
+  { description: "Mano de obra mecanica general", category: "labor", unitPrice: 42000 },
+  { description: "Filtro de aceite premium", category: "part", unitPrice: 18500 },
+  { description: "Aceite sintetico 5W-30", category: "part", unitPrice: 64000 },
+  { description: "Pastillas de freno delanteras", category: "part", unitPrice: 78000 },
+  { description: "Alineacion y balanceo", category: "labor", unitPrice: 36000 },
+  { description: "Scanner computarizado", category: "labor", unitPrice: 28000 },
+  { description: "Kit de limpieza de inyectores", category: "other", unitPrice: 31000 },
+  { description: "Refrigerante organico", category: "part", unitPrice: 22500 },
+] as const;
+
+const recommendationCatalog = [
+  {
+    description: "Revisar tren delantero en el proximo service",
+    reason: "Se detecto desgaste inicial en bujes",
+  },
+  {
+    description: "Cambiar escobillas limpiaparabrisas",
+    reason: "El barrido deja marcas en parabrisas",
+  },
+  {
+    description: "Controlar bateria en 30 dias",
+    reason: "La prueba de carga quedo cerca del minimo recomendado",
+  },
+  {
+    description: "Rotar neumaticos",
+    reason: "Ayuda a emparejar el desgaste entre ejes",
+  },
+  {
+    description: "Revisar sistema de refrigeracion",
+    reason: "Hubo antecedentes de temperatura elevada",
+  },
+] as const;
+
+const customerDocumentNumbers = superheroes.map(
+  (_, index) => `SH-${String(index + 1).padStart(3, "0")}`,
+);
+
+const createDate = (month: number, day: number, hour = 10) =>
+  new Date(Date.UTC(2026, month - 1, day, hour, 0, 0));
+
+const workOrderCountForVehicle = (customerIndex: number, vehicleIndex: number) => {
+  if (customerIndex === 1) {
+    return 0;
+  }
+
+  if (customerIndex === 2 && vehicleIndex === 0) {
+    return 1;
+  }
+
+  return 2 + ((customerIndex + vehicleIndex) % 3);
+};
+
+const clearPreviousSuperheroSeed = async () => {
+  const database = getDatabase();
+
+  await database.transaction(async (tx) => {
+    const seededCustomers = await tx
+      .select({ id: customers.id })
+      .from(customers)
+      .where(inArray(customers.documentNumber, customerDocumentNumbers));
+    const customerIds = seededCustomers.map((customer) => customer.id);
+
+    if (customerIds.length === 0) {
+      return;
+    }
+
+    const seededVehicles = await tx
+      .select({ id: vehicles.id })
+      .from(vehicles)
+      .where(inArray(vehicles.customerId, customerIds));
+    const vehicleIds = seededVehicles.map((vehicle) => vehicle.id);
+
+    if (vehicleIds.length > 0) {
+      const seededWorkOrders = await tx
+        .select({ id: workOrders.id })
+        .from(workOrders)
+        .where(inArray(workOrders.vehicleId, vehicleIds));
+      const workOrderIds = seededWorkOrders.map((workOrder) => workOrder.id);
+
+      if (workOrderIds.length > 0) {
+        await tx.delete(workOrderItems).where(inArray(workOrderItems.workOrderId, workOrderIds));
+        await tx
+          .delete(workOrderRecommendations)
+          .where(inArray(workOrderRecommendations.workOrderId, workOrderIds));
+        await tx.delete(workOrders).where(inArray(workOrders.id, workOrderIds));
+      }
+
+      await tx.delete(vehicles).where(inArray(vehicles.id, vehicleIds));
+    }
+
+    await tx.delete(customers).where(inArray(customers.id, customerIds));
+  });
+};
+
+const ensureDemoUsers = async () => {
+  const password = process.env.SEED_DEMO_PASSWORD;
+  if (!password || password.length < 16)
+    throw new Error("Set SEED_DEMO_PASSWORD (at least 16 characters) in root .env");
+  // Development fixtures only. No dependency on hosted SMTP or privileged API keys.
+  // Supabase Auth still hashes/verifies passwords through its standard bcrypt format.
+  const database = getDatabase();
+  const fixtures = [
+    { email: "mateo.cardoc.20261006@example.test", role: "MECHANIC" },
+    { email: "lucia.cardoc.20261006@example.test", role: "MECHANIC" },
+    { email: "god.cardoc@example.test", role: "GOD" },
+  ] as const;
+  const result: string[] = [];
+  for (const fixture of fixtures) {
+    const id = await database.transaction(async (tx) => {
+      const found = await tx.execute(sql`select id from auth.users where email = ${fixture.email}`);
+      let userId = found[0]?.id as string | undefined;
+      if (!userId) {
+        const created = await tx.execute(sql`
+          insert into auth.users(id, instance_id, aud, role, email, encrypted_password,
+            email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+            confirmation_token, recovery_token, email_change, email_change_token_new, is_anonymous)
+          values(gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+            ${fixture.email}, extensions.crypt(${password}, extensions.gen_salt('bf')), now(),
+            '{"provider":"email","providers":["email"]}'::jsonb, '{"email_verified":true}'::jsonb,
+            now(), now(), '', '', '', '', false) returning id`);
+        userId = created[0]!.id as string;
+        await tx.execute(sql`insert into auth.identities(id, provider_id, user_id, identity_data, provider, created_at, updated_at)
+          values(gen_random_uuid(), ${userId}, ${userId},
+            jsonb_build_object('sub', ${userId}::text, 'email', ${fixture.email}::text, 'email_verified', true),
+            'email', now(), now())`);
+      } else {
+        // Re-running the seed invalidates fixture sessions and restores fixture credentials.
+        await tx.execute(sql`delete from auth.sessions where user_id = ${userId}::uuid`);
+        await tx.execute(sql`update auth.users set encrypted_password = extensions.crypt(${password}, extensions.gen_salt('bf')),
+          email_confirmed_at = now(), updated_at = now() where id = ${userId}::uuid`);
+      }
+      await tx.execute(sql`insert into public.user_profiles(id, role) values(${userId}::uuid, ${fixture.role})
+        on conflict(id) do update set role = excluded.role`);
+      return userId;
+    });
+    result.push(id);
+  }
+  logger.info(
+    { users: fixtures.map(({ email, role }) => ({ email, role })) },
+    "Demo users ready; password is SEED_DEMO_PASSWORD in root .env",
+  );
+  return result.slice(0, 2);
+};
+
+const seedSuperheroes = async () => {
+  await initializeDatabase();
+  const mechanicIds = await ensureDemoUsers();
+  await clearPreviousSuperheroSeed();
+
+  const database = getDatabase();
+
+  const totals = await database.transaction(async (tx) => {
+    let vehicleCount = 0;
+    let workOrderCount = 0;
+    let itemCount = 0;
+    let recommendationCount = 0;
+
+    for (const [customerIndex, superhero] of superheroes.entries()) {
+      const documentNumber = customerDocumentNumbers[customerIndex]!;
+      const [createdCustomer] = await tx
+        .insert(customers)
+        .values({
+          mechanicId: mechanicIds[customerIndex % 2]!,
+          firstName: superhero.firstName,
+          lastName: superhero.lastName,
+          email: `${superhero.alias.toLowerCase().replaceAll(/[^a-z0-9]+/g, ".")}@hero.test`,
+          phone: `+54 11 5555-${String(1000 + customerIndex)}`,
+          address: `${100 + customerIndex} Hero Avenue`,
+          documentNumber,
+          notes: `Cliente seed: ${superhero.alias}`,
+        })
+        .returning({ id: customers.id });
+
+      const assignedVehicles = vehicleAssignments[customerIndex] ?? [];
+
+      for (const [vehicleIndex, assignedVehicle] of assignedVehicles.entries()) {
+        vehicleCount += 1;
+
+        const [createdVehicle] = await tx
+          .insert(vehicles)
+          .values({
+            customerId: createdCustomer!.id,
+            licensePlate: `HRO-${String(customerIndex + 1).padStart(2, "0")}${String.fromCharCode(
+              65 + vehicleIndex,
+            )}`,
+            make: assignedVehicle.make,
+            model: assignedVehicle.model,
+            year: assignedVehicle.year,
+            initialOdometer: 12000 + customerIndex * 3500 + vehicleIndex * 8700,
+            odometerUnit: "km",
+          })
+          .returning({ id: vehicles.id });
+
+        const orderCount = workOrderCountForVehicle(customerIndex, vehicleIndex);
+
+        for (const orderIndex of Array.from({ length: orderCount }, (_, index) => index)) {
+          const entryDate = createDate(
+            1 + ((customerIndex + orderIndex) % 6),
+            3 + ((customerIndex * 2 + orderIndex * 5) % 24),
+            9 + (orderIndex % 5),
+          );
+          const exitDate =
+            orderIndex % 2 === 0
+              ? createDate(entryDate.getUTCMonth() + 1, entryDate.getUTCDate(), 17)
+              : null;
+          const [createdWorkOrder] = await tx
+            .insert(workOrders)
+            .values({
+              vehicleId: createdVehicle!.id,
+              entryDate,
+              exitDate,
+              intakeOdometer:
+                12000 + customerIndex * 3500 + vehicleIndex * 8700 + orderIndex * 1300,
+              reportedProblem:
+                reportedProblems[(customerIndex + orderIndex) % reportedProblems.length]!,
+              notes: `Orden seed para ${superhero.alias}, vehiculo ${vehicleIndex + 1}`,
+              diagnosis: diagnoses[(customerIndex + orderIndex) % diagnoses.length]!,
+            })
+            .returning({ id: workOrders.id });
+
+          workOrderCount += 1;
+
+          const items = Array.from({ length: 2 + ((customerIndex + orderIndex) % 3) }).map(
+            (_, itemIndex) => {
+              const item =
+                itemCatalog[(customerIndex + orderIndex + itemIndex) % itemCatalog.length]!;
+
+              return {
+                workOrderId: createdWorkOrder!.id,
+                description: item.description,
+                category: item.category,
+                quantity: item.category === "part" ? 1 + (itemIndex % 2) : 1,
+                unitPrice: item.unitPrice + orderIndex * 2500 + vehicleIndex * 1800,
+              };
+            },
+          );
+
+          await tx.insert(workOrderItems).values(items);
+          itemCount += items.length;
+
+          const recommendations = Array.from({ length: (customerIndex + orderIndex) % 3 }).map(
+            (_, recommendationIndex) => {
+              const recommendation =
+                recommendationCatalog[
+                  (customerIndex + orderIndex + recommendationIndex) % recommendationCatalog.length
+                ]!;
+
+              return {
+                workOrderId: createdWorkOrder!.id,
+                description: recommendation.description,
+                reason: recommendation.reason,
+                status: ["pending", "accepted", "rejected"][
+                  (customerIndex + recommendationIndex) % 3
+                ] as "pending" | "accepted" | "rejected",
+                priority: ["low", "medium", "high"][(orderIndex + recommendationIndex) % 3] as
+                  "low" | "medium" | "high",
+              };
+            },
+          );
+
+          if (recommendations.length > 0) {
+            await tx.insert(workOrderRecommendations).values(recommendations);
+            recommendationCount += recommendations.length;
+          }
+        }
+      }
+    }
+
+    return {
+      customers: superheroes.length,
+      vehicles: vehicleCount,
+      workOrders: workOrderCount,
+      items: itemCount,
+      recommendations: recommendationCount,
+    };
+  });
+
+  logger.info(totals, "Seeded superhero demo data");
+};
+
+const main = async () => {
+  try {
+    await seedSuperheroes();
+  } catch (error) {
+    const failure = error as { code?: string; cause?: { code?: string } };
+    // Drizzle error messages may contain SQL parameters, including fixture passwords.
+    logger.error(
+      { errorCode: failure.cause?.code ?? failure.code ?? "SEED_FAILED" },
+      "Failed superhero demo seed; check root .env and database schema",
+    );
+    process.exitCode = 1;
+  } finally {
+    await closeDatabase();
+  }
+};
+
+void main();

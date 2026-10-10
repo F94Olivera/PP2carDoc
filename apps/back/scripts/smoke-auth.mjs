@@ -69,6 +69,7 @@ try {
   const me = await response.json();
   assert.equal(me.user.id, login.user.id);
   assert.equal(me.user.email, email);
+  assert.ok(["GOD", "MECHANIC"].includes(me.user.role));
   logger.info(
     { base },
     "PASS: ping, CORS, validation, unauthorized requests, login and authenticated me",
@@ -80,6 +81,8 @@ try {
       headers: { Authorization: `Bearer ${token}` },
     });
     expectStatus(response, 204, "logout");
-    logger.info({ base }, "PASS: logout (test session revoked)");
+    const revoked = await request("/auth/me", { headers: { Authorization: `Bearer ${token}` } });
+    expectStatus(revoked, 401, "access token from revoked session");
+    logger.info({ base }, "PASS: logout and immediate session rejection");
   }
 }

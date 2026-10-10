@@ -1,6 +1,6 @@
 "use client";
 
-import type { ApiErrorResponse } from "@cardoc/types";
+import { ACCESS_TOKEN_MAX_AGE_SECONDS, type ApiErrorResponse } from "@cardoc/types";
 
 import { createClient } from "./supabase/client";
 
@@ -51,7 +51,26 @@ export const onAuthExpired = (handler: () => void) => {
 };
 
 export const fetchAuthenticated = async (path: string, init?: RequestInit) => {
-  const { data, error } = await createClient().auth.getSession();
+  const client = createClient();
+  let { data, error } = await client.auth.getSession();
+  if (data.session) {
+    // This decode only schedules renewal. The backend verifies identity and permissions.
+    try {
+      const payload = data.session.access_token
+        .split(".")[1]!
+        .replaceAll("-", "+")
+        .replaceAll("_", "/");
+      const { iat } = JSON.parse(atob(payload)) as { iat?: number };
+      if (
+        typeof iat !== "number" ||
+        Date.now() >= (iat + ACCESS_TOKEN_MAX_AGE_SECONDS - 30) * 1000
+      ) {
+        ({ data, error } = await client.auth.refreshSession());
+      }
+    } catch {
+      ({ data, error } = await client.auth.refreshSession());
+    }
+  }
   if (error || !data.session) {
     notifyAuthExpired();
     throw new Error("Authentication required.");

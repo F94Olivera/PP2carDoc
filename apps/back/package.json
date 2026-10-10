@@ -7,11 +7,13 @@
     "dev": "node scripts/edge.mjs serve",
     "build": "tsc -p tsconfig.json --noEmit && node scripts/edge.mjs build",
     "start": "node scripts/edge.mjs serve",
-    "seed:superheroes": "tsx --env-file=../../.env ../../scripts/seed-superheroes.ts",
+    "seed:superheroes": "tsx --env-file=../../.env scripts/seed-superheroes.ts",
     "lint": "eslint \"**/*.{js,mjs,jsx,ts,tsx}\" --no-error-on-unmatched-pattern",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:customers": "node --env-file=../../.env scripts/smoke-customers.mjs",
-    "test:auth": "node --env-file=../../.env scripts/smoke-auth.mjs"
+    "test:auth": "node --env-file=../../.env scripts/smoke-auth.mjs",
+    "test:unit": "tsx --test tests/*.test.ts",
+    "test:authorization": "node --env-file=../../.env scripts/smoke-authorization.mjs"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

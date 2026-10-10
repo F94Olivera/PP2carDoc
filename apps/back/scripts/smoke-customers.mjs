@@ -9,12 +9,13 @@ const password = process.env.TEST_LOGIN_PASSWORD;
 assert.ok(email && password, "Set TEST_LOGIN_EMAIL and TEST_LOGIN_PASSWORD in root .env");
 assert.ok(process.env.DATABASE_URL, "Set DATABASE_URL to the database used by TEST_API_URL");
 
-const sql = postgres(process.env.DATABASE_URL, {
+const sql = postgres(process.env.EDGE_DATABASE_URL ?? process.env.DATABASE_URL, {
   max: 1,
   prepare: false,
   ssl: process.env.DATABASE_SSL === "false" ? false : "require",
 });
 let token;
+let user;
 const request = (path, init = {}) =>
   fetch(`${base}${path}`, { ...init, signal: AbortSignal.timeout(30_000) });
 const list = (query) =>
@@ -30,27 +31,31 @@ try {
     body: JSON.stringify({ email, password }),
   });
   assert.equal(login.status, 200, "login");
-  token = (await login.json()).session.access_token;
+  const authenticated = await login.json();
+  token = authenticated.session.access_token;
+  user = authenticated.user;
 
-  for (const query of [
-    "?page=0",
-    "?pageSize=101",
-    "?page=1.5",
-    "?includeArchived=1",
-    "?unexpected=true",
-    "?page=1&page=2",
-    "?page=9007199254740991&pageSize=100",
-  ]) {
-    assert.equal((await list(query)).status, 400, `invalid query ${query}`);
-  }
+  await Promise.all(
+    [
+      "?page=0",
+      "?pageSize=101",
+      "?page=1.5",
+      "?includeArchived=1",
+      "?unexpected=true",
+      "?page=1&page=2",
+      "?page=9007199254740991&pageSize=100",
+    ].map(async (query) => {
+      assert.equal((await list(query)).status, 400, `invalid query ${query}`);
+    }),
+  );
 
   for (const includeArchived of [false, true]) {
     const [summary] = await sql`
       select count(*)::int as total from customers
-      where ${includeArchived} or is_active = true
+      where (${includeArchived} or is_active = true) and (${user.role === "GOD"} or mechanic_id = ${user.id})
     `;
     const expectedRows = await sql`
-      select id from customers where ${includeArchived} or is_active = true order by id limit 2
+      select id from customers where (${includeArchived} or is_active = true) and (${user.role === "GOD"} or mechanic_id = ${user.id}) order by id limit 2
     `;
     const response = await list(`?page=1&pageSize=2&includeArchived=${includeArchived}`);
     assert.equal(response.status, 200, "authenticated listing");
@@ -78,7 +83,7 @@ try {
     const next = await list(`?page=2&pageSize=2&includeArchived=${includeArchived}`);
     assert.equal(next.status, 200);
     const expectedNext = await sql`
-      select id from customers where ${includeArchived} or is_active = true order by id limit 2 offset 2
+      select id from customers where (${includeArchived} or is_active = true) and (${user.role === "GOD"} or mechanic_id = ${user.id}) order by id limit 2 offset 2
     `;
     assert.deepEqual(
       (await next.json()).data.map((row) => row.id),
@@ -97,9 +102,11 @@ try {
   assert.equal(result.meta.pageSize, 10);
   const detail = (id) =>
     request(`/customers/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-  for (const id of ["0", "-1", "1.5", "abc", "01", "2147483648", "9007199254740992"]) {
-    assert.equal((await detail(id)).status, 400, `invalid customer ID ${id}`);
-  }
+  await Promise.all(
+    ["0", "-1", "1.5", "abc", "01", "2147483648", "9007199254740992"].map(async (id) => {
+      assert.equal((await detail(id)).status, 400, `invalid customer ID ${id}`);
+    }),
+  );
   const [missing] = await sql`
     select candidate.id from (
       select 1 as id union select id + 1 from customers where id < 2147483647
@@ -112,7 +119,7 @@ try {
   assert.deepEqual(await missingResponse.json(), { error: "Customer not found." });
   for (const isActive of [true, false]) {
     const rows = await sql`
-      select id from customers where is_active = ${isActive} order by id limit 1
+      select id from customers where is_active = ${isActive} and (${user.role === "GOD"} or mechanic_id = ${user.id}) order by id limit 1
     `;
     if (!rows.length) continue;
     const response = await detail(rows[0].id);
@@ -120,9 +127,9 @@ try {
     assert.equal(response.headers.get("cache-control"), "no-store");
     const customer = await response.json();
     const [expected] = await sql`
-      select id, first_name as "firstName", last_name as "lastName", email, phone,
+      select id, mechanic_id as "mechanicId", first_name as "firstName", last_name as "lastName", email, phone,
         address, document_number as "documentNumber", notes, is_active as "isActive",
-        created_at as "createdAt", updated_at as "updatedAt"
+        created_at at time zone 'UTC' as "createdAt", updated_at at time zone 'UTC' as "updatedAt"
       from customers where id = ${rows[0].id}
     `;
     expected.createdAt = expected.createdAt.toISOString();

@@ -4,6 +4,9 @@ import pino from "pino";
 import { loginController, logoutController, meController } from "./controllers/auth-controller.js";
 
 import {
+  createCustomerController,
+  updateCustomerController,
+  deleteCustomerController,
   customerByIdController,
   listCustomersController,
 } from "./controllers/customer-controller.js";
@@ -31,11 +34,16 @@ protectedRouter.post("/logout", logoutController);
 protectedRouter.get("/auth/me", meController);
 // protectedRouter.post("/budgets/pdf", createBudgetPdfController);
 // protectedRouter.get("/finances", financesController);
-// protectedRouter.post("/customers", createCustomerController);
+protectedRouter.post("/customers", express.json({ limit: "32kb" }), createCustomerController);
 protectedRouter.get("/customers", listCustomersController);
 protectedRouter.get("/customers/:customerId", customerByIdController);
 // protectedRouter.patch("/customers/:customerId/archive", archiveCustomerController);
-// protectedRouter.delete("/customers/:customerId", deleteCustomerController);
+protectedRouter.patch(
+  "/customers/:customerId",
+  express.json({ limit: "32kb" }),
+  updateCustomerController,
+);
+protectedRouter.delete("/customers/:customerId", deleteCustomerController);
 // protectedRouter.post("/vehicles", createVehicleController);
 // protectedRouter.get("/vehicles", vehiclesController);
 // protectedRouter.get("/vehicles/license-plate/:licensePlate", vehicleByLicensePlateController);
@@ -57,6 +65,6 @@ app.use((_req, res) => {
 app.use(errorMiddleware);
 
 // Supabase owns the worker lifecycle; do not install Node process signal handlers.
-app.listen(8000, "0.0.0.0", () => {
+app.listen(Number(process.env.PORT_BACK ?? 8000), "0.0.0.0", () => {
   logger.info("carDoc Edge API listening");
 });

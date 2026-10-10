@@ -1,14 +1,24 @@
 import type { CustomerResponse, PaginatedResponse } from "@cardoc/types";
 import { toCustomerResponse } from "../mappers/customer-mapper.js";
-import { findCustomerById, findCustomers } from "../repositories/customer-repository.js";
-import type { ListCustomersQuery } from "../schemas/customer.js";
+import {
+  deleteCustomerById,
+  insertCustomer,
+  updateCustomerById,
+  findCustomerById,
+  findCustomers,
+} from "../repositories/customer-repository.js";
+import { canChooseMechanic, type AuthorizationContext } from "../schemas/authorization.js";
+import type {
+  CreateCustomerInput,
+  UpdateCustomerInput,
+  ListCustomersQuery,
+} from "../schemas/customer.js";
 
-// The current domain has one shared customer list for authenticated users.
-// Introduce explicit workshop membership checks here when the model supports them.
 export const listCustomers = async (
+  context: AuthorizationContext,
   query: ListCustomersQuery,
 ): Promise<PaginatedResponse<CustomerResponse>> => {
-  const { rows, total } = await findCustomers(query);
+  const { rows, total } = await findCustomers(context, query);
   const totalPages = Math.ceil(total / query.pageSize);
 
   return {
@@ -24,7 +34,32 @@ export const listCustomers = async (
   };
 };
 
-export const getCustomerById = async (customerId: number): Promise<CustomerResponse | null> => {
-  const customer = await findCustomerById(customerId);
+export const getCustomerById = async (
+  context: AuthorizationContext,
+  customerId: number,
+): Promise<CustomerResponse | null> => {
+  const customer = await findCustomerById(context, customerId);
   return customer ? toCustomerResponse(customer) : null;
 };
+
+export const createCustomer = async (context: AuthorizationContext, input: CreateCustomerInput) => {
+  if (!canChooseMechanic(context, input.mechanicId)) return { outcome: "forbidden" } as const;
+  const customer = await insertCustomer(context, {
+    ...input,
+    mechanicId: input.mechanicId ?? context.userId,
+  });
+  return { outcome: "success", customer: toCustomerResponse(customer) } as const;
+};
+export const updateCustomer = async (
+  context: AuthorizationContext,
+  customerId: number,
+  input: UpdateCustomerInput,
+) => {
+  if (!canChooseMechanic(context, input.mechanicId)) return { outcome: "forbidden" } as const;
+  const customer = await updateCustomerById(context, customerId, input);
+  return customer
+    ? ({ outcome: "success", customer: toCustomerResponse(customer) } as const)
+    : ({ outcome: "not_found" } as const);
+};
+export const deleteCustomer = async (context: AuthorizationContext, customerId: number) =>
+  Boolean(await deleteCustomerById(context, customerId));

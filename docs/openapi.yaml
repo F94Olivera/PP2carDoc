@@ -51,7 +51,7 @@ paths:
   /auth/me:
     get:
       summary: Retrieve the current authenticated user
-      description: The shared requireAuth middleware validates the Bearer access token with Supabase Auth; the controller returns the verified user without another lookup. No request body is used.
+      description: The middleware verifies the token with Supabase Auth, checks its active session and reads the current database role. Tokens older than 15 minutes are rejected. The controller returns that verified context.
       security:
         - bearerAuth: []
       responses:
@@ -88,7 +88,8 @@ paths:
     get:
       summary: List customers
       description: |
-        Returns the shared customer list for authenticated users, ordered by ID ascending.
+        MECHANIC receives only customers it owns; GOD receives all customers, ordered by ID ascending.
+        Counts and pagination use the same ownership scope.
         Archived customers are excluded unless includeArchived=true.
         Unknown or repeated query parameters are rejected. Pages beyond the last page
         return an empty data array and the requested page metadata.
@@ -149,10 +150,44 @@ paths:
                 $ref: "#/components/schemas/AuthError"
         "503":
           description: Authentication unavailable or unconfigured
+    post:
+      summary: Create a customer
+      description: The owner defaults to the authenticated user. Only GOD can choose another mechanicId. Unknown body fields are rejected.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCustomerInput"
+      responses:
+        "201":
+          description: Created customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerResponse"
+        "400":
+          description: Invalid or undeclared body fields
+        "401":
+          description: Invalid token, expired token or inactive session
+        "403":
+          description: Cannot assign another mechanic
+        "409":
+          description: Duplicate document for this mechanic or unknown owner
+        "413":
+          description: Body exceeds 32 KB
+        "429":
+          description: Authentication rate limit
+        "500":
+          description: Unexpected database error
+        "503":
+          description: Authentication or authorization lookup unavailable
   /customers/{customerId}:
     get:
       summary: Retrieve a customer by ID
-      description: Returns an active or archived customer from the shared customer dataset. No query parameters or request body are used.
+      description: Returns an active or archived customer owned by MECHANIC, or any customer for GOD. An inaccessible customer returns the same 404 as a missing customer.
       security:
         - bearerAuth: []
       parameters:
@@ -200,14 +235,89 @@ paths:
                 $ref: "#/components/schemas/AuthError"
         "503":
           description: Authentication unavailable or unconfigured
+    patch:
+      summary: Update a customer
+      description: MECHANIC can edit its customers. Only GOD can transfer ownership; the transfer includes all vehicles and history and fails if it creates document or plate conflicts.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: customerId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2147483647
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCustomerInput"
+      responses:
+        "200":
+          description: Updated customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerResponse"
+        "400":
+          description: Invalid ID, empty body or undeclared fields
+        "401":
+          description: Invalid token or inactive session
+        "403":
+          description: Cannot assign another mechanic
+        "404":
+          description: Customer missing or inaccessible
+        "409":
+          description: Document, vehicle plate or owner reference conflict
+        "413":
+          description: Body exceeds 32 KB
+        "429":
+          description: Authentication rate limit
+        "500":
+          description: Unexpected database error
+        "503":
+          description: Authentication or authorization lookup unavailable
+    delete:
+      summary: Delete a customer
+      description: MECHANIC can delete its customers; GOD can delete any customer. Customers with vehicles cannot be deleted until their related records are removed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: customerId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2147483647
+      responses:
+        "204":
+          description: Customer deleted
+        "400":
+          description: Invalid ID
+        "401":
+          description: Invalid token or inactive session
+        "404":
+          description: Customer missing or inaccessible
+        "409":
+          description: Customer still has vehicles
+        "429":
+          description: Authentication rate limit
+        "500":
+          description: Unexpected database error
+        "503":
+          description: Authentication or authorization lookup unavailable
   /logout:
     post:
       summary: Sign out the current Supabase session
       description: |
         The shared requireAuth middleware validates the access token in Authorization
         before logout runs. Revokes only the current session's
-        refresh tokens. Other sessions remain active. The access token remains valid
-        until expiration; the client must delete its locally stored session tokens.
+        refresh tokens. Other sessions remain active. Subsequent requests using this
+        session are rejected immediately by the API and database policies; the
+        client must also delete its locally stored session tokens.
         No request body is used.
       security:
         - bearerAuth: []
@@ -233,6 +343,7 @@ components:
       required:
         [
           id,
+          mechanicId,
           firstName,
           lastName,
           email,
@@ -245,6 +356,9 @@ components:
           updatedAt,
         ]
       properties:
+        mechanicId:
+          type: string
+          format: uuid
         id:
           type: integer
         firstName:
@@ -318,8 +432,11 @@ components:
     UserResponse:
       type: object
       additionalProperties: false
-      required: [id, email]
+      required: [id, email, role]
       properties:
+        role:
+          type: string
+          enum: [GOD, MECHANIC]
         id:
           type: string
           format: uuid
@@ -366,3 +483,64 @@ components:
               type: integer
             expires_at:
               type: integer
+    CreateCustomerInput:
+      type: object
+      additionalProperties: false
+      required: [firstName]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        lastName:
+          type: string
+          nullable: true
+          maxLength: 200
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        phone:
+          type: string
+          nullable: true
+          maxLength: 100
+        address:
+          type: string
+          nullable: true
+          maxLength: 1000
+        documentNumber:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 100
+        notes:
+          type: string
+          nullable: true
+          maxLength: 10000
+        mechanicId:
+          type: string
+          format: uuid
+    UpdateCustomerInput:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        firstName:
+          $ref: "#/components/schemas/CreateCustomerInput/properties/firstName"
+        lastName:
+          $ref: "#/components/schemas/CreateCustomerInput/properties/lastName"
+        email:
+          $ref: "#/components/schemas/CreateCustomerInput/properties/email"
+        phone:
+          $ref: "#/components/schemas/CreateCustomerInput/properties/phone"
+        address:
+          $ref: "#/components/schemas/CreateCustomerInput/properties/address"
+        documentNumber:
+          $ref: "#/components/schemas/CreateCustomerInput/properties/documentNumber"
+        notes:
+          $ref: "#/components/schemas/CreateCustomerInput/properties/notes"
+        mechanicId:
+          $ref: "#/components/schemas/CreateCustomerInput/properties/mechanicId"
+        isActive:
+          type: boolean
