@@ -61,19 +61,23 @@
 
 ## Verification
 
+Unit tests are the default. A generic request such as "corre los tests" means unit tests only. `pnpm test` and `pnpm test:unit` at the root, or the backend equivalents, run only unit tests without live services.
+
+The three existing integration tests are retained, but executing them requires an explicit user request because of Supabase API rate limits. This also applies to local integrations. Do not run them automatically during verification, commits, deployment, hooks or CI, or substitute equivalent ad hoc calls. Before creating any new integration test (alone or alongside a unit test), explain why it is worthwhile using "mira que conviene sumar el test como integracion tambien" and wait for approval. Creation approval is separate from permission to execute.
+
 1. `pnpm --filter @cardoc/back test:unit` verifies identity/session claim parsing, expiration limits, owner selection, ignored metadata and strict writable schemas. Backend typecheck includes tests and the TypeScript seed.
 2. `test:auth` verifies public health/CORS, login validation, authenticated identity and immediate rejection after logout. `test:customers` compares isolated pagination/details against database results for the signed-in role.
 3. `test:authorization` uses the three seeded accounts against the configured API, Supabase Auth, direct Data API and restricted Postgres transactions. It checks API CRUD, ownership/count isolation, concurrent requests, all five domain tables, cross-parent writes, role escalation attempts, stale role claims, owner transfer, concurrent plate uniqueness, token alteration, lifetime/session binding and logout.
 4. Tests clean up their temporary records, restore fixture roles/metadata and revoke their test sessions. Run them against the demo dataset, with matching project configuration in root `.env`.
-5. Before delivery, run focused formatting, lint, TypeScript, unit/integration tests, `pnpm build`, `git diff --check` and Supabase security advisors. No commit is required to review local changes.
+5. Before delivery, run focused formatting, lint, TypeScript, unit tests, `pnpm build` and `git diff --check` as appropriate. Integration tests require the explicit user request described above; do not include them in routine verification. No commit is required to review local changes.
 
 ## Backend utility scripts
 
-There are five files in `apps/back/scripts`, including `seed-superheroes.ts`. The other four are:
+`apps/back/scripts` contains execution tools (`edge.mjs` and the seed). Integration tests live in `apps/back/tests/integration`; the integration commands below are for explicit user requests only:
 
 - `edge.mjs`: esbuild bundling for Supabase Edge. `build` produces the ignored bundle; `serve` watches source changes and starts the local Edge runtime through the CLI. Used by the backend build/dev/start commands.
-- `smoke-auth.mjs`: real HTTP integration checks for health, CORS, login validation, protected identity and logout/session rejection. Run with `pnpm --filter @cardoc/back test:auth`; uses the test credentials in root `.env` and revokes its test session.
-- `smoke-customers.mjs`: real HTTP customer list/detail checks against direct database expectations, including owner scope, pagination, archived filtering, validation and UTC timestamps. Run with `pnpm --filter @cardoc/back test:customers`; reads customer data and revokes its test session.
-- `smoke-authorization.mjs`: integration/security checks using the two demo mechanics and GOD across the HTTP API, Data API and restricted SQL transactions. Verifies cross-user denial, CRUD, inherited access, transfers, uniqueness under concurrency, role changes, token tampering and session revocation. Run with `pnpm --filter @cardoc/back test:authorization` against the demo dataset. It temporarily writes fixtures, modifies fixture roles/metadata, then cleans up records, restores roles/metadata and revokes sessions.
+- `tests/integration/smoke-auth.mjs`: real HTTP integration checks for health, CORS, login validation, protected identity and logout/session rejection. Run with `pnpm --filter @cardoc/back test:auth`; uses the test credentials in root `.env` and revokes its test session.
+- `tests/integration/smoke-customers.mjs`: real HTTP customer list/detail checks against direct database expectations, including owner scope, pagination, archived filtering, validation and UTC timestamps. Run with `pnpm --filter @cardoc/back test:customers`; reads customer data and revokes its test session.
+- `tests/integration/smoke-authorization.mjs`: integration/security checks using the two demo mechanics and GOD across the HTTP API, Data API and restricted SQL transactions. Verifies cross-user denial, CRUD, inherited access, transfers, uniqueness under concurrency, role changes, token tampering and session revocation. Run with `pnpm --filter @cardoc/back test:authorization` against the demo dataset. It temporarily writes fixtures, modifies fixture roles/metadata, then cleans up records, restores roles/metadata and revokes sessions.
 
-The smoke scripts are integration tests; unit tests live in `apps/back/tests`. They do not execute during ordinary application requests.
+The three smoke tests are integration tests under `apps/back/tests/integration`; unit tests remain directly under `apps/back/tests`. The package commands keep the backend workspace as their working directory, so they continue loading the single root `.env` via `../../.env`. These tests do not execute during ordinary application requests.

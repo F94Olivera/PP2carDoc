@@ -10,10 +10,11 @@
     "seed:superheroes": "tsx --env-file=../../.env scripts/seed-superheroes.ts",
     "lint": "eslint \"**/*.{js,mjs,jsx,ts,tsx}\" --no-error-on-unmatched-pattern",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:customers": "node --env-file=../../.env scripts/smoke-customers.mjs",
-    "test:auth": "node --env-file=../../.env scripts/smoke-auth.mjs",
+    "test:customers": "node --env-file=../../.env tests/integration/smoke-customers.mjs",
+    "test:auth": "node --env-file=../../.env tests/integration/smoke-auth.mjs",
     "test:unit": "tsx --test tests/*.test.ts",
-    "test:authorization": "node --env-file=../../.env scripts/smoke-authorization.mjs"
+    "test:authorization": "node --env-file=../../.env tests/integration/smoke-authorization.mjs",
+    "test": "pnpm test:unit"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

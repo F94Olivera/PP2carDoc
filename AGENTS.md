@@ -18,6 +18,15 @@ Run commands from the repository root with pnpm.
 
 Before creating a commit, run focused formatting, linting and TypeScript checks when those scripts exist, then run `pnpm build` and `git diff --check`. Do not create a commit if a configured check fails.
 
+## Testing policy
+
+- Unit tests are the default for all new tests. They must run without real Supabase/API calls or a live database; use isolated inputs or test doubles as needed.
+- A generic user request such as "corre los tests", "run the tests", "verify the changes" or similar authorizes unit tests only. `pnpm test`, `pnpm test:unit` and their backend equivalents must run unit tests only.
+- Keep the three existing integration tests in `apps/back/tests/integration`. NEVER execute integration tests unless the user explicitly requests them. Generic test, build, verification, commit, deployment or end-to-end-work requests are not authorization to execute integration tests.
+- `test:auth`, `test:customers` and `test:authorization` are integration commands. Do not run them automatically, including as part of aggregate scripts, hooks or CI. This restriction protects the Supabase API rate limit and applies to local and remote integrations.
+- If a new integration test would provide worthwhile coverage (in addition to a unit test or instead of one), stop before creating it. Tell the user: "mira que conviene sumar el test como integracion tambien", explain the concrete coverage and external-service cost, and wait for explicit approval. Approval to create an integration test does not by itself authorize executing it.
+- Apply this policy to scripts and manual verification too: do not replace a prohibited integration run with equivalent ad hoc Supabase/API/database calls.
+
 ## Backend conventions
 
 Backend source code belongs under `apps/back/src`.

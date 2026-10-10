@@ -95,7 +95,17 @@ y usuario `postgres.<project-ref>`, y mantener `DATABASE_SSL=true`. La conexión
 puede requerir IPv6 que Docker no tiene disponible. Drizzle no hereda automáticamente la identidad del usuario: el aislamiento por
 taller requiere autorización explícita.
 
+## Política de pruebas
+
+- Las pruebas nuevas serán unitarias por defecto, sin llamadas reales a Supabase, APIs ni bases de datos.
+- "Corre los tests" significa **solo unitarios**. Desde la raíz se pueden ejecutar con `pnpm test` o `pnpm test:unit`; los mismos comandos existen en `@cardoc/back`.
+- Se conservan las tres integraciones en `apps/back/tests/integration`. **Está prohibido ejecutarlas sin un pedido explícito del usuario**, tanto en local como en remoto, para evitar consumir el rate limit de Supabase. No forman parte de la verificación habitual, despliegues, hooks o CI; tampoco deben sustituirse por llamadas manuales equivalentes.
+- Si conviene agregar una integración, sola o junto con un unitario, primero comunicar "mira que conviene sumar el test como integracion tambien", explicar qué cubre y esperar aprobación. Aprobar su creación no autoriza su ejecución.
+- La regla para agentes está en `AGENTS.md`; los comandos y flujos están detallados en `FLOWS.MD`.
+
 ## Verificación de login local y remoto
+
+Esta sección describe una prueba de integración. Ejecutarla **únicamente ante un pedido explícito del usuario**; no se incluye cuando se solicita correr los tests en general.
 
 Crear un usuario de prueba en Auth del entorno a verificar, y configurar en el `.env` raíz:
 
@@ -137,8 +147,9 @@ pnpm deploy:api --project-ref lsbgegbghlgxkqxpmgyx
 
 El comando reconstruye el mismo bundle probado localmente y despliega únicamente `api`.
 No despliega el frontend, no migra la base y no publica el `.env`. Los secretos personalizados,
-si se necesitan, se configuran en el dashboard del proyecto. Después ejecutar la prueba de
-login remoto. En CI se necesita `SUPABASE_ACCESS_TOKEN` como secreto del pipeline.
+si se necesitan, se configuran en el dashboard del proyecto. La prueba de login remoto
+solo se ejecuta si el usuario la pide expresamente. En CI se necesita
+`SUPABASE_ACCESS_TOKEN` como secreto del pipeline.
 
 El frontend se publica por separado en un hosting para Next.js, con la URL remota de la API
 y las claves públicas del mismo proyecto Supabase.
