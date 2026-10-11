@@ -237,7 +237,7 @@ paths:
           description: Authentication unavailable or unconfigured
     patch:
       summary: Update a customer
-      description: MECHANIC can edit its customers; GOD can edit any customer. mechanicId is immutable and rejected with 400 even for GOD.
+      description: MECHANIC can edit its customers; GOD can edit any customer, including archived customers. Send isActive false to archive or true to restore; this does not change vehicle archive flags. Archived customers remain accessible for explicit administration, not operational descendant access. mechanicId is immutable and rejected with 400 even for GOD.
       security:
         - bearerAuth: []
       parameters:

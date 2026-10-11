@@ -1,6 +1,6 @@
 # Cambios de código pendientes
 
-El backlog se inició tras la reorganización documental del 17/10/2026. El paso 1 fue implementado localmente por solicitud del usuario; no se aplicó al despliegue. Los demás pasos siguen pendientes. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
+El backlog se inició tras la reorganización documental del 17/10/2026. Los pasos 1 y 2 fueron implementados localmente por solicitud del usuario; no se aplicaron al despliegue. Los demás pasos siguen pendientes. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
 
 ## 1. Propiedad y autorización — primero
 
@@ -15,10 +15,12 @@ Verificación local y límites en TESTING. Para alinear una demo existente, cons
 
 ## 2. Clientes y archivo
 
-- [ ] Corregir `apps/front/app/(app)/customers/customer-api.ts`: archivo usa `/customers/:id/archive`, ruta inexistente. Enviar PATCH a `/customers/:id` con `{ isActive }`; revisar si falta conectar edición general en la UI.
-- [ ] Diferenciar administración de archivados del acceso operativo. No dejar que un cliente archivado aparezca como opción de alta de vehículo; comprobarlo también en servidor.
-- [ ] Implementar validación de cliente/vehículo activos en las operaciones descendientes y revisar políticas directas: las políticas actuales heredan propiedad, pero no comprueban `is_active`.
-- [ ] Definir pruebas unitarias de acceso directo a descendientes de padres no operativos, sin depender de esconder links. Conservar archivo/restauración explícitos y sus validaciones de padre.
+- [x] Corregir archivo para enviar PATCH a `/customers/:id` con `{ isActive }`. Conectar edición general mediante formulario compartido con alta y restauración explícita desde el detalle.
+- [x] Separar administración de clientes archivados del recorrido operativo. Alta de vehículo selecciona exclusivamente clientes activos, recorre todas las páginas y rechaza selecciones inválidas; RLS exige cliente activo también para escritura directa.
+- [x] Aplicar estado activo de padres en políticas de vehículos, órdenes e hijos, sin excepción para GOD. Vehículos archivados conservan acceso administrativo bajo cliente activo; restaurar cliente no cambia el estado propio de sus vehículos.
+- [x] Agregar unitarios aislados de archivo/restauración, transporte PATCH, paginación y errores; comprobaciones estáticas de políticas para IDs directos y validación de ambos padres. Estas comprobaciones no ejecutan ni demuestran RLS real.
+
+El detalle de cliente sigue funcionando aunque falle el listado de vehículos, cuyo endpoint aún pertenece al paso 3. Las políticas se aplican a Data API y a operaciones bajo `withUserDatabase` una vez aplicado el schema; los endpoints de vehículos/órdenes siguen pendientes en pasos 3/4, incluidos sus filtros operativos, validación de padres en services y unitarios por operación. No hay cambios remotos ni verificación contra base viva. Resultados en TESTING.
 
 ## 3. Vehículos
 

@@ -1,5 +1,6 @@
 import type {
   CreateCustomerRequest,
+  UpdateCustomerRequest,
   CustomerResponse,
   PaginatedResponse,
   VehicleResponse,
@@ -66,8 +67,29 @@ export const createCustomer = (customer: CreateCustomerRequest, fallbackError: s
 export const getCustomer = (customerId: string, fallbackError: string) =>
   requestJson<CustomerResponse>(`/customers/${customerId}`, fallbackError);
 
+export const updateCustomer = (
+  customerId: string,
+  input: UpdateCustomerRequest,
+  fallbackError: string,
+) =>
+  requestJson<CustomerResponse>(`/customers/${customerId}`, fallbackError, {
+    body: JSON.stringify(input),
+    method: "PATCH",
+  });
+
+export const listAllCustomers = async (fallbackError: string, includeArchived = false) => {
+  const customers: CustomerResponse[] = [];
+  let page = 1;
+  while (true) {
+    const response = await listCustomers({ fallbackError, includeArchived, page, pageSize: 100 });
+    customers.push(...response.data);
+    if (!response.meta.hasNextPage) return customers;
+    page++;
+  }
+};
+
 export const archiveCustomer = (customerId: number, isActive: boolean, fallbackError: string) =>
-  requestJson<CustomerResponse>(`/customers/${customerId}/archive`, fallbackError, {
+  requestJson<CustomerResponse>(`/customers/${customerId}`, fallbackError, {
     body: JSON.stringify({ isActive }),
     method: "PATCH",
   });
@@ -86,9 +108,9 @@ export const deleteCustomer = async (customerId: number, fallbackError: string) 
   }
 };
 
-export const listVehicles = (fallbackError: string, includeArchived = false) => {
+const listVehiclesPage = (fallbackError: string, includeArchived: boolean, page: number) => {
   const query = new URLSearchParams({
-    page: "1",
+    page: String(page),
     pageSize: "100",
   });
 
@@ -97,4 +119,15 @@ export const listVehicles = (fallbackError: string, includeArchived = false) => 
   }
 
   return requestJson<PaginatedResponse<VehicleResponse>>(`/vehicles?${query}`, fallbackError);
+};
+
+export const listVehicles = async (fallbackError: string, includeArchived = false) => {
+  const data: VehicleResponse[] = [];
+  let page = 1;
+  while (true) {
+    const response = await listVehiclesPage(fallbackError, includeArchived, page);
+    data.push(...response.data);
+    if (!response.meta.hasNextPage) return { ...response, data };
+    page++;
+  }
 };

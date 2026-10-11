@@ -9,7 +9,13 @@ import {
   listPageSizeOptions,
   storeListPageSize,
 } from "../pagination-preferences";
-import { archiveCustomer, deleteCustomer, getCustomerName, listCustomers } from "./customer-api";
+import {
+  archiveCustomer,
+  deleteCustomer,
+  getCustomerName,
+  listCustomers,
+  listAllCustomers,
+} from "./customer-api";
 
 type PendingAction =
   | { customer: CustomerResponse; type: "archive" }
@@ -34,6 +40,11 @@ export default function CustomersPage() {
     setIsLoading(true);
 
     try {
+      if (query.trim()) {
+        setCustomers(await listAllCustomers(t.customers.loadError, includeArchived));
+        setMeta(null);
+        return;
+      }
       const response = await listCustomers({
         fallbackError: t.customers.loadError,
         includeArchived,

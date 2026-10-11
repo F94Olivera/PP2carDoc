@@ -98,6 +98,9 @@ type AppMessages = {
     pdfConnectionError: string;
   };
   customers: {
+    editAction: string;
+    restoreAction: string;
+    restoreMessage: (name: string) => string;
     sectionLabel: string;
     title: string;
     newCustomer: string;
@@ -410,6 +413,10 @@ export const messages = {
       pdfConnectionError: "No se pudo conectar con la API. Verificá que el backend esté corriendo.",
     },
     customers: {
+      editAction: "Editar",
+      restoreAction: "Restaurar",
+      restoreMessage: (name) =>
+        `¿Restaurar el cliente ${name}? Sus vehículos conservan su estado de archivo.`,
       sectionLabel: "Clientes",
       title: "Clientes",
       newCustomer: "Nuevo cliente",
@@ -725,6 +732,9 @@ export const messages = {
       pdfConnectionError: "Could not connect to the API. Check that the backend is running.",
     },
     customers: {
+      editAction: "Edit",
+      restoreAction: "Restore",
+      restoreMessage: (name) => `Restore customer ${name}? Its vehicles keep their archive status.`,
       sectionLabel: "Customers",
       title: "Customers",
       newCustomer: "New customer",

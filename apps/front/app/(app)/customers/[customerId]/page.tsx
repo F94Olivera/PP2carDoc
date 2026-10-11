@@ -18,10 +18,11 @@ export default function CustomerDetailPage() {
   const router = useRouter();
   const { t } = useI18n();
   const [customer, setCustomer] = useState<CustomerResponse | null>(null);
+  const [vehiclesError, setVehiclesError] = useState<string | null>(null);
   const [vehicles, setVehicles] = useState<VehicleResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [confirmMode, setConfirmMode] = useState<"archive" | "delete" | null>(null);
+  const [confirmMode, setConfirmMode] = useState<"archive" | "restore" | "delete" | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const customerId = params.customerId;
@@ -36,12 +37,20 @@ export default function CustomerDetailPage() {
     setIsLoading(true);
 
     try {
-      const [customerResponse, vehiclesResponse] = await Promise.all([
-        getCustomer(customerId, t.customers.loadDetailError),
-        listVehicles(t.customers.loadVehiclesError, true),
-      ]);
+      const customerResponse = await getCustomer(customerId, t.customers.loadDetailError);
       setCustomer(customerResponse);
-      setVehicles(vehiclesResponse.data);
+      setVehicles([]);
+      setVehiclesError(null);
+      if (customerResponse.isActive) {
+        try {
+          const response = await listVehicles(t.customers.loadVehiclesError, true);
+          setVehicles(response.data);
+        } catch (reason) {
+          setVehiclesError(
+            reason instanceof Error ? reason.message : t.customers.loadVehiclesError,
+          );
+        }
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : t.customers.loadDetailError);
     } finally {
@@ -68,7 +77,11 @@ export default function CustomerDetailPage() {
         return;
       }
 
-      const updatedCustomer = await archiveCustomer(customer.id, false, t.customers.archiveError);
+      const updatedCustomer = await archiveCustomer(
+        customer.id,
+        confirmMode === "restore",
+        t.customers.archiveError,
+      );
       setCustomer(updatedCustomer);
       setConfirmMode(null);
       await loadDetail();
@@ -112,7 +125,23 @@ export default function CustomerDetailPage() {
               {getCustomerName(customer)}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Link
+              className="inline-flex h-10 items-center rounded-lg border px-4 text-sm font-semibold"
+              href={`/customers/${customer.id}/edit`}
+            >
+              {t.customers.editAction}
+            </Link>
+            {!customer.isActive ? (
+              <button
+                disabled={isSubmitting}
+                type="button"
+                onClick={() => setConfirmMode("restore")}
+                className="rounded-lg border px-4 text-sm font-semibold"
+              >
+                {t.customers.restoreAction}
+              </button>
+            ) : null}
             {customer.isActive ? (
               <button
                 className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
@@ -152,60 +181,81 @@ export default function CustomerDetailPage() {
           />
         </dl>
 
-        <section className="mt-9">
-          <h3 className="text-lg font-semibold">{t.customers.associatedVehicles}</h3>
-          {associatedVehicles.length > 0 ? (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {associatedVehicles.map((vehicle) => (
-                <Link
-                  aria-label={`${t.vehicles.viewAction}: ${vehicle.licensePlate}`}
-                  className="group rounded-lg border border-slate-200 p-4 transition hover:border-blue-200 hover:bg-blue-50/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:hover:border-blue-900 dark:hover:bg-blue-950/20 dark:focus-visible:ring-offset-slate-900"
-                  href={`/vehicles/${vehicle.id}`}
-                  key={vehicle.id}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h4 className="font-semibold">
-                        {vehicle.make} {vehicle.model}
-                      </h4>
-                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                        {vehicle.licensePlate}
-                      </p>
+        {customer.isActive ? (
+          <section className="mt-9">
+            <h3 className="text-lg font-semibold">{t.customers.associatedVehicles}</h3>
+            {vehiclesError ? (
+              <p role="alert" className="mt-4 text-red-600">
+                {vehiclesError}
+              </p>
+            ) : associatedVehicles.length > 0 ? (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {associatedVehicles.map((vehicle) => (
+                  <Link
+                    aria-label={`${t.vehicles.viewAction}: ${vehicle.licensePlate}`}
+                    className="group rounded-lg border border-slate-200 p-4 transition hover:border-blue-200 hover:bg-blue-50/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:hover:border-blue-900 dark:hover:bg-blue-950/20 dark:focus-visible:ring-offset-slate-900"
+                    href={`/vehicles/${vehicle.id}`}
+                    key={vehicle.id}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h4 className="font-semibold">
+                          {vehicle.make} {vehicle.model}
+                        </h4>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                          {vehicle.licensePlate}
+                        </p>
+                      </div>
+                      {!vehicle.isActive ? (
+                        <StatusBadge label={t.customers.archivedStatus} />
+                      ) : null}
                     </div>
-                    {!vehicle.isActive ? <StatusBadge label={t.customers.archivedStatus} /> : null}
-                  </div>
-                  <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
-                    {vehicle.year ?? "-"} · {vehicle.initialOdometer ?? "-"} {vehicle.odometerUnit}
-                  </p>
-                  <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-blue-700 transition group-hover:text-blue-800 dark:text-blue-300 dark:group-hover:text-blue-200">
-                    {t.vehicles.viewAction}
-                    <span aria-hidden="true">{"->"}</span>
-                  </span>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-4 text-sm font-medium text-slate-500 dark:text-slate-400">
-              {t.customers.noVehicles}
-            </p>
-          )}
-        </section>
+                    <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+                      {vehicle.year ?? "-"} · {vehicle.initialOdometer ?? "-"}{" "}
+                      {vehicle.odometerUnit}
+                    </p>
+                    <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-blue-700 transition group-hover:text-blue-800 dark:text-blue-300 dark:group-hover:text-blue-200">
+                      {t.vehicles.viewAction}
+                      <span aria-hidden="true">{"->"}</span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-4 text-sm font-medium text-slate-500 dark:text-slate-400">
+                {t.customers.noVehicles}
+              </p>
+            )}
+          </section>
+        ) : null}
       </div>
 
       {confirmMode ? (
         <ConfirmDialog
           confirmLabel={
-            confirmMode === "delete" ? t.customers.deleteConfirm : t.customers.archiveConfirm
+            confirmMode === "delete"
+              ? t.customers.deleteConfirm
+              : confirmMode === "restore"
+                ? t.customers.restoreAction
+                : t.customers.archiveConfirm
           }
           isSubmitting={isSubmitting}
           message={
             confirmMode === "delete"
               ? t.customers.deleteMessage(getCustomerName(customer))
-              : t.customers.archiveMessage(getCustomerName(customer))
+              : confirmMode === "restore"
+                ? t.customers.restoreMessage(getCustomerName(customer))
+                : t.customers.archiveMessage(getCustomerName(customer))
           }
           onCancel={() => setConfirmMode(null)}
           onConfirm={confirmAction}
-          title={confirmMode === "delete" ? t.customers.deleteTitle : t.customers.archiveTitle}
+          title={
+            confirmMode === "delete"
+              ? t.customers.deleteTitle
+              : confirmMode === "restore"
+                ? t.customers.restoreAction
+                : t.customers.archiveTitle
+          }
           tone={confirmMode === "delete" ? "danger" : "default"}
         />
       ) : null}

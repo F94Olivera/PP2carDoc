@@ -37,7 +37,6 @@ protectedRouter.get("/auth/me", meController);
 protectedRouter.post("/customers", express.json({ limit: "32kb" }), createCustomerController);
 protectedRouter.get("/customers", listCustomersController);
 protectedRouter.get("/customers/:customerId", customerByIdController);
-// protectedRouter.patch("/customers/:customerId/archive", archiveCustomerController);
 protectedRouter.patch(
   "/customers/:customerId",
   express.json({ limit: "32kb" }),

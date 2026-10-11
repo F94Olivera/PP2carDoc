@@ -37,8 +37,9 @@ export const listCustomers = async (
 export const getCustomerById = async (
   context: AuthorizationContext,
   customerId: number,
+  find = findCustomerById,
 ): Promise<CustomerResponse | null> => {
-  const customer = await findCustomerById(context, customerId);
+  const customer = await find(context, customerId);
   return customer ? toCustomerResponse(customer) : null;
 };
 
@@ -59,8 +60,9 @@ export const updateCustomer = async (
   context: AuthorizationContext,
   customerId: number,
   input: UpdateCustomerInput,
+  persist = updateCustomerById,
 ) => {
-  const customer = await updateCustomerById(context, customerId, input);
+  const customer = await persist(context, customerId, input);
   return customer
     ? ({ outcome: "success", customer: toCustomerResponse(customer) } as const)
     : ({ outcome: "not_found" } as const);

@@ -1,7 +1,7 @@
 import { and, asc, count, eq } from "drizzle-orm";
 import { withUserDatabase } from "../database.js";
 import { userProfiles } from "../models/user-profile.js";
-import { customers, type NewCustomer } from "../models/customer.js";
+import { customers, type Customer, type NewCustomer } from "../models/customer.js";
 import type { AuthorizationContext } from "../schemas/authorization.js";
 import type { ListCustomersQuery, UpdateCustomerInput } from "../schemas/customer.js";
 
@@ -32,7 +32,10 @@ export const findCustomers = (
     true,
   );
 
-export const findCustomerById = (context: AuthorizationContext, customerId: number) =>
+export const findCustomerById = (
+  context: AuthorizationContext,
+  customerId: number,
+): Promise<Customer | undefined> =>
   withUserDatabase(
     context,
     async (transaction) => {
@@ -61,7 +64,7 @@ export const updateCustomerById = (
   context: AuthorizationContext,
   customerId: number,
   input: UpdateCustomerInput,
-) =>
+): Promise<Customer | undefined> =>
   withUserDatabase(context, async (transaction) => {
     const [customer] = await transaction
       .update(customers)

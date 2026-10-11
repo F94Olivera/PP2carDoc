@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type SyntheticEvent, useCallback, useEffect, useState } from "react";
 import { useI18n } from "../../../i18n/use-i18n";
-import { getCustomerName, listCustomers } from "../../customers/customer-api";
+import { getCustomerName, listAllCustomers } from "../../customers/customer-api";
 import { createVehicle } from "../vehicle-api";
 
 type VehicleForm = {
@@ -43,8 +43,8 @@ export default function NewVehiclePage() {
     setIsLoadingCustomers(true);
 
     try {
-      const response = await listCustomers(t.vehicles.loadCustomersError);
-      setCustomers(response.data.filter((customer) => customer.isActive));
+      const response = await listAllCustomers(t.vehicles.loadCustomersError);
+      setCustomers(response.filter((customer) => customer.isActive));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : t.vehicles.loadCustomersError);
     } finally {
@@ -78,6 +78,10 @@ export default function NewVehiclePage() {
     }
 
     setError(null);
+    if (!selectedCustomer || !selectedCustomer.isActive || isLoadingCustomers) {
+      setError(t.vehicles.customerPlaceholder);
+      return;
+    }
     setIsSubmitting(true);
 
     const payload: CreateVehicleRequest = {
@@ -209,7 +213,11 @@ export default function NewVehiclePage() {
             <Link className={secondaryButtonClasses} href="/vehicles">
               {t.vehicles.cancel}
             </Link>
-            <button className={primaryButtonClasses} disabled={isSubmitting} type="submit">
+            <button
+              className={primaryButtonClasses}
+              disabled={isSubmitting || isLoadingCustomers || !selectedCustomer}
+              type="submit"
+            >
               {isSubmitting ? t.vehicles.saving : t.vehicles.save}
             </button>
           </div>

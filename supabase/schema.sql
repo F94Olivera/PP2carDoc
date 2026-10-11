@@ -185,13 +185,20 @@ alter table public.customers enable row level security;
 create policy customers_access on public.customers for all to authenticated
 using (private.can_access_mechanic(mechanic_id)) with check (private.can_access_mechanic(mechanic_id));
 alter table public.vehicles enable row level security;
+-- Archived vehicles remain visible for explicit archive administration only while
+-- their customer is active. An UPDATE may restore the vehicle, so its own active
+-- flag must not be part of USING; orders enforce both active ancestors below.
 create policy vehicles_access on public.vehicles for all to authenticated
-using (exists(select 1 from public.customers c where c.id = customer_id))
-with check (exists(select 1 from public.customers c where c.id = customer_id));
+using (exists(select 1 from public.customers c where c.id = customer_id and c.is_active))
+with check (exists(select 1 from public.customers c where c.id = customer_id and c.is_active));
 alter table public.work_orders enable row level security;
 create policy work_orders_access on public.work_orders for all to authenticated
-using (exists(select 1 from public.vehicles v where v.id = vehicle_id))
-with check (exists(select 1 from public.vehicles v where v.id = vehicle_id));
+using (exists(select 1 from public.vehicles v
+  join public.customers c on c.id = v.customer_id
+  where v.id = vehicle_id and v.is_active and c.is_active))
+with check (exists(select 1 from public.vehicles v
+  join public.customers c on c.id = v.customer_id
+  where v.id = vehicle_id and v.is_active and c.is_active));
 alter table public.work_order_items enable row level security;
 create policy work_order_items_access on public.work_order_items for all to authenticated
 using (exists(select 1 from public.work_orders w where w.id = work_order_id))

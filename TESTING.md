@@ -90,3 +90,11 @@ En la reorganización documental no se ejecutaron unitarios, integraciones, buil
 `pnpm test:unit`: 11/11 aprobados (ocho casos existentes actualizados y tres nuevos con doble de persistencia). `pnpm lint`, `pnpm typecheck` y `pnpm build`: aprobados. Formato enfocado y `git diff --check`: aprobados. La suite de integración existente fue modificada, sin ejecutarla.
 
 Revisión estática de schema y seed; no se ejecutaron SQL, seed, API, Auth ni base de datos. La FK compuesta y triggers deben comprobarse en integración autorizada antes de afirmar garantías reales de RLS/concurrencia. No hubo despliegue ni commit. Guía de alineación de datos en [docs/demo-ownership-alignment.md](docs/demo-ownership-alignment.md).
+
+### 17/10/2026 — TODO paso 2: clientes y archivo
+
+`pnpm test:unit`: 18/18 comprobaciones aprobadas. Los 11 casos anteriores se mantienen; se agregaron dos unitarios de service con persistencia doble, tres de API frontend con transporte doble y dos regresiones estáticas del schema. El test del frontend se empaqueta en memoria con esbuild ya disponible; reemplaza el transporte antes de cargar el módulo, sin inicializar Auth ni realizar requests.
+
+Cobertura nueva: PATCH de archivo/restauración y edición general con payload esperado; propagación de errores; recorrido de todas las páginas de clientes/vehículos, incluido fallo de página posterior; detalle administrativo archivado y resultado de recurso inaccesible; actualización explícita de isActive. Las comprobaciones del SQL revisan USING/WITH CHECK con cliente activo, ambos padres activos para órdenes e herencia en ítems/recomendaciones; no ejecutan SQL ni demuestran RLS real, aislamiento o concurrencia.
+
+`pnpm lint`, `pnpm typecheck`, `pnpm build`, formato enfocado y `git diff --check`: aprobados. La compilación incluye la nueva ruta de edición de cliente. No se ejecutaron integraciones, API, Auth, SQL, seed ni despliegue, ni se verificó el recorrido con navegador conectado. Los endpoints de vehículos/órdenes todavía están pendientes; el detalle de cliente muestra su error de carga separado sin perder los datos del cliente. La validación funcional de RLS y de esos endpoints se conserva para una ejecución posterior explícitamente autorizada.

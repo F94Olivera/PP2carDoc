@@ -39,7 +39,7 @@ MECHANIC solo puede consultar y operar sus propios clientes y descendientes. GOD
 
 El propietario de un cliente siempre tiene rol MECHANIC. Al crear, MECHANIC usa su propia identidad; GOD debe identificar un MECHANIC destinatario. **No se permite cambiar `mechanicId` después de crear el cliente, tampoco a GOD.** No se incorpora el cambio de cliente/propietario de un vehículo en esta entrega. La propiedad de vehículos, órdenes, ítems y recomendaciones se hereda de sus padres.
 
-El código actual permite transferencias de cliente y no garantiza que el propietario sea MECHANIC; son incumplimientos pendientes, no excepciones al requisito. Las políticas y triggers de base también necesitan alinearse, dado que la Data API permite acceso directo.
+El incremento local de propiedad rechaza transferencias y exige propietario MECHANIC; las garantías SQL todavía deben aplicarse y verificarse en el proyecto de demo. La Data API requiere las mismas reglas que la API HTTP.
 
 ### Clientes y archivo
 
@@ -126,7 +126,7 @@ Métodos/rutas relativos a la base `/functions/v1/api`. Las filas pendientes ref
 | GET `/finances`                                     | Propietario/GOD | `startDate`, `endDate` por salida → `{ total }`.         | Pendiente.                           |
 | POST `/budgets/pdf`                                 | Bearer          | Datos independientes del formulario → PDF descargable.   | Pendiente.                           |
 
-El frontend de clientes hoy llama a `PATCH /customers/:id/archive`, que no existe: deberá usar el PATCH general con `isActive`. No añadir un endpoint duplicado solo para conservar esa discrepancia. No se requiere búsqueda por patente mediante un endpoint nuevo para cumplir el alcance actual.
+El frontend de clientes usa el PATCH general con `isActive` para archivo/restauración y el mismo endpoint para edición de datos, sin permitir editar propietario. No se requiere búsqueda por patente mediante un endpoint nuevo para cumplir el alcance actual.
 
 ## 7. Validación, paginación y errores
 
@@ -166,3 +166,11 @@ Estos puntos están registrados en TODO; no describen decisiones ya aprobadas ni
 Alta: MECHANIC usa su identidad por defecto; GOD debe enviar `mechanicId` de un MECHANIC existente (403 si falta o no corresponde). PATCH rechaza `mechanicId` como campo no declarado (400), incluso si repite el propietario. El repository comprueba el rol dentro de la transacción de alta.
 
 El schema de demo incorpora propietario MECHANIC mediante FK compuesta con discriminador generado, que impide promociones de propietarios incluso concurrentes; triggers impiden cambiar propietario de cliente y padres de vehículo/orden. Se conserva el índice privado de patentes normalizadas y su restricción única. Los perfiles son de solo lectura para authenticated, incluido GOD; altas/roles quedan en seed/SQL administrativo. Estos cambios SQL están en archivos, sin aplicar ni verificar en una base viva.
+
+## Estado del incremento de clientes y archivo — 17/10/2026
+
+El detalle permite editar datos y restaurar un cliente archivado con confirmación. El formulario de alta y edición se comparte; errores del módulo de vehículos no impiden administrar al cliente. El detalle archivado no ofrece recorrido a vehículos. La búsqueda de clientes y la selección para alta de vehículo recorren todas las páginas; esta última solicita solo activos y valida que el ID seleccionado pertenezca a las opciones cargadas.
+
+En el schema local, vehículos exige cliente activo en USING y WITH CHECK. Un vehículo archivado sigue visible para su administración mientras el cliente esté activo; sus órdenes e hijos quedan inaccesibles. Órdenes exige vehículo y cliente activos para lectura/escritura; ítems y recomendaciones heredan esa condición mediante RLS de la orden. GOD respeta las mismas condiciones. Primero se restaura cliente y luego, si corresponde, vehículo; restaurar cliente no restaura vehículos ni modifica órdenes. El detalle y PATCH de cliente siguen admitiendo archivados para administración autorizada.
+
+Estos controles SQL cubren Data API y la frontera transaccional autenticada del backend cuando se aplique el schema. Endpoints y validaciones de service de vehículos/órdenes permanecen en TODO pasos 3/4; no se anuncian como disponibles. Las pruebas de políticas son estáticas y no verifican comportamiento real ni concurrencia. El despliegue y sus datos no cambiaron. El tratamiento financiero de historial archivado sigue pendiente del paso de finanzas.

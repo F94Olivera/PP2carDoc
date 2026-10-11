@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createCustomer } from "../src/services/customer-service.js";
+import {
+  createCustomer,
+  getCustomerById,
+  updateCustomer,
+} from "../src/services/customer-service.js";
 import type { AuthorizationContext } from "../src/schemas/authorization.js";
 
 const mechanicId = "ed30c681-b04c-4216-a35e-14d354972461";
@@ -75,5 +79,38 @@ test("missing or non-MECHANIC owner rejected by persistence produces forbidden o
       async () => null,
     ),
     { outcome: "forbidden" },
+  );
+});
+
+test("archive and restore pass only the explicit active flag to persistence", async () => {
+  for (const actor of [context, { ...context, userId: godId, role: "GOD" as const }]) {
+    for (const isActive of [false, true]) {
+      const result = await updateCustomer(
+        actor,
+        row.id,
+        { isActive },
+        async (identity, id, input) => {
+          assert.equal(identity, actor);
+          assert.equal(id, row.id);
+          assert.deepEqual(input, { isActive });
+          return { ...row, isActive };
+        },
+      );
+      assert.equal(result.outcome, "success");
+      if (result.outcome === "success") assert.equal(result.customer.isActive, isActive);
+    }
+  }
+});
+
+test("archive administration allows archived detail but preserves missing/foreign outcomes", async () => {
+  const customer = await getCustomerById(context, row.id, async () => ({
+    ...row,
+    isActive: false,
+  }));
+  assert.equal(customer?.isActive, false);
+  assert.equal(await getCustomerById(context, row.id, async () => undefined), null);
+  assert.deepEqual(
+    await updateCustomer(context, row.id, { isActive: true }, async () => undefined),
+    { outcome: "not_found" },
   );
 });

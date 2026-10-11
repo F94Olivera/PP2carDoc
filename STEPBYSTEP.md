@@ -12,9 +12,9 @@ Esto surge de lectura del repositorio; no constituye validación funcional ni de
 
 - [x] Prohibir transferencias de cliente en schemas, services y base; propietario siempre MECHANIC.
 - [x] Alinear los contratos y unitarios que hoy permiten esa transferencia.
-- [ ] Definir recorridos operativos y de administración de archivados; impedir crear descendientes sobre padres no operativos.
-- [ ] Corregir el PATCH de archivo del frontend para usar la ruta existente y comprobar CRUD completo desde sus pantallas.
-- [ ] Actualizar OpenAPI y REQUIREMENTS al reflejar el comportamiento implementado.
+- [x] Definir recorridos operativos y de administración de archivados; impedir descendientes sobre padres no operativos en el schema local. Services HTTP de vehículos/órdenes se completan en sus incrementos.
+- [x] Corregir PATCH de archivo; conectar edición y restauración. Verificación aislada de transporte y compilación; recorrido real de pantallas pendiente de integración autorizada.
+- [x] Actualizar OpenAPI y REQUIREMENTS para propiedad, clientes y archivo.
 
 Salida: clientes funciona con las reglas confirmadas; unitarios aislados cubren permisos y validaciones. No ejecutar schema, seed ni integraciones sin autorización específica.
 
@@ -78,3 +78,7 @@ Al completar un incremento, registrar solamente alcance final, cambios, verifica
 ### 17/10/2026 — TODO paso 1
 
 Implementados contratos y autorización de alta/edición, garantías SQL de propiedad y parentesco, perfiles sin escritura Data API, seed revisado y suite de integración existente alineada sin ejecutarla. OpenAPI y REQUIREMENTS actualizados para este alcance. Archivo y frontend del incremento 1 siguen pendientes en TODO paso 2. Resultados locales en TESTING; sin cambios remotos.
+
+### 17/10/2026 — TODO paso 2
+
+Corregido PATCH de archivo y conectadas edición/restauración explícitas. Formulario compartido de clientes, selección activa y paginación completa en búsqueda/selección/detalle. El fallo del endpoint pendiente de vehículos se muestra sin bloquear al cliente. RLS local condiciona descendientes al estado de sus padres, conservando administración del vehículo archivado bajo cliente activo. No se implementaron los endpoints de vehículos/órdenes de los pasos siguientes. Verificaciones locales y límites en TESTING; sin cambios remotos.
