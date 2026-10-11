@@ -15,17 +15,22 @@ drop table if exists public.work_order_recommendations, public.work_order_items,
   public.user_profiles cascade;
 drop function if exists private.can_access_mechanic(uuid), private.current_app_role(),
   private.session_active(), private.sync_vehicle_plate(), private.sync_customer_plates(),
-  private.sync_profile_claim(), private.create_user_profile() cascade;
+  private.sync_profile_claim(), private.create_user_profile(),
+  private.enforce_customer_owner(), private.prevent_parent_change() cascade;
 
 create table public.user_profiles (
   id uuid primary key references auth.users(id) on delete restrict,
   role text not null default 'MECHANIC' check (role in ('GOD', 'MECHANIC')),
   created_at timestamp not null default now(),
-  updated_at timestamp not null default now()
+  updated_at timestamp not null default now(),
+  unique (id, role)
 );
 create table public.customers (
   id serial primary key,
   mechanic_id uuid not null references public.user_profiles(id) on delete restrict,
+  -- Composite FK also prevents role promotion racing with customer creation.
+  mechanic_role text generated always as ('MECHANIC'::text) stored,
+  foreign key (mechanic_id, mechanic_role) references public.user_profiles(id, role) on update restrict on delete restrict,
   first_name text not null, last_name text, email text, phone text, address text,
   document_number text, notes text, is_active boolean not null default true,
   created_at timestamp not null default now(), updated_at timestamp not null default now(),
@@ -79,26 +84,43 @@ create function private.sync_vehicle_plate() returns trigger
 language plpgsql security definer set search_path = '' as $$
 declare owner_id uuid;
 begin
-  -- Lock the parent against simultaneous ownership transfers.
+  -- Read the immutable owner; the unique claim serializes competing plate writes.
   select mechanic_id into strict owner_id from public.customers where id = new.customer_id for share;
   insert into private.vehicle_plate_claims(vehicle_id, mechanic_id, license_plate)
   values(new.id, owner_id, upper(trim(new.license_plate)))
   on conflict(vehicle_id) do update set mechanic_id = excluded.mechanic_id, license_plate = excluded.license_plate;
   return new;
 end $$;
-create trigger vehicles_plate after insert or update of customer_id, license_plate on public.vehicles
+create trigger vehicles_plate after insert or update of license_plate on public.vehicles
 for each row execute function private.sync_vehicle_plate();
-create function private.sync_customer_plates() returns trigger
+-- Immutable ownership/parents apply even to privileged writes, independently of RLS.
+create function private.enforce_customer_owner() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
-  if new.mechanic_id is distinct from old.mechanic_id then
-    update private.vehicle_plate_claims set mechanic_id = new.mechanic_id
-    where vehicle_id in (select id from public.vehicles where customer_id = new.id);
+  if tg_op = 'UPDATE' and new.mechanic_id is distinct from old.mechanic_id then
+    raise exception 'Customer owner is immutable' using errcode = '23514';
+  end if;
+  perform 1 from public.user_profiles where id = new.mechanic_id and role = 'MECHANIC' for share;
+  if not found then
+    raise exception 'Customer owner must be MECHANIC' using errcode = '23514';
   end if;
   return new;
 end $$;
-create trigger customers_plates after update of mechanic_id on public.customers
-for each row execute function private.sync_customer_plates();
+create trigger customers_owner before insert or update of mechanic_id on public.customers
+for each row execute function private.enforce_customer_owner();
+
+create function private.prevent_parent_change() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if (to_jsonb(new)->tg_argv[0]) is distinct from (to_jsonb(old)->tg_argv[0]) then
+    raise exception 'Parent is immutable' using errcode = '23514';
+  end if;
+  return new;
+end $$;
+create trigger vehicles_parent before update of customer_id on public.vehicles
+for each row execute function private.prevent_parent_change('customer_id');
+create trigger work_orders_parent before update of vehicle_id on public.work_orders
+for each row execute function private.prevent_parent_change('vehicle_id');
 
 -- Narrow security-definer helpers read protected auth/session/profile data only.
 -- They are private, have fixed search paths, and derive identity from auth.uid().
@@ -179,11 +201,7 @@ create policy recommendations_access on public.work_order_recommendations for al
 using (exists(select 1 from public.work_orders w where w.id = work_order_id))
 with check (exists(select 1 from public.work_orders w where w.id = work_order_id));
 
--- Only GOD can administratively change roles; immutable profile identity and timestamps are not writable.
-grant update(role) on public.user_profiles to authenticated;
-create policy profiles_update on public.user_profiles for update to authenticated
-using (private.current_app_role() = 'GOD')
-with check (private.current_app_role() = 'GOD');
+-- Profiles are read-only through Data API, including GOD. Roles are seed/admin SQL only.
 
 -- Existing hosted helper is an event trigger, not an application RPC.
 -- It is absent on some fresh local installations.

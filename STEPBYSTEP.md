@@ -10,8 +10,8 @@ Esto surge de lectura del repositorio; no constituye validación funcional ni de
 
 ## 1. Alinear propiedad, archivo y clientes
 
-- [ ] Prohibir transferencias de cliente en schemas, services y base; propietario siempre MECHANIC.
-- [ ] Alinear los contratos y unitarios que hoy permiten esa transferencia.
+- [x] Prohibir transferencias de cliente en schemas, services y base; propietario siempre MECHANIC.
+- [x] Alinear los contratos y unitarios que hoy permiten esa transferencia.
 - [ ] Definir recorridos operativos y de administración de archivados; impedir crear descendientes sobre padres no operativos.
 - [ ] Corregir el PATCH de archivo del frontend para usar la ruta existente y comprobar CRUD completo desde sus pantallas.
 - [ ] Actualizar OpenAPI y REQUIREMENTS al reflejar el comportamiento implementado.
@@ -74,3 +74,7 @@ Salida: alcance implementado, comprobaciones registradas y limitaciones explíci
 | 17/10/2026 | Reorganización de Markdown; incorporación de reglas confirmadas; flujos integrados en REQUIREMENTS; plan y TODO. | Revisión estática y comprobaciones documentales; resultados en TESTING. Sin pruebas funcionales ni servicios externos. | Todo cambio de código listado en TODO y los incrementos anteriores. |
 
 Al completar un incremento, registrar solamente alcance final, cambios, verificaciones efectivamente realizadas y pendientes. No marcar terminado por haber escrito el plan o creado un test.
+
+### 17/10/2026 — TODO paso 1
+
+Implementados contratos y autorización de alta/edición, garantías SQL de propiedad y parentesco, perfiles sin escritura Data API, seed revisado y suite de integración existente alineada sin ejecutarla. OpenAPI y REQUIREMENTS actualizados para este alcance. Archivo y frontend del incremento 1 siguen pendientes en TODO paso 2. Resultados locales en TESTING; sin cambios remotos.

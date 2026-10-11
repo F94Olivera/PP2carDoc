@@ -42,12 +42,17 @@ export const getCustomerById = async (
   return customer ? toCustomerResponse(customer) : null;
 };
 
-export const createCustomer = async (context: AuthorizationContext, input: CreateCustomerInput) => {
+export const createCustomer = async (
+  context: AuthorizationContext,
+  input: CreateCustomerInput,
+  persist = insertCustomer,
+) => {
   if (!canChooseMechanic(context, input.mechanicId)) return { outcome: "forbidden" } as const;
-  const customer = await insertCustomer(context, {
+  const customer = await persist(context, {
     ...input,
     mechanicId: input.mechanicId ?? context.userId,
   });
+  if (!customer) return { outcome: "forbidden" } as const;
   return { outcome: "success", customer: toCustomerResponse(customer) } as const;
 };
 export const updateCustomer = async (
@@ -55,7 +60,6 @@ export const updateCustomer = async (
   customerId: number,
   input: UpdateCustomerInput,
 ) => {
-  if (!canChooseMechanic(context, input.mechanicId)) return { outcome: "forbidden" } as const;
   const customer = await updateCustomerById(context, customerId, input);
   return customer
     ? ({ outcome: "success", customer: toCustomerResponse(customer) } as const)

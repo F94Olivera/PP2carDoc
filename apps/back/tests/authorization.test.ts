@@ -73,6 +73,8 @@ test("mechanics cannot choose another owner; GOD can", () => {
   assert.equal(canChooseMechanic(context, userId), true);
   assert.equal(canChooseMechanic(context, otherId), false);
   assert.equal(canChooseMechanic({ ...context, role: "GOD" }, otherId), true);
+  assert.equal(canChooseMechanic({ ...context, role: "GOD" }), false);
+  assert.equal(canChooseMechanic({ ...context, role: "GOD" }, userId), false);
 });
 test("customer schemas reject privilege fields, generated fields and empty updates", () => {
   for (const field of ["role", "id", "createdAt", "user_metadata", "unexpected"]) {
@@ -85,6 +87,11 @@ test("customer schemas reject privilege fields, generated fields and empty updat
       false,
     );
   }
+  assert.equal(updateCustomerSchema.safeParse({ mechanicId: otherId }).success, false);
+  assert.equal(
+    updateCustomerSchema.safeParse({ notes: "Edit", mechanicId: userId }).success,
+    false,
+  );
   assert.equal(updateCustomerSchema.safeParse({}).success, false);
   assert.equal(createCustomerSchema.safeParse({ firstName: "  " }).success, false);
   assert.equal(updateCustomerSchema.safeParse({ firstName: null }).success, false);

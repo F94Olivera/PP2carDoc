@@ -24,7 +24,7 @@ Ejecutar una alternativa, no las tres para repetir el mismo resultado. Todos apu
 
 `apps/back/tests/authorization.test.ts` contiene ocho casos: parseo de identidad ya verificada, límite de 15 minutos, identidad distinta, tokens viejos/futuros, claims de sesión/rol inválidos, metadata no confiable, elección de propietario/schemas estrictos y clasificación de sesión revocada. Algunos temas comparten caso. No prueban firmas JWT reales, HTTP completo, RLS ni transacciones reales.
 
-El caso actual que permite elegir otro propietario como GOD y los schemas de edición deben revisarse al separar alta de transferencia. Un unitario existente no demuestra conformidad con las reglas nuevas.
+Los schemas ya separan alta de edición y rechazan mechanicId en PATCH. customer-service.test.ts usa dobles de persistencia para alta propia, asignación por GOD y propietarios rechazados, sin inicializar la base.
 
 ## Comprobaciones de código
 
@@ -73,7 +73,7 @@ Requieren API, Auth y base del mismo proyecto de demo. Configurar en `.env` raí
 
 Los dos primeros usan `TEST_LOGIN_EMAIL` y `TEST_LOGIN_PASSWORD`; `TEST_API_URL` permite seleccionar la API. La suite multiusuario usa las cuentas del seed y `SEED_DEMO_PASSWORD`. Los scripts cargan `../../.env` desde el workspace backend.
 
-La suite de autorización aún incluye transferencias permitidas por la implementación anterior: debe alinearse antes de considerarla una verificación de las reglas finales. No sumar un comando agregado que ejecute las tres.
+La suite de autorización fue alineada para rechazar transferencias, reasignaciones por GOD, propietarios inválidos y cambios de rol por Data API; conserva cambios administrativos de rol solo sobre GOD sin clientes. No fue ejecutada tras estos cambios. No sumar un comando agregado que ejecute las tres.
 
 ## Resultados y límites
 
@@ -84,3 +84,9 @@ La suite de autorización aún incluye transferencias permitidas por la implemen
 | 17/10/2026 | Diagnóstico histórico de performance.                                          | Ver informe en docs; muestras y límites propios. No demuestra conformidad con las reglas nuevas ni el estado del despliegue actual.                                                                         |
 
 En la reorganización documental no se ejecutaron unitarios, integraciones, build, seed ni schema. En la preparación posterior del commit se ejecutaron y aprobaron formato enfocado, `pnpm lint`, `pnpm typecheck`, `pnpm build` y `git diff --check`; no se ejecutaron unitarios ni integraciones. Tampoco se verificó el despliegue remoto. Registrar futuras ejecuciones con fecha, comando, resultado, alcance y restricciones; no transformar escenarios planeados en resultados aprobados.
+
+### 17/10/2026 — TODO paso 1: propiedad y autorización
+
+`pnpm test:unit`: 11/11 aprobados (ocho casos existentes actualizados y tres nuevos con doble de persistencia). `pnpm lint`, `pnpm typecheck` y `pnpm build`: aprobados. Formato enfocado y `git diff --check`: aprobados. La suite de integración existente fue modificada, sin ejecutarla.
+
+Revisión estática de schema y seed; no se ejecutaron SQL, seed, API, Auth ni base de datos. La FK compuesta y triggers deben comprobarse en integración autorizada antes de afirmar garantías reales de RLS/concurrencia. No hubo despliegue ni commit. Guía de alineación de datos en [docs/demo-ownership-alignment.md](docs/demo-ownership-alignment.md).

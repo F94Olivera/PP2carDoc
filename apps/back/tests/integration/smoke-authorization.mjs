@@ -66,7 +66,9 @@ const asUser = (session, operation, overrides = {}) =>
     return operation(tx);
   });
 const expectDenied = async (operation) => {
-  await assert.rejects(operation, (error) => ["42501", "23503", "23505"].includes(error.code));
+  await assert.rejects(operation, (error) =>
+    ["42501", "23503", "23505", "23514"].includes(error.code),
+  );
 };
 
 try {
@@ -142,7 +144,7 @@ try {
   assert.equal((await api(`/customers/${created[1]}`, a, "DELETE")).status, 404);
   assert.equal(
     (await api(`/customers/${created[0]}`, a, "PATCH", { mechanicId: b.id })).status,
-    403,
+    400,
   );
   assert.equal((await api(`/customers/${created[0]}`, a, "PATCH", {})).status, 400);
   await json(
@@ -151,13 +153,32 @@ try {
   assert.equal((await json(await api("/customers?includeArchived=true", a))).meta.total, 11);
   assert.equal((await json(await api("/customers", a))).meta.total, 10);
   await json(await api(`/customers/${created[1]}`, god, "PATCH", { notes: "GOD edit" }));
-  // First remove the conflicting document, then transfer ownership.
-  await json(
-    await api(`/customers/${created[0]}`, god, "PATCH", { documentNumber: null, mechanicId: b.id }),
+  for (const mechanicId of [undefined, god.id, "00000000-0000-4000-8000-000000000001"]) {
+    assert.equal(
+      (await api("/customers", god, "POST", { firstName: "Invalid owner", mechanicId })).status,
+      403,
+    );
+  }
+  const assigned = await json(
+    await api("/customers", god, "POST", { firstName: "Assigned", mechanicId: a.id }),
+    201,
   );
-  assert.equal((await api(`/customers/${created[0]}`, a)).status, 404);
-  assert.equal((await api(`/customers/${created[0]}`, b)).status, 200);
-  await json(await api(`/customers/${created[0]}`, god, "PATCH", { mechanicId: a.id }));
+  created.push(assigned.id);
+  assert.equal(assigned.mechanicId, a.id);
+  assert.equal(
+    (await api(`/customers/${created[0]}`, god, "PATCH", { mechanicId: b.id })).status,
+    400,
+  );
+  await expectDenied(() =>
+    asUser(god, (tx) => tx`update customers set mechanic_id=${b.id} where id=${created[0]}`),
+  );
+  await expectDenied(() =>
+    asUser(
+      god,
+      (tx) => tx`insert into customers(mechanic_id,first_name) values(${god.id},'Invalid')`,
+    ),
+  );
+  await expectDenied(() => sql`update user_profiles set role='GOD' where id=${a.id}`);
 
   logger.info("PASS: HTTP identity, isolated pagination, customer CRUD and owner selection");
 
@@ -298,8 +319,8 @@ try {
   testVehicles.push(conflicting);
   assert.equal(
     (await api(`/customers/${created[0]}`, god, "PATCH", { mechanicId: b.id })).status,
-    409,
-    "transfer detects plate collision",
+    400,
+    "transfer is rejected before checking plate collision",
   );
   await sql`delete from vehicles where id=${conflicting}`;
   const inheritedVehicle = testVehicles[0];
@@ -317,12 +338,26 @@ try {
       vehicles: inheritedVehicle,
     };
   });
-  await json(await api(`/customers/${created[0]}`, god, "PATCH", { mechanicId: b.id }));
+  assert.equal(
+    (await api(`/customers/${created[0]}`, god, "PATCH", { mechanicId: b.id })).status,
+    400,
+  );
+  await expectDenied(() =>
+    asUser(
+      god,
+      (tx) => tx`update vehicles set customer_id=${bCustomer} where id=${inheritedVehicle}`,
+    ),
+  );
+  await expectDenied(() =>
+    asUser(
+      god,
+      (tx) => tx`update work_orders set vehicle_id=${bv} where id=${inherited.work_orders}`,
+    ),
+  );
   for (const [table, id] of Object.entries(inherited)) {
-    assert.deepEqual(await json(await rest(table, a, "GET", undefined, `?id=eq.${id}`)), []);
-    assert.equal((await json(await rest(table, b, "GET", undefined, `?id=eq.${id}`))).length, 1);
+    assert.equal((await json(await rest(table, a, "GET", undefined, `?id=eq.${id}`))).length, 1);
+    assert.deepEqual(await json(await rest(table, b, "GET", undefined, `?id=eq.${id}`)), []);
   }
-  await json(await api(`/customers/${created[0]}`, god, "PATCH", { mechanicId: a.id }));
   await sql`delete from work_orders where vehicle_id=${inheritedVehicle}`;
   await sql`delete from vehicles where id=${inheritedVehicle}`;
   testVehicles.length = 0;
@@ -367,10 +402,12 @@ try {
     403,
     "profile identity is immutable even for GOD",
   );
-  assert.deepEqual(
-    await json(await rest("user_profiles", a, "PATCH", { role: "GOD" }, `?id=eq.${a.id}`)),
-    [],
-  );
+  for (const session of [a, god]) {
+    assert.equal(
+      (await rest("user_profiles", session, "PATCH", { role: "GOD" }, `?id=eq.${a.id}`)).status,
+      403,
+    );
+  }
   const [original] = await sql`select raw_user_meta_data from auth.users where id=${a.id}`;
   metadata = { id: a.id, value: original.raw_user_meta_data };
   const metadataResponse = await fetch(`${authUrl}/auth/v1/user`, {
@@ -395,7 +432,7 @@ try {
   assert.equal((await api("/auth/me", tampered)).status, 401);
 
   logger.info(
-    "PASS: inherited RLS, child writes, plate concurrency, transfer and metadata escalation",
+    "PASS: inherited RLS, child writes, plate concurrency, immutable ownership and metadata escalation",
   );
 
   // A signed GOD claim remains in this token, but current database role controls access.
@@ -405,11 +442,11 @@ try {
   assert.deepEqual(await json(await rest("vehicles", god)), []);
   await sql`update user_profiles set role='GOD' where id=${god.id}`;
   assert.equal((await json(await api("/auth/me", god))).user.role, "GOD");
-  await json(await rest("user_profiles", god, "PATCH", { role: "GOD" }, `?id=eq.${b.id}`));
-  assert.equal((await json(await api("/auth/me", b))).user.role, "GOD");
-  assert.equal((await api(`/customers/${aCustomer}`, b)).status, 200);
-  await json(await rest("user_profiles", god, "PATCH", { role: "MECHANIC" }, `?id=eq.${b.id}`));
-  assert.equal((await api(`/customers/${aCustomer}`, b)).status, 404);
+  assert.equal(
+    (await rest("user_profiles", god, "PATCH", { role: "GOD" }, `?id=eq.${b.id}`)).status,
+    403,
+  );
+  assert.equal((await json(await api("/auth/me", b))).user.role, "MECHANIC");
 
   for (const id of created)
     assert.equal((await api(`/customers/${id}`, god, "DELETE")).status, 204);

@@ -30,9 +30,11 @@ const customerFields = {
   address: z.string().max(1000).nullable().optional(),
   documentNumber: z.string().trim().min(1).max(100).nullable().optional(),
   notes: z.string().max(10000).nullable().optional(),
-  mechanicId: z.uuid().optional(),
 };
-export const createCustomerSchema = z.strictObject(customerFields);
+export const createCustomerSchema = z.strictObject({
+  ...customerFields,
+  mechanicId: z.uuid().optional(),
+});
 export const updateCustomerSchema = z
   .strictObject({ ...customerFields, isActive: z.boolean().optional() })
   .partial()

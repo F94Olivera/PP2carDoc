@@ -225,6 +225,17 @@ const ensureDemoUsers = async () => {
         await tx.execute(sql`update auth.users set encrypted_password = extensions.crypt(${password}, extensions.gen_salt('bf')),
           email_confirmed_at = now(), updated_at = now() where id = ${userId}::uuid`);
       }
+      // Never promote an existing customer owner; old non-seed data needs manual review.
+      const owned = await tx
+        .select({ id: customers.id })
+        .from(customers)
+        .where(sql`${customers.mechanicId} = ${userId}::uuid`)
+        .limit(1);
+      if (fixture.role === "GOD" && owned.length) {
+        throw new Error(
+          "GOD demo account owns non-seed customers; review demo data before seeding",
+        );
+      }
       await tx.execute(sql`insert into public.user_profiles(id, role) values(${userId}::uuid, ${fixture.role})
         on conflict(id) do update set role = excluded.role`);
       return userId;
@@ -239,9 +250,12 @@ const ensureDemoUsers = async () => {
 };
 
 const seedSuperheroes = async () => {
+  const password = process.env.SEED_DEMO_PASSWORD;
+  if (!password || password.length < 16)
+    throw new Error("Set SEED_DEMO_PASSWORD (at least 16 characters) in root .env");
   await initializeDatabase();
-  const mechanicIds = await ensureDemoUsers();
   await clearPreviousSuperheroSeed();
+  const mechanicIds = await ensureDemoUsers();
 
   const database = getDatabase();
 

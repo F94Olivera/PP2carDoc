@@ -52,7 +52,7 @@ export const createCustomerController: AuthenticatedHandler = async (req, res) =
   }
   const result = await createCustomer(res.locals.authorization, parsed.data);
   if (result.outcome === "forbidden") {
-    res.status(403).json({ error: "Cannot choose another mechanic." });
+    res.status(403).json({ error: "Customer owner must be an authorized existing MECHANIC." });
     return;
   }
   res.status(201).json(result.customer);
@@ -65,10 +65,6 @@ export const updateCustomerController: AuthenticatedHandler = async (req, res) =
     return;
   }
   const result = await updateCustomer(res.locals.authorization, params.data.customerId, body.data);
-  if (result.outcome === "forbidden") {
-    res.status(403).json({ error: "Cannot choose another mechanic." });
-    return;
-  }
   if (result.outcome === "not_found") {
     res.status(404).json({ error: "Customer not found." });
     return;

@@ -9,7 +9,9 @@ export type CreateCustomerRequest = {
   notes?: string | null;
 };
 
-export type UpdateCustomerRequest = Partial<CreateCustomerRequest> & { isActive?: boolean };
+export type UpdateCustomerRequest = Partial<Omit<CreateCustomerRequest, "mechanicId">> & {
+  isActive?: boolean;
+};
 
 export type CustomerResponse = {
   mechanicId: string;

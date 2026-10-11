@@ -39,7 +39,9 @@ export const identityFromVerifiedToken = (
 };
 
 export const canChooseMechanic = (context: AuthorizationContext, mechanicId?: string) =>
-  mechanicId === undefined || mechanicId === context.userId || context.role === "GOD";
+  context.role === "GOD"
+    ? mechanicId !== undefined && mechanicId !== context.userId
+    : mechanicId === undefined || mechanicId === context.userId;
 
 export const classifyAuthenticationError = (error: {
   status?: number;

@@ -152,7 +152,7 @@ paths:
           description: Authentication unavailable or unconfigured
     post:
       summary: Create a customer
-      description: The owner defaults to the authenticated user. Only GOD can choose another mechanicId. Unknown body fields are rejected.
+      description: MECHANIC defaults to itself and cannot choose another owner. GOD must supply an existing MECHANIC mechanicId; GOD cannot own customers. Invalid or unauthorized owners return 403. Unknown body fields are rejected.
       security:
         - bearerAuth: []
       requestBody:
@@ -173,9 +173,9 @@ paths:
         "401":
           description: Invalid token, expired token or inactive session
         "403":
-          description: Cannot assign another mechanic
+          description: Owner must be an authorized existing MECHANIC
         "409":
-          description: Duplicate document for this mechanic or unknown owner
+          description: Duplicate document for this mechanic
         "413":
           description: Body exceeds 32 KB
         "429":
@@ -237,7 +237,7 @@ paths:
           description: Authentication unavailable or unconfigured
     patch:
       summary: Update a customer
-      description: MECHANIC can edit its customers. Only GOD can transfer ownership; the transfer includes all vehicles and history and fails if it creates document or plate conflicts.
+      description: MECHANIC can edit its customers; GOD can edit any customer. mechanicId is immutable and rejected with 400 even for GOD.
       security:
         - bearerAuth: []
       parameters:
@@ -265,12 +265,10 @@ paths:
           description: Invalid ID, empty body or undeclared fields
         "401":
           description: Invalid token or inactive session
-        "403":
-          description: Cannot assign another mechanic
         "404":
           description: Customer missing or inaccessible
         "409":
-          description: Document, vehicle plate or owner reference conflict
+          description: Duplicate document for this mechanic
         "413":
           description: Body exceeds 32 KB
         "429":
@@ -540,7 +538,5 @@ components:
           $ref: "#/components/schemas/CreateCustomerInput/properties/documentNumber"
         notes:
           $ref: "#/components/schemas/CreateCustomerInput/properties/notes"
-        mechanicId:
-          $ref: "#/components/schemas/CreateCustomerInput/properties/mechanicId"
         isActive:
           type: boolean

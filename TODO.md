@@ -1,15 +1,17 @@
 # Cambios de código pendientes
 
-Ninguna tarea de este documento fue implementada durante la reorganización documental del 17/10/2026. El usuario autorizó únicamente Markdown. No ejecutar este backlog automáticamente: se trabajará después. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
+El backlog se inició tras la reorganización documental del 17/10/2026. El paso 1 fue implementado localmente por solicitud del usuario; no se aplicó al despliegue. Los demás pasos siguen pendientes. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
 
 ## 1. Propiedad y autorización — primero
 
-- [ ] Separar creación y edición de clientes en `apps/back/src/schemas/customer.ts` y `packages/types/src/customer.ts`: permitir asignar MECHANIC al crear como GOD, prohibir cambiar `mechanicId` en PATCH incluso como GOD. La asignación por defecto a GOD tampoco es válida.
-- [ ] Ajustar `customer-service.ts` y repositories para comprobar que el propietario existe y tiene rol MECHANIC. Mantener las reglas en la base ante Data API directa; una FK al perfil no comprueba su rol.
-- [ ] Alinear `supabase/schema.sql`: hoy las políticas permiten cambiar propietario y los triggers mantienen patentes durante transferencias. Impedir reasignaciones de cliente y de padres de vehículo/orden. Revisar triggers que quedan obsoletos sin perder unicidad de patente bajo concurrencia.
-- [ ] Evitar que un cambio de rol deje a GOD como propietario de clientes; revisar la operación directa de perfiles que hoy permite GOD. La aplicación solo necesita seed para altas/roles por ahora.
-- [ ] Revisar el seed para que sus fixtures sigan cumpliendo las reglas; documentar cómo alinear datos de demo preexistentes sin asumir que editar SQL cambia el despliegue.
-- [ ] Actualizar unitarios y `tests/integration/smoke-authorization.mjs`: hoy prueban transferencias permitidas a GOD. Corregir escenarios a rechazo de transferencias y propietario MECHANIC. No crear una integración nueva ni ejecutar las existentes sin las autorizaciones indicadas en TESTING.
+- [x] Separar creación y edición de clientes en `apps/back/src/schemas/customer.ts` y `packages/types/src/customer.ts`: permitir asignar MECHANIC al crear como GOD, prohibir cambiar `mechanicId` en PATCH incluso como GOD. La asignación por defecto a GOD tampoco es válida.
+- [x] Ajustar `customer-service.ts` y repositories para comprobar que el propietario existe y tiene rol MECHANIC. Mantener las reglas en la base ante Data API directa; una FK al perfil no comprueba su rol.
+- [x] Alinear `supabase/schema.sql`: hoy las políticas permiten cambiar propietario y los triggers mantienen patentes durante transferencias. Impedir reasignaciones de cliente y de padres de vehículo/orden. Revisar triggers que quedan obsoletos sin perder unicidad de patente bajo concurrencia.
+- [x] Evitar que un cambio de rol deje a GOD como propietario de clientes; revisar la operación directa de perfiles que hoy permite GOD. La aplicación solo necesita seed para altas/roles por ahora.
+- [x] Revisar el seed para que sus fixtures sigan cumpliendo las reglas; documentar cómo alinear datos de demo preexistentes sin asumir que editar SQL cambia el despliegue.
+- [x] Actualizar unitarios y `tests/integration/smoke-authorization.mjs`: hoy prueban transferencias permitidas a GOD. Corregir escenarios a rechazo de transferencias y propietario MECHANIC. No crear una integración nueva ni ejecutar las existentes sin las autorizaciones indicadas en TESTING.
+
+Verificación local y límites en TESTING. Para alinear una demo existente, consultar [docs/demo-ownership-alignment.md](docs/demo-ownership-alignment.md); editar el schema no actualiza la base desplegada.
 
 ## 2. Clientes y archivo
 
@@ -40,7 +42,7 @@ Ninguna tarea de este documento fue implementada durante la reorganización docu
 - [ ] Usar `fetchAuthenticated` en vehículos/órdenes, finanzas y PDF: hoy llaman a `fetchApi` con `credentials: include` sin Bearer, a diferencia de clientes.
 - [ ] Revisar logout del frontend y renovación para mantener coherencia con revocación de sesión y límite de 15 minutos de la API.
 - [ ] Alinear `packages/types/src/api-error.ts` y consumidores con el formato implementado `{ error: string }`; no mantener contratos divergentes por módulo.
-- [ ] Actualizar `docs/openapi.yaml` en la misma entrega que cambie endpoints. Hoy describe transferencias de propietario que las reglas finales prohíben; se mantiene intacto en esta tarea por limitar la autorización a Markdown.
+- [ ] Actualizar `docs/openapi.yaml` en la misma entrega que cambie endpoints. Los contratos de propiedad de clientes se alinearon en el paso 1; mantenerlos actualizados en los siguientes módulos.
 
 ## 6. Finanzas
 
@@ -63,3 +65,17 @@ Ninguna tarea de este documento fue implementada durante la reorganización docu
 - [ ] Al terminar funcionalidades, revisar requests duplicadas/carreras en efectos y viajes secuenciales a Postgres; evaluar instrumentación Pino/Server-Timing y volumen antes de modificar el pool `max: 1`.
 - [ ] La selección regional `x-region: us-west-2` ya existe en el transporte actual: no registrarla como optimización pendiente de implementar. Las mediciones nuevas con Auth/base/API requieren autorización explícita.
 - [ ] Actualizar TESTING con resultados reales y cerrar casillas solo tras implementar y verificar. Ningún resultado histórico demuestra el estado remoto o la conformidad con las nuevas reglas.
+
+## 9. Cierre en Supabase: seed, schema, integraciones y deploy
+
+Este bloque reúne el trabajo pendiente de preparación y ejecución sobre Supabase al finalizar los cambios de aplicación. El paso 1 modificó localmente schema, seed y la integración de autorización; esos archivos todavía no fueron aplicados ni probados contra Supabase. Este listado y la autorización para commit/push no autorizan ejecutar schema, seed, integraciones ni deploy.
+
+- [ ] Revisar y completar las modificaciones del seed según los módulos terminados: propietarios exclusivamente MECHANIC, GOD sin clientes, padres válidos, patentes únicas por mecánico y fixtures representativos de archivo y órdenes abiertas/cerradas. Conservar la limpieza ordenada de fixtures y el rechazo de datos ajenos al seed que impidan restaurar roles.
+- [ ] Elegir explícitamente el proyecto de demo y revisar el estado de sus datos antes de tocarlo. Seguir [la guía de alineación](docs/demo-ownership-alignment.md): decidir entre reinicio destructivo con `supabase/schema.sql` o una migración revisada que conserve datos; respaldar lo necesario y resolver propietarios/colisiones existentes.
+- [ ] Con autorización explícita, aplicar el schema o la migración elegida. Incluir restricciones de propietario MECHANIC y parentesco inmutable, permisos de perfiles, retiro de triggers de transferencia y conservación del índice privado de patentes. Editar SQL en el repositorio no modifica el despliegue.
+- [ ] Con autorización explícita, ejecutar el seed revisado sobre el proyecto elegido. Tener en cuenta que elimina/recrea fixtures y restaura credenciales y sesiones de cuentas demo; comprobar el resultado solo dentro del alcance autorizado.
+- [ ] Revisar las tres integraciones existentes frente a los contratos finales, manteniéndolas separadas de los agregados unitarios. La suite de autorización ya fue adaptada a rechazo de transferencias y propietarios inválidos, pero no fue ejecutada. Antes de crear nuevas integraciones, solicitar la aprobación específica prevista en TESTING.
+- [ ] Con solicitud explícita para ejecutar integraciones, correr las suites acordadas (`test:auth`, `test:customers`, `test:authorization`) contra API, Auth y base del mismo proyecto. Verificar propiedad, parentescos, roles actuales, aislamiento RLS, unicidad de patentes bajo concurrencia y revocación; registrar resultados, limpieza y límites reales. Aprobar creación de tests no autoriza su ejecución.
+- [ ] Preparar el deploy: completar formato, lint, TypeScript, unitarios, build y diff-check; revisar configuración del proyecto, secretos exclusivamente de servidor y compatibilidad del schema con la API que se publicará. Definir el orden de aplicación y recuperación antes de cambiar el entorno.
+- [ ] Con autorización explícita, desplegar la API a Supabase mediante el comando documentado y coordinarlo con la actualización de base. Acordar las comprobaciones posteriores que hagan requests reales; no ejecutar integraciones como efecto incidental del deploy.
+- [ ] Actualizar README, REQUIREMENTS, STEPBYSTEP y TESTING con la versión efectivamente aplicada, fecha, proyecto sin secretos, cambios de schema/seed, comandos ejecutados, resultados y pendientes. Cerrar estas casillas únicamente con evidencia de cada operación.

@@ -101,30 +101,30 @@ Se conserva la plantilla `classic` del contrato actual. Respuesta binaria PDF co
 
 Métodos/rutas relativos a la base `/functions/v1/api`. Las filas pendientes reflejan los clientes HTTP existentes y el plan; **todavía no son endpoints disponibles**. Los detalles de cuerpos y errores implementados se consultan en OpenAPI; no duplicar aquí todas sus propiedades.
 
-| Método y ruta                                       | Acceso          | Entrada / salida principal                               | Estado                                |
-| --------------------------------------------------- | --------------- | -------------------------------------------------------- | ------------------------------------- |
-| GET `/ping`                                         | Público         | `{ pong: true }`.                                        | Implementado.                         |
-| POST `/login`                                       | Público         | Email/password → usuario y sesión; límite 8 KB.          | Implementado.                         |
-| GET `/auth/me`                                      | Bearer          | Usuario actual: id, email y rol.                         | Implementado.                         |
-| POST `/logout`                                      | Bearer          | Revocar sesión actual → 204.                             | Implementado.                         |
-| GET `/customers`                                    | Propietario/GOD | Paginación y `includeArchived` → `{ data, meta }`.       | Implementado; revisar archivo.        |
-| GET `/customers/:customerId`                        | Propietario/GOD | ID → cliente o 404.                                      | Implementado.                         |
-| POST `/customers`                                   | Propietario/GOD | Datos y propietario válido → cliente, 201.               | Implementado; corregir propietario.   |
-| PATCH `/customers/:customerId`                      | Propietario/GOD | Parcial no vacío, incluido `isActive` → cliente.         | Implementado; prohibir transferencia. |
-| DELETE `/customers/:customerId`                     | Propietario/GOD | Sin dependencias → 204; con vehículos → 409.             | Implementado.                         |
-| GET `/vehicles`                                     | Propietario/GOD | Paginación/filtros → vehículos de clientes operativos.   | Pendiente.                            |
-| GET `/vehicles/:vehicleId`                          | Propietario/GOD | ID → vehículo accesible.                                 | Pendiente.                            |
-| POST `/vehicles`                                    | Propietario/GOD | Cliente activo y datos → vehículo, 201.                  | Pendiente.                            |
-| PUT `/vehicles/:vehicleId`                          | Propietario/GOD | Datos del vehículo, sin reasignarlo → vehículo.          | Pendiente.                            |
-| PATCH `/vehicles/:vehicleId/archive`                | Propietario/GOD | `isActive` → vehículo.                                   | Pendiente.                            |
-| DELETE `/vehicles/:vehicleId`                       | Propietario/GOD | Sin órdenes → 204; con órdenes → 409.                    | Pendiente.                            |
-| GET `/vehicles/:vehicleId/work-orders`              | Propietario/GOD | Paginación y filtro de cierre → órdenes de ese vehículo. | Pendiente.                            |
-| POST `/work-orders`                                 | Propietario/GOD | Vehículo y datos de entrada/hijos → orden abierta, 201.  | Pendiente.                            |
-| GET `/work-orders/:workOrderId`                     | Propietario/GOD | ID → orden con ítems/recomendaciones.                    | Pendiente.                            |
-| PUT `/vehicles/:vehicleId/work-orders/:workOrderId` | Propietario/GOD | Editar orden e hijos sin reasignarla.                    | Pendiente.                            |
-| DELETE `/work-orders/:workOrderId`                  | Propietario/GOD | Eliminar orden e hijos → 204.                            | Pendiente.                            |
-| GET `/finances`                                     | Propietario/GOD | `startDate`, `endDate` por salida → `{ total }`.         | Pendiente.                            |
-| POST `/budgets/pdf`                                 | Bearer          | Datos independientes del formulario → PDF descargable.   | Pendiente.                            |
+| Método y ruta                                       | Acceso          | Entrada / salida principal                               | Estado                               |
+| --------------------------------------------------- | --------------- | -------------------------------------------------------- | ------------------------------------ |
+| GET `/ping`                                         | Público         | `{ pong: true }`.                                        | Implementado.                        |
+| POST `/login`                                       | Público         | Email/password → usuario y sesión; límite 8 KB.          | Implementado.                        |
+| GET `/auth/me`                                      | Bearer          | Usuario actual: id, email y rol.                         | Implementado.                        |
+| POST `/logout`                                      | Bearer          | Revocar sesión actual → 204.                             | Implementado.                        |
+| GET `/customers`                                    | Propietario/GOD | Paginación y `includeArchived` → `{ data, meta }`.       | Implementado; revisar archivo.       |
+| GET `/customers/:customerId`                        | Propietario/GOD | ID → cliente o 404.                                      | Implementado.                        |
+| POST `/customers`                                   | Propietario/GOD | Datos y propietario válido → cliente, 201.               | Implementado; propietario MECHANIC.  |
+| PATCH `/customers/:customerId`                      | Propietario/GOD | Parcial no vacío, incluido `isActive` → cliente.         | Implementado; propietario inmutable. |
+| DELETE `/customers/:customerId`                     | Propietario/GOD | Sin dependencias → 204; con vehículos → 409.             | Implementado.                        |
+| GET `/vehicles`                                     | Propietario/GOD | Paginación/filtros → vehículos de clientes operativos.   | Pendiente.                           |
+| GET `/vehicles/:vehicleId`                          | Propietario/GOD | ID → vehículo accesible.                                 | Pendiente.                           |
+| POST `/vehicles`                                    | Propietario/GOD | Cliente activo y datos → vehículo, 201.                  | Pendiente.                           |
+| PUT `/vehicles/:vehicleId`                          | Propietario/GOD | Datos del vehículo, sin reasignarlo → vehículo.          | Pendiente.                           |
+| PATCH `/vehicles/:vehicleId/archive`                | Propietario/GOD | `isActive` → vehículo.                                   | Pendiente.                           |
+| DELETE `/vehicles/:vehicleId`                       | Propietario/GOD | Sin órdenes → 204; con órdenes → 409.                    | Pendiente.                           |
+| GET `/vehicles/:vehicleId/work-orders`              | Propietario/GOD | Paginación y filtro de cierre → órdenes de ese vehículo. | Pendiente.                           |
+| POST `/work-orders`                                 | Propietario/GOD | Vehículo y datos de entrada/hijos → orden abierta, 201.  | Pendiente.                           |
+| GET `/work-orders/:workOrderId`                     | Propietario/GOD | ID → orden con ítems/recomendaciones.                    | Pendiente.                           |
+| PUT `/vehicles/:vehicleId/work-orders/:workOrderId` | Propietario/GOD | Editar orden e hijos sin reasignarla.                    | Pendiente.                           |
+| DELETE `/work-orders/:workOrderId`                  | Propietario/GOD | Eliminar orden e hijos → 204.                            | Pendiente.                           |
+| GET `/finances`                                     | Propietario/GOD | `startDate`, `endDate` por salida → `{ total }`.         | Pendiente.                           |
+| POST `/budgets/pdf`                                 | Bearer          | Datos independientes del formulario → PDF descargable.   | Pendiente.                           |
 
 El frontend de clientes hoy llama a `PATCH /customers/:id/archive`, que no existe: deberá usar el PATCH general con `isActive`. No añadir un endpoint duplicado solo para conservar esa discrepancia. No se requiere búsqueda por patente mediante un endpoint nuevo para cumplir el alcance actual.
 
@@ -160,3 +160,9 @@ Precisiones para cerrar al implementar el módulo correspondiente, sin impedir e
 - Representación numérica consistente: preservar el modelo actual de precio entero o acordar soporte decimal, sin introducir conversiones de moneda. No cambiar tablas sin necesidad.
 
 Estos puntos están registrados en TODO; no describen decisiones ya aprobadas ni requieren cambiar código durante esta tarea.
+
+## Estado del incremento de propiedad — 17/10/2026
+
+Alta: MECHANIC usa su identidad por defecto; GOD debe enviar `mechanicId` de un MECHANIC existente (403 si falta o no corresponde). PATCH rechaza `mechanicId` como campo no declarado (400), incluso si repite el propietario. El repository comprueba el rol dentro de la transacción de alta.
+
+El schema de demo incorpora propietario MECHANIC mediante FK compuesta con discriminador generado, que impide promociones de propietarios incluso concurrentes; triggers impiden cambiar propietario de cliente y padres de vehículo/orden. Se conserva el índice privado de patentes normalizadas y su restricción única. Los perfiles son de solo lectura para authenticated, incluido GOD; altas/roles quedan en seed/SQL administrativo. Estos cambios SQL están en archivos, sin aplicar ni verificar en una base viva.
