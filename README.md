@@ -27,7 +27,7 @@ Existen endpoints de salud, login, identidad, logout, CRUD de clientes y CRUD de
 
 ## Desarrollo local
 
-Requisitos: Node.js y pnpm compatibles con los paquetes, Docker en ejecución y Supabase CLI instalada como dependencia del repositorio. `package.json` fija pnpm 11.7.0; todavía no declara una versión común de Node mediante `engines`.
+Requisitos: Node.js 26.3.0 (fijado en `.nvmrc`), pnpm 11.7.0, Docker en ejecución y Supabase CLI instalada como dependencia del repositorio. `package.json` limita Node a `>=26.3.0 <27`; la versión comprobada localmente es 26.3.0. Con nvm disponible, usar `nvm use` antes de instalar. Los controles locales verifican compilación y unitarios; no equivalen a iniciar Docker ni verificar el runtime Edge desplegado.
 
 Desde la raíz:
 

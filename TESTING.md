@@ -147,3 +147,15 @@ Se generaron localmente dos PDFs ficticios con el servicio real: 35 ítems en tr
 Checks: formato enfocado, `pnpm typecheck`, `pnpm lint`, `pnpm build` y `git diff --check`. OpenAPI y enlaces locales revisados. El build valida compilación/bundle, sin demostrar ejecución del runtime Edge desplegado.
 
 Sin schema, seed, integraciones, llamadas a Auth/API/base ni deploy. El cierre remoto ya está reunido en TODO paso 9; este endpoint no necesita cambios de schema o fixtures.
+
+## 17/10/2026 — TODO paso 8: calidad local
+
+Runtime observado: Node **26.3.0**, pnpm **11.7.0**. Se agrega `.nvmrc` y engines `>=26.3.0 <27`, sin dependencias ni herramientas nuevas. Esto documenta la versión probada; no demuestra arranque de Docker, servidor de desarrollo ni ejecución Edge.
+
+`pnpm test:unit`: **60/60 aprobados**, nueve casos nuevos en `customer-quality.test.ts` y `auth-quality.test.ts`. Clientes: controllers 400/403/404/201/204, CRUD exitoso, filtros de archivo, primera/última/página vacía, identidad propagada a persistencia, errores propagados al manejador central y mapper con fechas UTC, nulls y selección explícita de campos. Auth: mappers excluyen metadata y tokens de proveedor; controllers traducen éxito/401/429/503, validación, cache no-store, desafío Bearer y excepciones sanitizadas; services prueban login, identidad verificada simulada, rol actual frente a metadata maliciosa, perfil ausente/inválido, sesión revocada, indisponibilidad, errores de proveedor y revocación tras login rechazado. El JWT ficticio solo ejercita decodificación después del doble de verificación: no prueba firma real. Los logs Pino de indisponibilidad durante los tests son errores simulados esperados.
+
+Los módulos se empaquetan en memoria con esbuild existente y se sustituyen repositories antes de evaluarlos. En Auth se reemplaza además la frontera de base por un doble que falla si se intenta acceder; no se inicializa Supabase ni se abren conexiones. Se mantienen las pruebas previas de vehículos, finanzas, PDF y transporte. No se agregan pruebas de órdenes aún no implementadas.
+
+Revisión estática de efectos/transacciones registrada en TODO paso 8: riesgo de duplicación/respuestas obsoletas en Clientes/Vehículos, cleanup existente en Finanzas, transacciones separadas de perfil y operación y consultas COUNT/SELECT secuenciales. Se conserva `max: 1`; Pino/Server-Timing y volumen se evaluarán al terminar funcionalidades. No se midió rendimiento nuevo ni se modificaron flujos de aplicación, contratos HTTP, schema, seed o despliegue. El cierre remoto ya está en TODO paso 9.
+
+Controles finales del paso 8: formato enfocado, `pnpm lint`, `pnpm typecheck`, `pnpm build` (contratos, bundle Edge y Next.js), enlaces locales de Markdown modificado y `git diff --check`: aprobados con Node 26.3.0. Sin integraciones, schema, seed, Auth/API/base real ni deploy.

@@ -1,6 +1,6 @@
 # Cambios de código pendientes
 
-El backlog se inició tras la reorganización documental del 17/10/2026. Los pasos 1, 2, 3, 5, 6 y 7 fueron implementados localmente por solicitud del usuario; no se aplicaron al despliegue. Los demás pasos siguen pendientes. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
+El backlog se inició tras la reorganización documental del 17/10/2026. Los pasos 1, 2, 3, 5, 6 y 7 fueron implementados localmente por solicitud del usuario; no se aplicaron al despliegue. El paso 8 tiene verificación local y revisión final de rendimiento pendiente del paso 4. Los demás pasos siguen pendientes. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
 
 ## 1. Propiedad y autorización — primero
 
@@ -70,11 +70,13 @@ Implementación y verificación local en TESTING. PDF generado en memoria; no re
 
 ## 8. Calidad y tareas posteriores
 
-- [ ] Agregar unitarios por caso de uso con dobles de repositories/Auth; ampliar cobertura de controllers y mappers según los módulos implementados. No usar APIs ni base real.
-- [ ] Fijar/documentar versión compatible de Node cuando se verifique el runtime de desarrollo; no incorporar herramientas solo para ello.
+- [x] Agregar unitarios por caso de uso con dobles de repositories/Auth; ampliar cobertura de controllers y mappers según los módulos implementados. No usar APIs ni base real. Cobertura ampliada de clientes y Auth; órdenes se cubre al implementar el paso 4.
+- [x] Fijar/documentar versión compatible de Node: 26.3.0 en `.nvmrc`, rango `>=26.3.0 <27` en engines y pnpm 11.7.0 existente. Verificados unitarios y compilación local; arranque Docker/Edge no ejecutado.
 - [ ] Al terminar funcionalidades, revisar requests duplicadas/carreras en efectos y viajes secuenciales a Postgres; evaluar instrumentación Pino/Server-Timing y volumen antes de modificar el pool `max: 1`.
-- [ ] La selección regional `x-region: us-west-2` ya existe en el transporte actual: no registrarla como optimización pendiente de implementar. Las mediciones nuevas con Auth/base/API requieren autorización explícita.
-- [ ] Actualizar TESTING con resultados reales y cerrar casillas solo tras implementar y verificar. Ningún resultado histórico demuestra el estado remoto o la conformidad con las nuevas reglas.
+- [x] La selección regional `x-region: us-west-2` ya existe en el transporte actual: no registrarla como optimización pendiente de implementar. Las mediciones nuevas con Auth/base/API requieren autorización explícita.
+- [x] Actualizar TESTING con resultados reales y cerrar casillas solo tras implementar y verificar. Ningún resultado histórico demuestra el estado remoto o la conformidad con las nuevas reglas.
+
+Revisión estática del paso 8: Clientes y Vehículos encolan cargas desde efectos sin cleanup; una respuesta anterior puede sobrescribir una búsqueda posterior y Strict Mode puede duplicar cargas. Finanzas ya descarta respuestas obsoletas con cleanup. En Postgres, autenticación/perfil y operación abren transacciones separadas; cada frontera configura claims, rol y sesión, y los listados hacen COUNT y SELECT secuenciales. Mantener estas garantías y `max: 1` hasta medir concurrencia/volumen. Evaluar Pino/Server-Timing por etapa, sin registrar tokens, credenciales ni cuerpos. La revisión final y las correcciones de efectos quedan pendientes de terminar órdenes (paso 4); no se atribuyen mejoras medidas. `docs/performance-2026-10-17.md` conserva evidencia histórica y su recomendación de agregar región ya fue implementada. Sin mediciones nuevas ni llamadas reales.
 
 ## 9. Cierre en Supabase: seed, schema, integraciones y deploy
 

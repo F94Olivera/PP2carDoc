@@ -98,3 +98,7 @@ Implementado GET `/finances` y agregado privado con sesión/propiedad/rol vigent
 ### Paso 7 de TODO — presupuesto PDF (17/10/2026)
 
 Endpoint protegido, schema compartido estricto, classic en memoria con paginación, CORS de descarga y validación frontend implementados localmente. Unitarios y muestra visual aislada registrados en TESTING; sin schema, seed, integraciones ni deploy. El cierre remoto continúa en TODO paso 9.
+
+### 17/10/2026 — TODO paso 8 (calidad local)
+
+Ampliada cobertura aislada de casos de uso, controllers y mappers de clientes/Auth: 60/60 unitarios aprobados. Node 26.3.0 fijado en `.nvmrc` y rango engines documentado; pnpm 11.7.0 existente. Revisión estática de efectos y viajes a Postgres registrada en TODO; región ya implementada, pool conservado. La revisión final de rendimiento queda abierta hasta terminar órdenes (paso 4). Sin cambios de flujo ni contratos; evidencia y límites en TESTING. Cierre de seed/schema/integraciones/deploy ya contemplado en paso 9, sin ejecutar.
