@@ -23,7 +23,7 @@ Los flujos están integrados en REQUIREMENTS. El [informe de performance del 17/
 - `supabase`: configuración, esquema SQL y entrada de la función.
 - `scripts`: herramientas compartidas.
 
-Existen endpoints de salud, login, identidad, logout, CRUD de clientes y CRUD de vehículos con archivo/restauración, además de GET `/finances`. Los incrementos locales de propiedad, clientes/archivo, vehículos, transporte y finanzas están implementados; órdenes y PDF siguen pendientes. Finanzas incluye historial de padres archivados y usa días completos de Buenos Aires; requiere aplicar la función privada `finance_total` y sus permisos antes del deploy de la API. El schema y la API desplegada no se actualizaron con estos incrementos; ver TODO y TESTING.
+Existen endpoints de salud, login, identidad, logout, CRUD de clientes y CRUD de vehículos con archivo/restauración, además de GET `/finances` y POST `/budgets/pdf`. Los incrementos locales de propiedad, clientes/archivo, vehículos, transporte, finanzas y PDF están implementados; órdenes sigue pendiente. Finanzas incluye historial de padres archivados y usa días completos de Buenos Aires; requiere aplicar la función privada `finance_total` y sus permisos antes del deploy de la API. El schema y la API desplegada no se actualizaron con estos incrementos; ver TODO y TESTING.
 
 ## Desarrollo local
 

@@ -1,9 +1,13 @@
 "use client";
 
-import type { BudgetPdfTemplateId, CreateBudgetPdfRequest } from "@cardoc/types";
+import {
+  budgetItemAmount,
+  type BudgetPdfTemplateId,
+  type CreateBudgetPdfRequest,
+} from "@cardoc/types";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "../../i18n/use-i18n";
-import { createBudgetPdf } from "./budget-api";
+import { createBudgetPdf, downloadBudgetPdf } from "./budget-api";
 
 type BudgetItem = {
   id: number;
@@ -38,14 +42,6 @@ const currencyFormatter = new Intl.NumberFormat("es-AR", {
   minimumFractionDigits: 2,
   style: "currency",
 });
-
-const getFilenameFromDisposition = (contentDisposition: string | null) => {
-  const match = contentDisposition?.match(/filename="?([^"]+)"?/i);
-
-  return match?.[1] ?? null;
-};
-
-const getBudgetPdfFilename = (budgetDate: string) => `presupuesto-${budgetDate}.pdf`;
 
 export default function BudgetPage() {
   const { locale, t } = useI18n();
@@ -108,7 +104,7 @@ export default function BudgetPage() {
   }, [budgetDate, customerName, domain, isDraftLoaded, items, templateId, vehicleName]);
 
   const total = useMemo(
-    () => items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
+    () => items.reduce((sum, item) => sum + Math.round(budgetItemAmount(item) * 100), 0) / 100,
     [items],
   );
 
@@ -180,17 +176,7 @@ export default function BudgetPage() {
     try {
       const response = await createBudgetPdf(payload, t.budget.pdfDefaultError);
 
-      const pdf = await response.blob();
-      const url = URL.createObjectURL(pdf);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download =
-        getFilenameFromDisposition(response.headers.get("Content-Disposition")) ??
-        getBudgetPdfFilename(budgetDate);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      await downloadBudgetPdf(response, budgetDate);
     } catch (error) {
       setPdfError(error instanceof Error ? error.message : t.budget.pdfConnectionError);
     } finally {
@@ -346,7 +332,7 @@ export default function BudgetPage() {
                       />
                     </td>
                     <td className="px-4 py-3 text-right font-semibold">
-                      {currencyFormatter.format(item.quantity * item.unitPrice)}
+                      {currencyFormatter.format(budgetItemAmount(item))}
                     </td>
                     <td className="px-3 py-3 text-right">
                       <button
@@ -428,7 +414,7 @@ export default function BudgetPage() {
                   </div>
                   <div className="flex justify-between border-t border-slate-200 pt-3 text-sm font-semibold dark:border-slate-800">
                     <span>{t.budget.totalLabel}</span>
-                    <span>{currencyFormatter.format(item.quantity * item.unitPrice)}</span>
+                    <span>{currencyFormatter.format(budgetItemAmount(item))}</span>
                   </div>
                 </div>
               </div>

@@ -79,6 +79,7 @@ const loadClient = async () => {
       fallbackError: string;
     }): Promise<unknown>;
     createBudgetPdf(payload: unknown, fallbackError: string): Promise<Response>;
+    downloadBudgetPdf(response: Response, date: string): Promise<void>;
   };
   return {
     api,
@@ -216,16 +217,82 @@ test("finance and PDF domain clients use authenticated transport and propagate A
       },
     }),
   );
-  const pdf = await state.api.createBudgetPdf({ templateId: "classic" }, "failed");
+  const payload = {
+    templateId: "classic",
+    customer: { fullName: "Ana" },
+    vehicle: { name: "Auto", plate: "AA123BB" },
+    date: "2026-10-17",
+    items: [{ description: "Service", quantity: 1, unitPrice: 20 }],
+  };
+  const pdf = await state.api.createBudgetPdf(payload, "failed");
   assert.equal(await pdf.text(), "fake PDF");
   assert.equal(pdf.headers.get("Content-Disposition"), 'attachment; filename="budget.pdf"');
   assert.equal(new Headers(state.calls[1]!.init.headers).get("Accept"), "application/pdf");
+  await assert.rejects(state.api.createBudgetPdf({}, "failed"), /Datos inválidos/);
+  state.setResponse(new Response("not a PDF"));
+  await assert.rejects(state.api.createBudgetPdf(payload, "failed"), /failed/);
   state.setResponse(new Response('{"error":"unavailable"}', { status: 503 }));
-  await assert.rejects(state.api.createBudgetPdf({}, "failed"), /unavailable/);
+  await assert.rejects(state.api.createBudgetPdf(payload, "failed"), /unavailable/);
   state.setResponse(new Response('{"error":"expired"}', { status: 401 }));
   await assert.rejects(
     state.api.getFinances({ startDate: "", endDate: "", fallbackError: "failed" }),
     /expired/,
   );
   assert.deepEqual(state.events, ["cardoc:auth-expired"]);
+});
+
+test("PDF download consumes binary data, uses server/fallback filename and releases browser resources", async (t) => {
+  const state = await loadClient();
+  let downloaded = "";
+  let removed = 0;
+  let scheduled: (() => void) | undefined;
+  const revoked: string[] = [];
+  const link = {
+    href: "",
+    download: "",
+    click() {
+      downloaded = this.download;
+    },
+    remove() {
+      removed++;
+    },
+  };
+  const oldDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: { createElement: () => link, body: { appendChild: () => {} } },
+  });
+  t.after(() => {
+    if (oldDocument) Object.defineProperty(globalThis, "document", oldDocument);
+    else Reflect.deleteProperty(globalThis, "document");
+  });
+  t.mock.method(URL, "createObjectURL", (blob: Blob) => {
+    assert.equal(blob.type, "application/pdf");
+    return "blob:sample";
+  });
+  t.mock.method(URL, "revokeObjectURL", (url: string) => revoked.push(url));
+  t.mock.method(globalThis, "setTimeout", (callback: () => void) => {
+    scheduled = callback;
+    return 1;
+  });
+  await state.api.downloadBudgetPdf(
+    new Response("%PDF-1.7", {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": 'attachment; filename="server.pdf"',
+      },
+    }),
+    "2026-10-17",
+  );
+  assert.equal(downloaded, "server.pdf");
+  assert.equal(removed, 1);
+  assert.equal(revoked.length, 0);
+  scheduled!();
+  assert.deepEqual(revoked, ["blob:sample"]);
+  await state.api.downloadBudgetPdf(
+    new Response("%PDF-1.7", { headers: { "Content-Type": "application/pdf" } }),
+    "2026-10-17",
+  );
+  assert.equal(downloaded, "presupuesto-2026-10-17.pdf");
+  scheduled!();
 });

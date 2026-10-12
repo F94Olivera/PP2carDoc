@@ -1,3 +1,4 @@
+import { createBudgetPdfController } from "./controllers/budget-controller.js";
 import {
   listVehiclesController,
   vehicleByIdController,
@@ -41,7 +42,7 @@ const protectedRouter = express.Router();
 protectedRouter.use(requireAuth);
 protectedRouter.post("/logout", logoutController);
 protectedRouter.get("/auth/me", meController);
-// protectedRouter.post("/budgets/pdf", createBudgetPdfController);
+protectedRouter.post("/budgets/pdf", express.json({ limit: "256kb" }), createBudgetPdfController);
 protectedRouter.get("/finances", financesController);
 protectedRouter.post("/customers", express.json({ limit: "32kb" }), createCustomerController);
 protectedRouter.get("/customers", listCustomersController);

@@ -1,6 +1,6 @@
 # Cambios de código pendientes
 
-El backlog se inició tras la reorganización documental del 17/10/2026. Los pasos 1, 2, 3, 5 y 6 fueron implementados localmente por solicitud del usuario; no se aplicaron al despliegue. Los demás pasos siguen pendientes. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
+El backlog se inició tras la reorganización documental del 17/10/2026. Los pasos 1, 2, 3, 5, 6 y 7 fueron implementados localmente por solicitud del usuario; no se aplicaron al despliegue. Los demás pasos siguen pendientes. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
 
 ## 1. Propiedad y autorización — primero
 
@@ -62,9 +62,11 @@ Implementación y controles locales en TESTING. La suma y sus filtros SQL tienen
 
 ## 7. PDF
 
-- [ ] Implementar POST `/budgets/pdf` protegido, con validación estricta y generación compatible con Edge. Solo usar datos del formulario y plantilla classic; no persistir ni enviar el archivo.
-- [ ] Responder `application/pdf` y `Content-Disposition`; exponer el header en CORS si el navegador necesita leer el nombre.
-- [ ] Alinear validación de cantidades/precios del formulario y backend; comprobar descarga, errores y legibilidad con datos ficticios y generación aislada.
+- [x] Implementar POST `/budgets/pdf` protegido, con validación estricta y generación compatible con Edge. Solo usar datos del formulario y plantilla classic; no persistir ni enviar el archivo.
+- [x] Responder `application/pdf` y `Content-Disposition`; exponer el header en CORS si el navegador necesita leer el nombre.
+- [x] Alinear validación de cantidades/precios del formulario y backend; comprobar descarga, errores y legibilidad con datos ficticios y generación aislada.
+
+Implementación y verificación local en TESTING. PDF generado en memoria; no requiere modificar seed ni schema. El cierre remoto ya está contemplado en el paso 9 y no se ejecutó.
 
 ## 8. Calidad y tareas posteriores
 

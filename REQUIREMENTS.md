@@ -87,14 +87,14 @@ Las órdenes cerradas de clientes o vehículos archivados siguen participando: a
 
 Usuario autenticado → completa nombre del cliente, nombre/patente del vehículo, fecha e ítems → API valida y genera PDF → navegador descarga el archivo para compartirlo manualmente. Solo usa los datos del formulario y calcula los importes; no requiere IDs de cliente, vehículo ni orden.
 
-Se conserva la plantilla `classic` del contrato actual. Respuesta binaria PDF con nombre de descarga. No almacenar PDFs en base ni Storage, enviarlos por correo ni vincularlos a órdenes. El borrador que hoy guarda el frontend en localStorage no equivale a persistencia del presupuesto en servidor.
+Implementado localmente en el paso 7: generación en memoria con plantilla `classic`, A4, paginación y encabezados repetidos. Validación estricta compartida entre formulario y API: 1–100 ítems, cantidad entre 1 y 1.000.000 con hasta tres decimales, precio entre 0 y 1.000.000.000 con hasta dos; redondeo de cada renglón a centavos antes de sumar y total seguro. Textos Latin-1 imprimibles (incluye tildes y ñ), sin saltos de línea; cliente/vehículo hasta 120 caracteres, patente hasta 30 y descripción hasta 300. Fecha de calendario real. Se rechazan campos desconocidos y cuerpo mayor que 256 KiB. El endpoint usa la autenticación existente también para GOD, responde `no-store` y expone `Content-Disposition` mediante CORS. El navegador valida antes del request y verifica el tipo PDF antes de descargar. Respuesta binaria PDF con nombre de descarga. No almacenar PDFs en base ni Storage, enviarlos por correo ni vincularlos a órdenes. El borrador que hoy guarda el frontend en localStorage no equivale a persistencia del presupuesto en servidor.
 
 ## 5. Autenticación y autorización
 
 - Login del frontend mediante Supabase SSR; `/login` del backend también permite obtener una sesión. Ambos apuntan al mismo proyecto.
 - API privada con Bearer explícito. CORS no sustituye autorización; no usar cookies entre orígenes como credencial de API.
 - Middleware verifica token con Auth, identidad, `session_id` activo y rol actual del perfil. La aplicación limita tokens a 900 segundos desde `iat` o a su expiración si ocurre antes. No autorizar con `user_metadata` ni roles obsoletos del token.
-- El transporte frontend renueva 30 segundos antes del límite de 900 segundos, comparte la renovación entre pedidos simultáneos del mismo contexto y notifica 401 sin reintentar escrituras. Conserva el Accept de cada módulo, incluido PDF, y omite cookies en requests privados. Esto prepara finanzas/PDF sin implementar sus endpoints pendientes.
+- El transporte frontend renueva 30 segundos antes del límite de 900 segundos, comparte la renovación entre pedidos simultáneos del mismo contexto y notifica 401 sin reintentar escrituras. Conserva el Accept de cada módulo, incluido PDF, y omite cookies en requests privados. Finanzas y PDF ya tienen endpoints implementados localmente.
 - Logout del frontend llama POST `/logout` con Bearer y después limpia tokens/cookies mediante el SDK con alcance local. Un error 429/503 conserva el estado de error y permite reintentar. Logout revoca solo la sesión actual; los controles de sesión la rechazan en requests posteriores. Otras sesiones permanecen activas.
 - Repositories usan `withUserDatabase`: transacción, claims locales, rol authenticated y sesión vigente. RLS controla propiedad heredada; no debe haber fuga de identidad entre conexiones del pool.
 - Sin acceso anónimo a tablas de aplicación. No exponer contraseñas, tokens ni claves privilegiadas en respuestas de dominio o logs. Auth devuelve los tokens necesarios de su contrato y usa `Cache-Control: no-store`.
@@ -127,7 +127,7 @@ Métodos/rutas relativos a la base `/functions/v1/api`. Las filas pendientes ref
 | PUT `/vehicles/:vehicleId/work-orders/:workOrderId` | Propietario/GOD | Editar orden e hijos sin reasignarla.                    | Pendiente.                           |
 | DELETE `/work-orders/:workOrderId`                  | Propietario/GOD | Eliminar orden e hijos → 204.                            | Pendiente.                           |
 | GET `/finances`                                     | Propietario/GOD | `startDate`, `endDate` por salida → `{ total }`.         | Implementado localmente.             |
-| POST `/budgets/pdf`                                 | Bearer          | Datos independientes del formulario → PDF descargable.   | Pendiente.                           |
+| POST `/budgets/pdf`                                 | Bearer          | Datos independientes del formulario → PDF descargable.   | Implementado localmente (paso 7).    |
 
 El frontend de clientes usa el PATCH general con `isActive` para archivo/restauración y el mismo endpoint para edición de datos, sin permitir editar propietario. No se requiere búsqueda por patente mediante un endpoint nuevo para cumplir el alcance actual.
 

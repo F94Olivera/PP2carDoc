@@ -50,10 +50,10 @@ Salida local: validación, límites de calendario, transporte y frontera de cons
 
 ## 5. Completar presupuesto PDF
 
-- [ ] Validar contrato independiente de formulario y plantilla classic.
-- [ ] Implementar generación compatible con Edge y respuesta PDF con nombre de descarga; admitir los headers necesarios en CORS.
-- [ ] Conectar descarga autenticada, estado de generación y mensajes de error; no persistir PDFs.
-- [ ] Cubrir cálculos, validación y respuesta con pruebas aisladas; revisar visualmente un PDF con datos ficticios generado sin servicios externos.
+- [x] Validar contrato independiente de formulario y plantilla classic.
+- [x] Implementar generación compatible con Edge y respuesta PDF con nombre de descarga; admitir los headers necesarios en CORS.
+- [x] Conectar descarga autenticada, estado de generación y mensajes de error; no persistir PDFs.
+- [x] Cubrir cálculos, validación y respuesta con pruebas aisladas; revisar visualmente un PDF con datos ficticios generado sin servicios externos.
 
 Salida: PDF legible descargable con importes y datos del formulario, independiente de clientes/órdenes almacenados.
 
@@ -94,3 +94,7 @@ Completado Bearer en finanzas y PDF; API I/O del PDF en módulo de dominio. Tran
 ### 17/10/2026 — TODO paso 6 (finanzas)
 
 Implementado GET `/finances` y agregado privado con sesión/propiedad/rol vigente, órdenes cerradas, período de salida por días de Buenos Aires e inclusión de padres archivados. Sin joins con recomendaciones, total cero sin coincidencias y lectura nueva por petición. Frontend con Bearer, filtros rápidos en Buenos Aires, explicación del alcance y estados de carga/error diferenciados de cero. Contratos y documentación alineados. Verificaciones aisladas y límites en TESTING; función SQL sin aplicar, sin seed, integraciones ni deploy. Cierre remoto en TODO paso 9.
+
+### Paso 7 de TODO — presupuesto PDF (17/10/2026)
+
+Endpoint protegido, schema compartido estricto, classic en memoria con paginación, CORS de descarga y validación frontend implementados localmente. Unitarios y muestra visual aislada registrados en TESTING; sin schema, seed, integraciones ni deploy. El cierre remoto continúa en TODO paso 9.
