@@ -81,9 +81,9 @@ try {
   const lists = await Promise.all(
     [a, b, god].map((s) => api("/customers?pageSize=100", s).then(json)),
   );
-  assert.equal(lists[0].meta.total, 10);
-  assert.equal(lists[1].meta.total, 10);
-  assert.equal(lists[2].meta.total, 20);
+  assert.equal(lists[0].meta.total, 9);
+  assert.equal(lists[1].meta.total, 9);
+  assert.equal(lists[2].meta.total, 18);
   assert.ok(lists[0].data.every((c) => c.mechanicId === a.id));
   assert.ok(lists[1].data.every((c) => c.mechanicId === b.id));
   const aCustomer = lists[0].data[0].id;
@@ -100,7 +100,7 @@ try {
     assert.equal((await api(`/customers${query}`, a)).status, 400);
   }
   const page = await json(await api("/customers?pageSize=2&page=2", a));
-  assert.equal(page.meta.total, 10);
+  assert.equal(page.meta.total, 9);
   assert.deepEqual(
     page.data.map((c) => c.id),
     lists[0].data.slice(2, 4).map((c) => c.id),
@@ -151,7 +151,9 @@ try {
     await api(`/customers/${created[0]}`, a, "PATCH", { notes: "Own edit", isActive: false }),
   );
   assert.equal((await json(await api("/customers?includeArchived=true", a))).meta.total, 11);
-  assert.equal((await json(await api("/customers", a))).meta.total, 10);
+  assert.equal((await json(await api("/customers", a))).meta.total, 9);
+  // Later child-write/concurrency scenarios require an operational parent.
+  await json(await api(`/customers/${created[0]}`, a, "PATCH", { isActive: true }));
   await json(await api(`/customers/${created[1]}`, god, "PATCH", { notes: "GOD edit" }));
   for (const mechanicId of [undefined, god.id, "00000000-0000-4000-8000-000000000001"]) {
     assert.equal(
@@ -184,10 +186,10 @@ try {
 
   // Direct Data API proves that Express is not the only authorization boundary.
   const [owners] = await sql`select json_build_object(
-    'vehicles', (select json_agg(v.id) from vehicles v join customers c on c.id=v.customer_id where c.mechanic_id=${b.id}),
-    'work_orders', (select json_agg(w.id) from work_orders w join vehicles v on v.id=w.vehicle_id join customers c on c.id=v.customer_id where c.mechanic_id=${b.id}),
-    'work_order_items', (select json_agg(i.id) from work_order_items i join work_orders w on w.id=i.work_order_id join vehicles v on v.id=w.vehicle_id join customers c on c.id=v.customer_id where c.mechanic_id=${b.id}),
-    'work_order_recommendations', (select json_agg(i.id) from work_order_recommendations i join work_orders w on w.id=i.work_order_id join vehicles v on v.id=w.vehicle_id join customers c on c.id=v.customer_id where c.mechanic_id=${b.id})
+    'vehicles', (select json_agg(v.id) from vehicles v join customers c on c.id=v.customer_id where c.mechanic_id=${b.id} and c.is_active and v.is_active),
+    'work_orders', (select json_agg(w.id) from work_orders w join vehicles v on v.id=w.vehicle_id join customers c on c.id=v.customer_id where c.mechanic_id=${b.id} and c.is_active and v.is_active),
+    'work_order_items', (select json_agg(i.id) from work_order_items i join work_orders w on w.id=i.work_order_id join vehicles v on v.id=w.vehicle_id join customers c on c.id=v.customer_id where c.mechanic_id=${b.id} and c.is_active and v.is_active),
+    'work_order_recommendations', (select json_agg(i.id) from work_order_recommendations i join work_orders w on w.id=i.work_order_id join vehicles v on v.id=w.vehicle_id join customers c on c.id=v.customer_id where c.mechanic_id=${b.id} and c.is_active and v.is_active)
   ) as data`;
   for (const [table, ids] of Object.entries(owners.data)) {
     const hidden = await json(await rest(table, a, "GET", undefined, `?id=eq.${ids[0]}`));

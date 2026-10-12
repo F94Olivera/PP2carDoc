@@ -1,4 +1,4 @@
-import { inArray, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import pino from "pino";
 
 import { closeDatabase, getDatabase, initializeDatabase } from "../src/database.js";
@@ -373,6 +373,22 @@ const seedSuperheroes = async () => {
             recommendationCount += recommendations.length;
           }
         }
+
+        // Archive only after creating the history; keep parents valid during fixture insertion.
+        if (customerIndex === 11 && vehicleIndex === 1) {
+          await tx
+            .update(vehicles)
+            .set({ isActive: false })
+            .where(eq(vehicles.id, createdVehicle!.id));
+        }
+      }
+
+      // One archived customer per mechanic; their vehicles retain their own active state.
+      if (customerIndex >= 18) {
+        await tx
+          .update(customers)
+          .set({ isActive: false })
+          .where(eq(customers.id, createdCustomer!.id));
       }
     }
 

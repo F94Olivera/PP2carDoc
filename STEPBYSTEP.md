@@ -102,3 +102,9 @@ Endpoint protegido, schema compartido estricto, classic en memoria con paginaci�
 ### 17/10/2026 — TODO paso 8 (calidad local)
 
 Ampliada cobertura aislada de casos de uso, controllers y mappers de clientes/Auth: 60/60 unitarios aprobados. Node 26.3.0 fijado en `.nvmrc` y rango engines documentado; pnpm 11.7.0 existente. Revisión estática de efectos y viajes a Postgres registrada en TODO; región ya implementada, pool conservado. La revisión final de rendimiento queda abierta hasta terminar órdenes (paso 4). Sin cambios de flujo ni contratos; evidencia y límites en TESTING. Cierre de seed/schema/integraciones/deploy ya contemplado en paso 9, sin ejecutar.
+
+### 17/10/2026 — TODO paso 9 (demo Supabase)
+
+Con autorización explícita se ejecutó reinicio destructivo de `lsbgegbghlgxkqxpmgyx`, con inventario y copia local de dominio/fuentes anteriores. Seed ampliado con casos de archivo de cliente/vehículo e integración existente alineada con los nuevos totales y padres operativos. Schema aplicado y API versión 7 publicada mediante conector Supabase; la CLI carece de access token. Resultados de seed e integraciones en [el informe de cierre](docs/supabase-closure-2026-10-17.md) y TESTING. Este cierre corresponde a las funcionalidades disponibles: TODO paso 4 y revisión final del paso 8 siguen pendientes y exigirán revalidación y otro despliegue cuando se implementen.
+
+Resultado del paso 9: 60/60 unitarios, formato, lint, TypeScript, build, enlaces y diff-check aprobados; las tres integraciones terminaron con salida 0. Inventario final igual al seed, roles restaurados, sin fixtures ni sesiones temporales. Bundle remoto idéntico al build local.

@@ -23,7 +23,7 @@ Los flujos están integrados en REQUIREMENTS. El [informe de performance del 17/
 - `supabase`: configuración, esquema SQL y entrada de la función.
 - `scripts`: herramientas compartidas.
 
-Existen endpoints de salud, login, identidad, logout, CRUD de clientes y CRUD de vehículos con archivo/restauración, además de GET `/finances` y POST `/budgets/pdf`. Los incrementos locales de propiedad, clientes/archivo, vehículos, transporte, finanzas y PDF están implementados; órdenes sigue pendiente. Finanzas incluye historial de padres archivados y usa días completos de Buenos Aires; requiere aplicar la función privada `finance_total` y sus permisos antes del deploy de la API. El schema y la API desplegada no se actualizaron con estos incrementos; ver TODO y TESTING.
+Existen endpoints de salud, login, identidad, logout, CRUD de clientes y CRUD de vehículos con archivo/restauración, además de GET `/finances` y POST `/budgets/pdf`. Los incrementos locales de propiedad, clientes/archivo, vehículos, transporte, finanzas y PDF están implementados; órdenes sigue pendiente. Finanzas incluye historial de padres archivados y usa días completos de Buenos Aires; la función privada `finance_total` y sus permisos ya se aplicaron a la demo documentada. El 17/10/2026 se reinició el schema, ejecutó el seed y publicó la API versión 7 en `lsbgegbghlgxkqxpmgyx`, con autorización explícita. Evidencia, recuperación y límites de integración en [el informe de cierre](docs/supabase-closure-2026-10-17.md) y TESTING. El frontend no fue desplegado en ese cierre.
 
 ## Desarrollo local
 
@@ -81,7 +81,7 @@ Después de crear el esquema, configurar `SEED_DEMO_PASSWORD` de al menos 16 car
 pnpm run seed:superheroes
 ```
 
-El seed prepara Mateo y Lucia como MECHANIC y `god.cardoc@example.test` como GOD. Las otras cuentas son `mateo.cardoc.20261006@example.test` y `lucia.cardoc.20261006@example.test`. Sus contraseñas vienen del entorno y no se imprimen. Se recrean 20 clientes, 19 vehículos, 48 órdenes, 143 ítems y 47 recomendaciones de muestra. Reejecutarlo restablece credenciales/roles de estas cuentas y revoca sus sesiones.
+El seed prepara Mateo y Lucia como MECHANIC y `god.cardoc@example.test` como GOD. Las otras cuentas son `mateo.cardoc.20261006@example.test` y `lucia.cardoc.20261006@example.test`. Sus contraseñas vienen del entorno y no se imprimen. Hay 18 clientes activos y dos archivados (uno por MECHANIC); sus vehículos mantienen su estado propio. Kimoyo Cruiser queda archivado bajo un cliente activo, con historial abierto/cerrado, para distinguir archivo de vehículo y de cliente. Se recrean 20 clientes, 19 vehículos, 48 órdenes, 143 ítems y 47 recomendaciones de muestra. Reejecutarlo restablece credenciales/roles de estas cuentas y revoca sus sesiones.
 
 El seed usa acceso privilegiado para fixtures, sin registro público ni SMTP. Desplegar la función no crea tablas, no ejecuta el esquema y no copia usuarios o datos. Local y remoto son entornos independientes. Los comandos de este apartado son instrucciones de preparación manual, no pasos automáticos de verificación.
 
