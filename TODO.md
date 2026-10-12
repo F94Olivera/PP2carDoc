@@ -1,6 +1,6 @@
 # Cambios de código pendientes
 
-El backlog se inició tras la reorganización documental del 17/10/2026. Los pasos 1, 2, 3 y 5 fueron implementados localmente por solicitud del usuario; no se aplicaron al despliegue. Los demás pasos siguen pendientes. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
+El backlog se inició tras la reorganización documental del 17/10/2026. Los pasos 1, 2, 3, 5 y 6 fueron implementados localmente por solicitud del usuario; no se aplicaron al despliegue. Los demás pasos siguen pendientes. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
 
 ## 1. Propiedad y autorización — primero
 
@@ -46,17 +46,19 @@ Implementación y verificaciones locales en TESTING. Las restricciones de patent
 - [x] Completar `fetchAuthenticated` en finanzas y PDF. Clientes, vehículos y órdenes también usan Bearer; se conserva `Accept: application/pdf`, sin cookies como credencial de API.
 - [x] Revisar logout del frontend y renovación: POST `/logout` revoca la sesión actual antes de limpiar tokens/cookies con el SDK; fallos 429/503 no confirman éxito. Renovación 30 segundos antes del límite de 15 minutos, compartida entre pedidos simultáneos; 401 notifica sesión expirada sin repetir mutaciones.
 - [x] Alinear `packages/types/src/api-error.ts` y consumidores con `{ error: string }`; respuestas inválidas usan el mensaje de respaldo.
-- [x] Revisar `docs/openapi.yaml`: el formato de error ya coincide; aclarado el consumo de logout sin cambiar rutas ni contratos HTTP. Finanzas y PDF siguen siendo endpoints pendientes de los pasos 6/7.
+- [x] Revisar `docs/openapi.yaml`: el formato de error ya coincide; aclarado el consumo de logout sin cambiar rutas ni contratos HTTP. Finanzas se implementó en el paso 6; PDF sigue pendiente del paso 7.
 
 Verificación aislada del transporte, renovación, errores, logout y clientes de finanzas/PDF en TESTING. Sin llamadas reales a Auth/API/base ni cambios remotos. El cierre de seed, schema, integraciones y deploy ya está contemplado en el paso 9.
 
 ## 6. Finanzas
 
-- [ ] Implementar GET `/finances` por alcance de propietario, sumando `quantity * unitPrice` solo de órdenes con `exitDate` no nula y filtrando por salida.
-- [ ] Definir zona horaria y límites de `startDate/endDate` compatibles con los timestamps actuales. Propuesta para evaluar: días de Buenos Aires e intervalo semiabierto hasta el comienzo del día siguiente al final.
-- [ ] Acordar el tratamiento de órdenes cerradas cuyos padres estén archivados; no confundir ocultar historial operativo con excluirlo de un total financiero.
-- [ ] Evitar duplicar importes al unir ítems y recomendaciones; cero resultados devuelve cero. Cubrir cambios del total al editar/reabrir/eliminar una orden.
-- [ ] Conectar UI con Bearer y mostrar `$`, sin conversiones, impuestos, cobros ni notas de crédito.
+- [x] Implementar GET `/finances` por alcance de propietario, sumando `quantity * unitPrice` solo de órdenes con `exitDate` no nula y filtrando por salida.
+- [x] Definir zona horaria y límites de `startDate/endDate` compatibles con los timestamps actuales. Días de Buenos Aires, convertidos a UTC para las columnas actuales; intervalo semiabierto hasta el comienzo del día siguiente al final.
+- [x] Conservar órdenes cerradas de padres archivados en el total; función agregada privada con sesión/rol/propiedad explícitos, sin abrir acceso operativo.
+- [x] Evitar duplicar importes al unir ítems y recomendaciones; cero resultados devuelve cero. Cubrir cambios del total al editar/reabrir/eliminar una orden.
+- [x] Conectar UI con Bearer y mostrar `$`, sin conversiones, impuestos, cobros ni notas de crédito.
+
+Implementación y controles locales en TESTING. La suma y sus filtros SQL tienen comprobaciones estáticas; los dobles verifican transporte, frontera autenticada y recálculo sin caché, sin ejecutar SQL ni demostrar RLS real. La función/permisos de `supabase/schema.sql` deben aplicarse mediante el cierre del paso 9 antes de habilitar el endpoint en el despliegue. Órdenes sigue pendiente del paso 4.
 
 ## 7. PDF
 
@@ -78,7 +80,7 @@ Este bloque reúne el trabajo pendiente de preparación y ejecución sobre Supab
 
 - [ ] Revisar y completar las modificaciones del seed según los módulos terminados: propietarios exclusivamente MECHANIC, GOD sin clientes, padres válidos, patentes únicas por mecánico y fixtures representativos de archivo y órdenes abiertas/cerradas. Conservar la limpieza ordenada de fixtures y el rechazo de datos ajenos al seed que impidan restaurar roles.
 - [ ] Elegir explícitamente el proyecto de demo y revisar el estado de sus datos antes de tocarlo. Seguir [la guía de alineación](docs/demo-ownership-alignment.md): decidir entre reinicio destructivo con `supabase/schema.sql` o una migración revisada que conserve datos; respaldar lo necesario y resolver propietarios/colisiones existentes.
-- [ ] Con autorización explícita, aplicar el schema o la migración elegida. Incluir restricciones de propietario MECHANIC y parentesco inmutable, permisos de perfiles, retiro de triggers de transferencia y conservación del índice privado de patentes. Editar SQL en el repositorio no modifica el despliegue.
+- [ ] Con autorización explícita, aplicar el schema o la migración elegida. Incluir restricciones de propietario MECHANIC y parentesco inmutable, permisos de perfiles, retiro de triggers de transferencia, conservación del índice privado de patentes y función privada de finanzas con sus permisos. Editar SQL en el repositorio no modifica el despliegue.
 - [ ] Con autorización explícita, ejecutar el seed revisado sobre el proyecto elegido. Tener en cuenta que elimina/recrea fixtures y restaura credenciales y sesiones de cuentas demo; comprobar el resultado solo dentro del alcance autorizado.
 - [ ] Revisar las tres integraciones existentes frente a los contratos finales, manteniéndolas separadas de los agregados unitarios. La suite de autorización ya fue adaptada a rechazo de transferencias y propietarios inválidos, pero no fue ejecutada. Antes de crear nuevas integraciones, solicitar la aprobación específica prevista en TESTING.
 - [ ] Con solicitud explícita para ejecutar integraciones, correr las suites acordadas (`test:auth`, `test:customers`, `test:authorization`) contra API, Auth y base del mismo proyecto. Verificar propiedad, parentescos, roles actuales, aislamiento RLS, unicidad de patentes bajo concurrencia y revocación; registrar resultados, limpieza y límites reales. Aprobar creación de tests no autoriza su ejecución.

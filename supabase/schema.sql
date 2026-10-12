@@ -14,7 +14,7 @@ drop table if exists public.work_order_recommendations, public.work_order_items,
   public.work_orders, private.vehicle_plate_claims, public.vehicles, public.customers,
   public.user_profiles cascade;
 drop function if exists private.can_access_mechanic(uuid), private.current_app_role(),
-  private.session_active(), private.sync_vehicle_plate(), private.sync_customer_plates(),
+  private.session_active(), private.finance_total(date, date), private.sync_vehicle_plate(), private.sync_customer_plates(),
   private.sync_profile_claim(), private.create_user_profile(),
   private.enforce_customer_owner(), private.prevent_parent_change() cascade;
 
@@ -144,6 +144,35 @@ language sql stable security invoker set search_path = '' as $$
     or (private.current_app_role() = 'MECHANIC' and auth.uid() = owner_id);
 $$;
 
+-- Financial history is independent of operational archive visibility. This narrowly
+-- scoped aggregate deliberately bypasses RLS, returns no rows/IDs, and enforces
+-- current identity/session/ownership itself. Never accept an owner/role argument.
+create function private.finance_total(start_date date, end_date date) returns numeric
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if auth.uid() is null or not private.session_active()
+    or private.current_app_role() is null then
+    raise exception 'Session is no longer active' using errcode = '42501';
+  end if;
+  if start_date is null or end_date is null or not isfinite(start_date) or not isfinite(end_date)
+    or start_date < date '0001-01-01' or end_date > date '9999-12-31' or start_date > end_date then
+    raise exception 'Invalid finance date range' using errcode = '22023';
+  end if;
+  return (
+    select coalesce(sum(i.quantity::numeric * i.unit_price::numeric), 0)
+    from public.work_order_items i
+    join public.work_orders w on w.id = i.work_order_id
+    join public.vehicles v on v.id = w.vehicle_id
+    join public.customers c on c.id = v.customer_id
+    where private.can_access_mechanic(c.mechanic_id)
+      and w.exit_date is not null
+      -- Existing timestamp-without-time-zone values contain UTC wall time:
+      -- Drizzle writes Date.toISOString(); the seed creates UTC dates.
+      and w.exit_date >= ((start_date::timestamp at time zone 'America/Argentina/Buenos_Aires') at time zone 'UTC')
+      and w.exit_date < (((end_date + 1)::timestamp at time zone 'America/Argentina/Buenos_Aires') at time zone 'UTC')
+  );
+end $$;
+
 -- Profile is authoritative; this nested signed claim is informational and refreshes with the JWT.
 create function private.sync_profile_claim() returns trigger
 language plpgsql security definer set search_path = '' as $$
@@ -169,7 +198,7 @@ insert into public.user_profiles(id) select id from auth.users where not is_anon
 
 revoke all on all functions in schema private from public, anon, authenticated;
 grant execute on function private.session_active(), private.current_app_role(),
-  private.can_access_mechanic(uuid) to authenticated;
+  private.can_access_mechanic(uuid), private.finance_total(date, date) to authenticated;
 revoke all on public.user_profiles, public.customers, public.vehicles, public.work_orders,
   public.work_order_items, public.work_order_recommendations from anon, authenticated;
 grant select on public.user_profiles to authenticated;

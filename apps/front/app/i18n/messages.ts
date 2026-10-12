@@ -310,6 +310,7 @@ type AppMessages = {
     lastSixtyDaysFilter: string;
     lastNinetyDaysFilter: string;
     laborRevenueLabel: string;
+    periodHint: string;
     rangeLabel: (startDate: string, endDate: string) => string;
     loading: string;
     loadError: string;
@@ -630,7 +631,9 @@ export const messages = {
       lastThirtyDaysFilter: "30 días",
       lastSixtyDaysFilter: "60 días",
       lastNinetyDaysFilter: "90 días",
-      laborRevenueLabel: "Total ganado",
+      laborRevenueLabel: "Total de órdenes cerradas",
+      periodHint:
+        "Días completos de Buenos Aires, por fecha de salida. Incluye historial de clientes y vehículos archivados.",
       rangeLabel: (startDate: string, endDate: string) => `${startDate} al ${endDate}`,
       loading: "Calculando ingresos...",
       loadError: "No se pudieron cargar las finanzas.",
@@ -948,7 +951,9 @@ export const messages = {
       lastThirtyDaysFilter: "30 days",
       lastSixtyDaysFilter: "60 days",
       lastNinetyDaysFilter: "90 days",
-      laborRevenueLabel: "Total earned",
+      laborRevenueLabel: "Closed order total",
+      periodHint:
+        "Full Buenos Aires days, by exit date. Includes archived customer and vehicle history.",
       rangeLabel: (startDate: string, endDate: string) => `${startDate} to ${endDate}`,
       loading: "Calculating revenue...",
       loadError: "Could not load finances.",

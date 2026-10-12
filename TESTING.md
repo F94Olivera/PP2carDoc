@@ -116,3 +116,22 @@ Verificación local: `pnpm test:unit` **39/39 aprobados**, incluidos ocho casos 
 Pasaron formato enfocado, `pnpm lint`, `pnpm typecheck`, `pnpm build` y `git diff --check`. Revisión de enlaces locales de los Markdown modificados sin destinos faltantes. El build verifica compilación, no un recorrido real del navegador ni revocación/renovación reales. Se consultó documentación pública de Supabase sobre [signOut](https://supabase.com/docs/reference/javascript/auth-signout) y [refreshSession](https://supabase.com/docs/reference/javascript/auth-refreshsession), y la implementación instalada del SDK para limpiar una sesión ya revocada.
 
 Sin schema, seed, integraciones, llamadas manuales a Auth/API/base ni deploy. Los endpoints de finanzas/PDF siguen pendientes; esta entrega completa su transporte frontend. El cierre remoto ya está contemplado en TODO paso 9.
+
+## 17/10/2026 — TODO paso 6: finanzas
+
+Implementado GET `/finances` con validación estricta del período, capas controller/service/repository/mapper y agregado `private.finance_total(date, date)` en el schema local. Se conserva el historial financiero de padres archivados sin modificar las políticas operativas. El intervalo usa días completos de Buenos Aires convertidos a los timestamps UTC actuales. La función verifica sesión y rol/propietario, suma todas las categorías de ítems, no une recomendaciones y devuelve cero sin coincidencias. Frontend con Bearer, filtros rápidos en Buenos Aires, explicación del alcance y guion durante carga/error.
+
+Verificación ejecutada desde la raíz:
+
+- `pnpm --filter @cardoc/back exec tsx --test tests/finance.test.ts`: 7/7 unitarios nuevos aprobados.
+- `pnpm test:unit`: 46/46 aprobados, sin integraciones.
+- `pnpm lint`: aprobado en los workspaces configurados.
+- `pnpm typecheck`: aprobado en los tres workspaces tras corregir el tipo del doble de fechas del frontend para respetar el rootDir del backend.
+- `pnpm build`: aprobados contratos, bundle Edge y build Next.js.
+- Prettier enfocado sobre los archivos modificados: aprobado. SQL no tiene formateador configurado.
+- Referencias locales de OpenAPI: 41 resueltas; enlaces locales de los cinco Markdown principales resueltos.
+- `git diff --check`: aprobado.
+
+Los siete casos nuevos cubren fechas reales, bisiestos, rango invertido, parámetros ausentes/desconocidos/repetidos; conversión y rechazo de totales corruptos; consulta nueva en cada llamada sin caché y propagación de errores; SQL parametrizado dentro de la frontera autenticada de solo lectura para ambos roles; controller 400/200; comprobaciones estáticas del agregado, permisos, filtros, archivo y ausencia de recomendaciones; límites de medianoche de Buenos Aires y filtros rápidos. Se comprueba además que el modelo Drizzle serializa un instante con offset como ISO UTC. El unitario existente de transporte cubre Bearer, total cero, errores y sesión expirada de finanzas.
+
+Límites: los resultados variables del service son dobles, no ediciones/reaperturas/eliminaciones reales de órdenes. Las comprobaciones del agregado SQL son estáticas, no ejecutan PostgreSQL ni prueban sumas, aislamiento RLS, permisos o conversiones temporales en una base viva. No se verificó el recorrido visual contra API ni se aplicó schema, seed o deploy; no se crearon ni ejecutaron integraciones. El CRUD de órdenes continúa pendiente del paso 4. La función privada y sus permisos deben aplicarse antes del deploy de esta API; el cierre de estas operaciones ya está en TODO paso 9.

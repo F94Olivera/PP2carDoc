@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "../../i18n/use-i18n";
 import { getFinances } from "./finance-api";
+import { getCurrentMonthRange, getLastDaysRange } from "./finance-dates";
 
 type QuickFilter = "currentMonth" | "last30" | "last60" | "last90";
 
@@ -17,40 +18,8 @@ const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
   month: "2-digit",
   year: "numeric",
+  timeZone: "UTC",
 });
-
-const toDateInputValue = (date: Date) => {
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  const day = date.getDate().toString().padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-};
-
-const addDays = (date: Date, days: number) => {
-  const nextDate = new Date(date);
-  nextDate.setDate(nextDate.getDate() + days);
-
-  return nextDate;
-};
-
-const getCurrentMonthRange = () => {
-  const today = new Date();
-
-  return {
-    endDate: toDateInputValue(today),
-    startDate: toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1)),
-  };
-};
-
-const getLastDaysRange = (days: number) => {
-  const today = new Date();
-
-  return {
-    endDate: toDateInputValue(today),
-    startDate: toDateInputValue(addDays(today, -(days - 1))),
-  };
-};
 
 const getQuickFilterRange = (filter: QuickFilter) => {
   if (filter === "currentMonth") {
@@ -60,7 +29,7 @@ const getQuickFilterRange = (filter: QuickFilter) => {
   return getLastDaysRange(filter === "last30" ? 30 : filter === "last60" ? 60 : 90);
 };
 
-const formatDisplayDate = (date: string) => dateFormatter.format(new Date(`${date}T00:00:00`));
+const formatDisplayDate = (date: string) => dateFormatter.format(new Date(`${date}T12:00:00Z`));
 
 export default function FinancesPage() {
   const { t } = useI18n();
@@ -94,6 +63,7 @@ export default function FinancesPage() {
       }
 
       setIsLoading(true);
+      setTotal(null);
       setError(null);
 
       getFinances({
@@ -155,6 +125,7 @@ export default function FinancesPage() {
           {t.finances.sectionLabel}
         </p>
         <h2 className="mt-1 text-2xl font-semibold tracking-tight">{t.finances.title}</h2>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{t.finances.periodHint}</p>
       </div>
 
       <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
@@ -221,7 +192,7 @@ export default function FinancesPage() {
 
           <div className="min-w-0">
             <p className="break-words text-3xl font-semibold tracking-tight text-slate-950 dark:text-slate-50 sm:text-4xl">
-              {total === null ? currencyFormatter.format(0) : currencyFormatter.format(total)}
+              {total === null ? "—" : currencyFormatter.format(total)}
             </p>
             {isLoading ? (
               <p className="mt-3 text-sm font-medium text-slate-500 dark:text-slate-400">

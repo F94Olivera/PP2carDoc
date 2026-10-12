@@ -16,6 +16,53 @@ servers:
 # OPTIONS is public and handled by the gateway or Express CORS middleware.
 # Bearer tokens authenticate protected routes; browser cookies are not used.
 paths:
+  /finances:
+    get:
+      summary: Sum closed order items in the authorized financial scope
+      description: >-
+        MECHANIC sees their own total; GOD sees the global total. Includes closed
+        orders even when the vehicle or customer is archived. All item categories
+        contribute quantity times unitPrice; recommendations never contribute.
+        Both dates are required real calendar days (years 0001 through 9999) in
+        America/Argentina/Buenos_Aires, with startDate <= endDate. The interval is
+        inclusive of both days, internally [start midnight, midnight after end).
+        Existing timestamp columns contain UTC wall time; boundaries are converted
+        to UTC before comparing exit_date. No filtering by entry date, pagination,
+        currency conversion or rounding. No matches returns zero. Recalculated on
+        every request, including after order edits, reopening or deletion.
+        Unknown or repeated query parameters are rejected.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema: { type: string, format: date, example: "2026-10-01" }
+        - name: endDate
+          in: query
+          required: true
+          schema: { type: string, format: date, example: "2026-10-17" }
+      responses:
+        "200":
+          description: Financial total; Cache-Control is no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceResponse"
+        "400":
+          description: Missing, invalid, repeated, unknown or reversed query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthError"
+        "401":
+          description: Missing, invalid, expired or inactive Bearer session
+        "429":
+          description: Authentication rate limit exceeded
+        "503":
+          description: Authentication unavailable
+        "500":
+          description: Unexpected failure; no database details exposed
   /ping:
     get:
       responses:
@@ -590,6 +637,17 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    FinanceResponse:
+      type: object
+      additionalProperties: false
+      required: [total]
+      properties:
+        total:
+          type: number
+          minimum: 0
+          description: Sum of quantity times integer unit price, without currency conversion
+          example: 12500.5
+
     CustomerResponse:
       type: object
       additionalProperties: false

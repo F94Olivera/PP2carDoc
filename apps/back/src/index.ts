@@ -6,6 +6,7 @@ import {
   archiveVehicleController,
   deleteVehicleController,
 } from "./controllers/vehicle-controller.js";
+import { financesController } from "./controllers/finance-controller.js";
 import express from "express";
 import pino from "pino";
 
@@ -41,7 +42,7 @@ protectedRouter.use(requireAuth);
 protectedRouter.post("/logout", logoutController);
 protectedRouter.get("/auth/me", meController);
 // protectedRouter.post("/budgets/pdf", createBudgetPdfController);
-// protectedRouter.get("/finances", financesController);
+protectedRouter.get("/finances", financesController);
 protectedRouter.post("/customers", express.json({ limit: "32kb" }), createCustomerController);
 protectedRouter.get("/customers", listCustomersController);
 protectedRouter.get("/customers/:customerId", customerByIdController);

@@ -40,13 +40,13 @@ Salida: recorrido vehículo → orden → edición/cierre/reapertura funciona, s
 
 ## 4. Completar finanzas
 
-- [ ] Cerrar convención de fechas y tratamiento del historial archivado según REQUIREMENTS, sin introducir reglas contables nuevas.
-- [ ] Implementar suma de cantidad por precio solo en órdenes con salida y dentro del período de salida.
-- [ ] Aplicar alcance MECHANIC/GOD y evitar multiplicar ítems al unir recomendaciones.
-- [ ] Conectar filtros y total del frontend con Bearer y formato `$`.
-- [ ] Cubrir exclusión de abiertas, límites de fechas, cero resultados, reapertura y aislamiento con unitarios.
+- [x] Cerrar convención de fechas y tratamiento del historial archivado según REQUIREMENTS, sin introducir reglas contables nuevas.
+- [x] Implementar suma de cantidad por precio solo en órdenes con salida y dentro del período de salida.
+- [x] Aplicar alcance MECHANIC/GOD y evitar multiplicar ítems al unir recomendaciones.
+- [x] Conectar filtros y total del frontend con Bearer y formato `$`.
+- [x] Cubrir exclusión de abiertas, límites de fechas, cero resultados, reapertura y aislamiento con unitarios.
 
-Salida: total verificable con fixtures aislados, sin impuestos, conversiones ni registro de cobros.
+Salida local: validación, límites de calendario, transporte y frontera de consulta cubiertos con unitarios/dobles; suma/alcance SQL comprobados estáticamente. Sin ejecución PostgreSQL/RLS ni prueba real de edición de órdenes. Sin impuestos, conversiones ni registro de cobros.
 
 ## 5. Completar presupuesto PDF
 
@@ -90,3 +90,7 @@ Implementado CRUD HTTP de vehículos y archivo/restauración, contratos separado
 ### 17/10/2026 — TODO paso 5 (transporte y contratos)
 
 Completado Bearer en finanzas y PDF; API I/O del PDF en módulo de dominio. Transporte conserva Accept, omite cookies, comparte renovación anticipada y centraliza aviso de 401 sin reintentar mutaciones. Logout usa API y luego limpieza local; contrato compartido de error alineado a `{ error: string }`. Ocho unitarios nuevos aislados; resultados en TESTING. Los endpoints de finanzas/PDF y el paso 4 de TODO siguen pendientes. El cierre remoto ya está en TODO paso 9; no se ejecutó.
+
+### 17/10/2026 — TODO paso 6 (finanzas)
+
+Implementado GET `/finances` y agregado privado con sesión/propiedad/rol vigente, órdenes cerradas, período de salida por días de Buenos Aires e inclusión de padres archivados. Sin joins con recomendaciones, total cero sin coincidencias y lectura nueva por petición. Frontend con Bearer, filtros rápidos en Buenos Aires, explicación del alcance y estados de carga/error diferenciados de cero. Contratos y documentación alineados. Verificaciones aisladas y límites en TESTING; función SQL sin aplicar, sin seed, integraciones ni deploy. Cierre remoto en TODO paso 9.

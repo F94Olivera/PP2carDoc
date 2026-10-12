@@ -79,7 +79,9 @@ El total es la suma de `quantity × unitPrice` de los ítems pertenecientes a ó
 
 Mostrar importes con `$`. No incluir órdenes abiertas, impuestos, descuentos, notas de crédito, métodos de pago ni tipos de cambio. Reabrir, editar o eliminar una orden cambia el total calculado; no hay un libro contable separado. Sin órdenes que cumplan el filtro, devolver total cero.
 
-Antes de implementar, fijar en el contrato los límites del período y zona horaria, y cómo participa el historial de recursos archivados. Son detalles aún no confirmados; ver sección 9. No filtrar por fecha de entrada.
+El período usa días completos de `America/Argentina/Buenos_Aires`: `startDate` y `endDate` obligatorias en YYYY-MM-DD, fechas reales entre los años 0001 y 9999, inicio no posterior al final. Ambos días son inclusivos; internamente se compara desde medianoche inicial hasta, sin incluir, medianoche posterior al final. Los timestamps actuales sin zona representan UTC (serialización ISO de Drizzle y fechas UTC del seed); se convierten los límites a UTC, sin modificar columnas ni datos existentes. No filtrar por fecha de entrada.
+
+Las órdenes cerradas de clientes o vehículos archivados siguen participando: archivar no borra historial financiero. El acceso operativo continúa ocultando sus órdenes e hijos. Una función agregada privada comprueba identidad, sesión vigente y rol actual; limita por propietario para MECHANIC y permite total global para GOD, sin devolver registros ni aceptar un propietario como parámetro. Todas las categorías de ítems contribuyen, las recomendaciones no. No se redondea en la API; la pantalla muestra `$` y dos decimales sin conversiones. Los filtros rápidos usan el calendario de Buenos Aires aunque el navegador esté en otra zona; carga/error muestran un guion hasta disponer de un total válido.
 
 ### Presupuesto PDF
 
@@ -124,7 +126,7 @@ Métodos/rutas relativos a la base `/functions/v1/api`. Las filas pendientes ref
 | GET `/work-orders/:workOrderId`                     | Propietario/GOD | ID → orden con ítems/recomendaciones.                    | Pendiente.                           |
 | PUT `/vehicles/:vehicleId/work-orders/:workOrderId` | Propietario/GOD | Editar orden e hijos sin reasignarla.                    | Pendiente.                           |
 | DELETE `/work-orders/:workOrderId`                  | Propietario/GOD | Eliminar orden e hijos → 204.                            | Pendiente.                           |
-| GET `/finances`                                     | Propietario/GOD | `startDate`, `endDate` por salida → `{ total }`.         | Pendiente.                           |
+| GET `/finances`                                     | Propietario/GOD | `startDate`, `endDate` por salida → `{ total }`.         | Implementado localmente.             |
 | POST `/budgets/pdf`                                 | Bearer          | Datos independientes del formulario → PDF descargable.   | Pendiente.                           |
 
 El frontend de clientes usa el PATCH general con `isActive` para archivo/restauración y el mismo endpoint para edición de datos, sin permitir editar propietario. No se requiere búsqueda por patente mediante un endpoint nuevo para cumplir el alcance actual.
@@ -156,11 +158,9 @@ Fuera de alcance: datos reales, talleres compartidos, nuevos roles, transferenci
 
 Precisiones para cerrar al implementar el módulo correspondiente, sin impedir esta reorganización documental:
 
-- Convención temporal exacta de finanzas: zona horaria y límites inclusivos de fechas del formulario. Propuesta técnica: días completos de Buenos Aires con intervalo interno semiabierto; validar contra los timestamps actuales antes de aplicarlo.
-- Participación de órdenes de padres archivados en finanzas: el usuario confirmó órdenes cerradas, pero no una exclusión por archivo. No excluir silenciosamente historial; resolver y documentar ese alcance al implementar la consulta.
 - Representación numérica consistente: preservar el modelo actual de precio entero o acordar soporte decimal, sin introducir conversiones de moneda. No cambiar tablas sin necesidad.
 
-Estos puntos están registrados en TODO; no describen decisiones ya aprobadas ni requieren cambiar código durante esta tarea.
+El punto pendiente está registrado en TODO paso 4; finanzas conserva el precio entero y admite cantidades fraccionarias sin cambiar las tablas.
 
 ## Estado del incremento de propiedad — 17/10/2026
 
@@ -183,3 +183,9 @@ Implementados localmente GET/POST de vehículos, GET/PUT/DELETE por ID y PATCH d
 PUT reemplaza patente, marca, modelo y unidad; año/kilometraje omitidos se normalizan a null. `customerId` y `isActive` se rechazan en PUT; el estado se modifica exclusivamente mediante PATCH de archivo. Patente sin espacios extremos y en mayúsculas, marca/modelo no vacíos, año entero >= 1886, kilometraje entero >= 0; números dentro del rango integer de Postgres. La unicidad por mecánico y la restricción al eliminar con órdenes usan las garantías SQL existentes y responden 409 ante sus conflictos.
 
 Frontend con Bearer, cliente fijo al editar, restauración confirmada, búsqueda completa de vehículos y consulta directa del cliente asociado. Errores del historial pendiente de órdenes quedan en su panel y no bloquean edición/archivo. No se carga historial ni se ofrece nueva orden desde un vehículo archivado. No se implementan endpoints de órdenes en este incremento. Verificaciones aisladas en TESTING; sin aplicar ni verificar cambios en Supabase.
+
+## Estado del incremento de finanzas — 17/10/2026
+
+Implementado localmente GET `/finances` protegido, schema estricto de query, controller/service/repository/mapper y contrato OpenAPI. La función `private.finance_total(date, date)` devuelve únicamente un agregado, con búsqueda de objetos fijada, permisos revocados por defecto y ejecución concedida a authenticated. Comprueba sesión y alcance por rol/propietario sin depender del filtro operativo de archivo. La consulta no une recomendaciones y devuelve cero para conjuntos vacíos. No hay caché de totales.
+
+El frontend conserva Bearer y manejo de sesión expirada; explica período y archivo, calcula filtros rápidos en Buenos Aires y evita presentar cero como resultado de una carga o error. El schema SQL solo se editó en el repositorio: aplicar función/permisos al proyecto elegido sigue pendiente del paso 9. Los unitarios y comprobaciones estáticas no prueban ejecución PostgreSQL, RLS real ni recorridos contra API; órdenes sigue pendiente del paso 4. Resultados en TESTING.
