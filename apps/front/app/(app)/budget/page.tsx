@@ -3,7 +3,7 @@
 import type { BudgetPdfTemplateId, CreateBudgetPdfRequest } from "@cardoc/types";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "../../i18n/use-i18n";
-import { fetchApi, getErrorMessage, handleUnauthorizedResponse } from "../../lib/auth-client";
+import { createBudgetPdf } from "./budget-api";
 
 type BudgetItem = {
   id: number;
@@ -178,24 +178,7 @@ export default function BudgetPage() {
     };
 
     try {
-      const response = await fetchApi(`/budgets/pdf`, {
-        body: JSON.stringify(payload),
-        credentials: "include",
-        headers: {
-          Accept: "application/pdf",
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        if (handleUnauthorizedResponse(response)) {
-          return;
-        }
-
-        setPdfError(await getErrorMessage(response, t.budget.pdfDefaultError));
-        return;
-      }
+      const response = await createBudgetPdf(payload, t.budget.pdfDefaultError);
 
       const pdf = await response.blob();
       const url = URL.createObjectURL(pdf);
@@ -208,8 +191,8 @@ export default function BudgetPage() {
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-    } catch {
-      setPdfError(t.budget.pdfConnectionError);
+    } catch (error) {
+      setPdfError(error instanceof Error ? error.message : t.budget.pdfConnectionError);
     } finally {
       setIsGeneratingPdf(false);
     }

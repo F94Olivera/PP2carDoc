@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { createClient } from "../lib/supabase/client";
+import { signOut } from "../lib/auth-client";
 import { usePathname, useRouter } from "next/navigation";
 import { LanguageToggle } from "../language-toggle";
 import { ThemeToggle } from "../theme-toggle";
@@ -25,11 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setIsSigningOut(true);
     setSignOutError(false);
     try {
-      const { error } = await createClient().auth.signOut({ scope: "local" });
-      if (error) {
-        setSignOutError(true);
-        return;
-      }
+      await signOut();
       router.replace("/login");
       router.refresh();
     } catch {

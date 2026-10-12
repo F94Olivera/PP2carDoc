@@ -19,9 +19,9 @@ export const loginPath = "/login";
 const authExpiredEventName = "cardoc:auth-expired";
 
 export const getErrorMessage = async (response: Response, fallback: string) => {
-  const payload = (await response.json().catch(() => null)) as ApiErrorResponse | null;
+  const payload: Partial<ApiErrorResponse> | null = await response.json().catch(() => null);
 
-  return payload?.message ?? (payload as { error?: string } | null)?.error ?? fallback;
+  return typeof payload?.error === "string" && payload.error.trim() ? payload.error : fallback;
 };
 
 export const fetchAuthenticatedUser = async () => {
@@ -35,12 +35,17 @@ export const notifyAuthExpired = () => {
   window.dispatchEvent(new Event(authExpiredEventName));
 };
 
+const expiredResponses = new WeakSet<Response>();
+
 export const handleUnauthorizedResponse = (response: Response) => {
   if (response.status !== 401) {
     return false;
   }
 
-  notifyAuthExpired();
+  if (!expiredResponses.has(response)) {
+    expiredResponses.add(response);
+    notifyAuthExpired();
+  }
   return true;
 };
 
@@ -50,40 +55,65 @@ export const onAuthExpired = (handler: () => void) => {
   return () => window.removeEventListener(authExpiredEventName, handler);
 };
 
-export const fetchAuthenticated = async (path: string, init?: RequestInit) => {
+const readApiSession = async () => {
   const client = createClient();
   let { data, error } = await client.auth.getSession();
   if (data.session) {
     // This decode only schedules renewal. The backend verifies identity and permissions.
+    let needsRefresh = true;
     try {
       const payload = data.session.access_token
         .split(".")[1]!
         .replaceAll("-", "+")
         .replaceAll("_", "/");
       const { iat } = JSON.parse(atob(payload)) as { iat?: number };
-      if (
+      needsRefresh =
         typeof iat !== "number" ||
-        Date.now() >= (iat + ACCESS_TOKEN_MAX_AGE_SECONDS - 30) * 1000
-      ) {
-        ({ data, error } = await client.auth.refreshSession());
-      }
+        !Number.isFinite(iat) ||
+        iat * 1000 > Date.now() ||
+        Date.now() >= (iat + ACCESS_TOKEN_MAX_AGE_SECONDS - 30) * 1000;
     } catch {
-      ({ data, error } = await client.auth.refreshSession());
+      // A malformed local token must be renewed, never used to authorize a request.
+      needsRefresh = true;
     }
+    if (needsRefresh) ({ data, error } = await client.auth.refreshSession());
   }
   if (error || !data.session) {
     notifyAuthExpired();
     throw new Error("Authentication required.");
   }
 
-  const headers = new Headers(init?.headers);
-  headers.set("Authorization", `Bearer ${data.session.access_token}`);
-  headers.set("Accept", "application/json");
+  return data.session;
+};
 
-  return fetchApi(path, {
+// Share renewal across concurrent API requests in this browser context.
+let pendingSession: ReturnType<typeof readApiSession> | undefined;
+
+export const fetchAuthenticated = async (path: string, init?: RequestInit) => {
+  pendingSession ??= readApiSession().finally(() => {
+    pendingSession = undefined;
+  });
+  const session = await pendingSession;
+  const headers = new Headers(init?.headers);
+  headers.set("Authorization", `Bearer ${session.access_token}`);
+  if (!headers.has("Accept")) headers.set("Accept", "application/json");
+
+  const response = await fetchApi(path, {
     ...init,
     headers,
     credentials: "omit",
     cache: "no-store",
   });
+  handleUnauthorizedResponse(response);
+  return response;
+};
+
+export const signOut = async () => {
+  const response = await fetchAuthenticated("/logout", { method: "POST" });
+  if (!response.ok && response.status !== 401) {
+    throw new Error(await getErrorMessage(response, "Could not sign out."));
+  }
+  // The SDK removes SSR cookies and local tokens, including an already revoked session.
+  const { error } = await createClient().auth.signOut({ scope: "local" });
+  if (error) throw error;
 };

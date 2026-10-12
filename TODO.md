@@ -1,6 +1,6 @@
 # Cambios de código pendientes
 
-El backlog se inició tras la reorganización documental del 17/10/2026. Los pasos 1, 2 y 3 fueron implementados localmente por solicitud del usuario; no se aplicaron al despliegue. Los demás pasos siguen pendientes. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
+El backlog se inició tras la reorganización documental del 17/10/2026. Los pasos 1, 2, 3 y 5 fueron implementados localmente por solicitud del usuario; no se aplicaron al despliegue. Los demás pasos siguen pendientes. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
 
 ## 1. Propiedad y autorización — primero
 
@@ -43,10 +43,12 @@ Implementación y verificaciones locales en TESTING. Las restricciones de patent
 
 ## 5. Transporte y contratos compartidos
 
-- [ ] Completar `fetchAuthenticated` en finanzas y PDF. El módulo compartido de vehículos/órdenes ya usa Bearer desde el paso 3, al igual que clientes.
-- [ ] Revisar logout del frontend y renovación para mantener coherencia con revocación de sesión y límite de 15 minutos de la API.
-- [ ] Alinear `packages/types/src/api-error.ts` y consumidores con el formato implementado `{ error: string }`; no mantener contratos divergentes por módulo.
-- [ ] Actualizar `docs/openapi.yaml` en la misma entrega que cambie endpoints. Los contratos de propiedad de clientes se alinearon en el paso 1; mantenerlos actualizados en los siguientes módulos.
+- [x] Completar `fetchAuthenticated` en finanzas y PDF. Clientes, vehículos y órdenes también usan Bearer; se conserva `Accept: application/pdf`, sin cookies como credencial de API.
+- [x] Revisar logout del frontend y renovación: POST `/logout` revoca la sesión actual antes de limpiar tokens/cookies con el SDK; fallos 429/503 no confirman éxito. Renovación 30 segundos antes del límite de 15 minutos, compartida entre pedidos simultáneos; 401 notifica sesión expirada sin repetir mutaciones.
+- [x] Alinear `packages/types/src/api-error.ts` y consumidores con `{ error: string }`; respuestas inválidas usan el mensaje de respaldo.
+- [x] Revisar `docs/openapi.yaml`: el formato de error ya coincide; aclarado el consumo de logout sin cambiar rutas ni contratos HTTP. Finanzas y PDF siguen siendo endpoints pendientes de los pasos 6/7.
+
+Verificación aislada del transporte, renovación, errores, logout y clientes de finanzas/PDF en TESTING. Sin llamadas reales a Auth/API/base ni cambios remotos. El cierre de seed, schema, integraciones y deploy ya está contemplado en el paso 9.
 
 ## 6. Finanzas
 

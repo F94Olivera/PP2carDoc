@@ -86,3 +86,7 @@ Corregido PATCH de archivo y conectadas edición/restauración explícitas. Form
 ### 17/10/2026 — TODO paso 3
 
 Implementado CRUD HTTP de vehículos y archivo/restauración, contratos separados, cliente inmutable, validación estricta y controles de padre activo/propiedad en service y repository. Pantallas con Bearer, restauración y paginación completa de búsqueda. Reutilizadas restricciones SQL de patente por mecánico y FK restrictiva de órdenes; errores 409 sin detalles de base. OpenAPI y REQUIREMENTS alineados. Verificación local en TESTING; sin schema, seed, integraciones remotas ni deploy. Órdenes permanece en TODO paso 4.
+
+### 17/10/2026 — TODO paso 5 (transporte y contratos)
+
+Completado Bearer en finanzas y PDF; API I/O del PDF en módulo de dominio. Transporte conserva Accept, omite cookies, comparte renovación anticipada y centraliza aviso de 401 sin reintentar mutaciones. Logout usa API y luego limpieza local; contrato compartido de error alineado a `{ error: string }`. Ocho unitarios nuevos aislados; resultados en TESTING. Los endpoints de finanzas/PDF y el paso 4 de TODO siguen pendientes. El cierre remoto ya está en TODO paso 9; no se ejecutó.

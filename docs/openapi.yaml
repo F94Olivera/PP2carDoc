@@ -316,6 +316,9 @@ paths:
         refresh tokens. Other sessions remain active. Subsequent requests using this
         session are rejected immediately by the API and database policies; the
         client must also delete its locally stored session tokens.
+        The frontend renews tokens before the 15-minute API age limit, sends Bearer
+        without cross-origin cookies, then clears SDK session storage after success.
+        A 429 or 503 must not be presented as a successful logout.
         No request body is used.
       security:
         - bearerAuth: []

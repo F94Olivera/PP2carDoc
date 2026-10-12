@@ -92,7 +92,8 @@ Se conserva la plantilla `classic` del contrato actual. Respuesta binaria PDF co
 - Login del frontend mediante Supabase SSR; `/login` del backend también permite obtener una sesión. Ambos apuntan al mismo proyecto.
 - API privada con Bearer explícito. CORS no sustituye autorización; no usar cookies entre orígenes como credencial de API.
 - Middleware verifica token con Auth, identidad, `session_id` activo y rol actual del perfil. La aplicación limita tokens a 900 segundos desde `iat` o a su expiración si ocurre antes. No autorizar con `user_metadata` ni roles obsoletos del token.
-- Logout revoca solo la sesión actual; los controles de sesión la rechazan en requests posteriores. Otras sesiones permanecen activas.
+- El transporte frontend renueva 30 segundos antes del límite de 900 segundos, comparte la renovación entre pedidos simultáneos del mismo contexto y notifica 401 sin reintentar escrituras. Conserva el Accept de cada módulo, incluido PDF, y omite cookies en requests privados. Esto prepara finanzas/PDF sin implementar sus endpoints pendientes.
+- Logout del frontend llama POST `/logout` con Bearer y después limpia tokens/cookies mediante el SDK con alcance local. Un error 429/503 conserva el estado de error y permite reintentar. Logout revoca solo la sesión actual; los controles de sesión la rechazan en requests posteriores. Otras sesiones permanecen activas.
 - Repositories usan `withUserDatabase`: transacción, claims locales, rol authenticated y sesión vigente. RLS controla propiedad heredada; no debe haber fuga de identidad entre conexiones del pool.
 - Sin acceso anónimo a tablas de aplicación. No exponer contraseñas, tokens ni claves privilegiadas en respuestas de dominio o logs. Auth devuelve los tokens necesarios de su contrato y usa `Cache-Control: no-store`.
 - Recurso ajeno e inexistente deben ser indistinguibles en consultas individuales (404). GOD no evita validaciones ni puede cambiar propietarios.
@@ -134,7 +135,7 @@ Validación estricta en schemas: rechazar claves no declaradas; validar body, pa
 
 Clientes usa `page=1`, `pageSize=10`, máximo 100; rechaza parámetros desconocidos/repetidos y offsets inseguros. Orden por ID; página fuera de rango devuelve lista vacía. Conteo y filas comparten alcance y snapshot. Adoptar esa envoltura para los listados pendientes y documentar sus filtros antes de implementarlos.
 
-Formato de error implementado: `{ error: string }`. Los contratos compartidos tienen una diferencia pendiente de alinear; no anunciar otro formato como vigente. Usar 400 para entrada inválida, 401 para sesión/token inválido, 403 para operación prohibida, 404 para inexistente/ajeno, 409 para conflictos, 413 para tamaño excesivo, 429 para límite de Auth, 503 para indisponibilidad de autenticación y 500 genérico para fallos inesperados. No filtrar detalles de registros ajenos o errores SQL.
+Formato de error implementado: `{ error: string }`. El contrato compartido `ApiErrorResponse` y el lector de errores del frontend usan este mismo formato; cuerpos inválidos conservan el mensaje de respaldo. Usar 400 para entrada inválida, 401 para sesión/token inválido, 403 para operación prohibida, 404 para inexistente/ajeno, 409 para conflictos, 413 para tamaño excesivo, 429 para límite de Auth, 503 para indisponibilidad de autenticación y 500 genérico para fallos inesperados. No filtrar detalles de registros ajenos o errores SQL.
 
 ## 8. Criterios de aceptación
 

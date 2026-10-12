@@ -1,5 +1,9 @@
 import type { FinanceResponse } from "@cardoc/types";
-import { fetchApi, getErrorMessage, handleUnauthorizedResponse } from "../../lib/auth-client";
+import {
+  fetchAuthenticated,
+  getErrorMessage,
+  handleUnauthorizedResponse,
+} from "../../lib/auth-client";
 
 export const getFinances = async ({
   endDate,
@@ -11,8 +15,7 @@ export const getFinances = async ({
   startDate: string;
 }) => {
   const query = new URLSearchParams({ endDate, startDate });
-  const response = await fetchApi(`/finances?${query}`, {
-    credentials: "include",
+  const response = await fetchAuthenticated(`/finances?${query}`, {
     headers: {
       Accept: "application/json",
     },
