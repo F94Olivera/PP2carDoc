@@ -20,10 +20,10 @@ Salida: clientes funciona con las reglas confirmadas; unitarios aislados cubren 
 
 ## 2. Completar vehículos
 
-- [ ] Schema, controller, service, repository y mapper para listado, detalle, alta, edición, archivo/restauración y eliminación.
-- [ ] Validar padre activo, aislamiento heredado y patente única por mecánico; no permitir reasignación de cliente.
-- [ ] Conectar pantallas y selección/listado de clientes usando transporte Bearer.
-- [ ] Cubrir éxito, permisos, archivo, unicidad y conflicto por órdenes con unitarios y dobles.
+- [x] Schema, controller, service, repository y mapper para listado, detalle, alta, edición, archivo/restauración y eliminación.
+- [x] Validar padre activo, aislamiento heredado y patente única por mecánico; no permitir reasignación de cliente.
+- [x] Conectar pantallas y selección/listado de clientes usando transporte Bearer.
+- [x] Cubrir éxito, permisos, archivo, unicidad y conflicto por órdenes con unitarios y dobles.
 
 Salida: un mecánico puede gestionar sus vehículos y GOD los de cualquier mecánico; contratos y documentación coinciden. Los conflictos de base tienen respuesta controlada.
 
@@ -82,3 +82,7 @@ Implementados contratos y autorización de alta/edición, garantías SQL de prop
 ### 17/10/2026 — TODO paso 2
 
 Corregido PATCH de archivo y conectadas edición/restauración explícitas. Formulario compartido de clientes, selección activa y paginación completa en búsqueda/selección/detalle. El fallo del endpoint pendiente de vehículos se muestra sin bloquear al cliente. RLS local condiciona descendientes al estado de sus padres, conservando administración del vehículo archivado bajo cliente activo. No se implementaron los endpoints de vehículos/órdenes de los pasos siguientes. Verificaciones locales y límites en TESTING; sin cambios remotos.
+
+### 17/10/2026 — TODO paso 3
+
+Implementado CRUD HTTP de vehículos y archivo/restauración, contratos separados, cliente inmutable, validación estricta y controles de padre activo/propiedad en service y repository. Pantallas con Bearer, restauración y paginación completa de búsqueda. Reutilizadas restricciones SQL de patente por mecánico y FK restrictiva de órdenes; errores 409 sin detalles de base. OpenAPI y REQUIREMENTS alineados. Verificación local en TESTING; sin schema, seed, integraciones remotas ni deploy. Órdenes permanece en TODO paso 4.

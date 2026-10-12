@@ -16,7 +16,7 @@ export type {
 export type { CreateCustomerRequest, UpdateCustomerRequest, CustomerResponse } from "./customer.js";
 export type { FinanceQuery, FinanceResponse } from "./finance.js";
 export type { PaginatedResponse, PaginationMeta, PaginationQuery } from "./pagination.js";
-export type { CreateVehicleRequest, VehicleResponse } from "./vehicle.js";
+export type { CreateVehicleRequest, UpdateVehicleRequest, VehicleResponse } from "./vehicle.js";
 export type {
   CreateWorkOrderItemRequest,
   CreateWorkOrderRecommendationRequest,

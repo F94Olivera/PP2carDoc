@@ -1,3 +1,11 @@
+import {
+  listVehiclesController,
+  vehicleByIdController,
+  createVehicleController,
+  updateVehicleController,
+  archiveVehicleController,
+  deleteVehicleController,
+} from "./controllers/vehicle-controller.js";
 import express from "express";
 import pino from "pino";
 
@@ -43,13 +51,20 @@ protectedRouter.patch(
   updateCustomerController,
 );
 protectedRouter.delete("/customers/:customerId", deleteCustomerController);
-// protectedRouter.post("/vehicles", createVehicleController);
-// protectedRouter.get("/vehicles", vehiclesController);
-// protectedRouter.get("/vehicles/license-plate/:licensePlate", vehicleByLicensePlateController);
-// protectedRouter.get("/vehicles/:vehicleId", vehicleByIdController);
-// protectedRouter.put("/vehicles/:vehicleId", replaceVehicleController);
-// protectedRouter.patch("/vehicles/:vehicleId/archive", archiveVehicleController);
-// protectedRouter.delete("/vehicles/:vehicleId", deleteVehicleController);
+protectedRouter.get("/vehicles", listVehiclesController);
+protectedRouter.get("/vehicles/:vehicleId", vehicleByIdController);
+protectedRouter.post("/vehicles", express.json({ limit: "32kb" }), createVehicleController);
+protectedRouter.put(
+  "/vehicles/:vehicleId",
+  express.json({ limit: "32kb" }),
+  updateVehicleController,
+);
+protectedRouter.patch(
+  "/vehicles/:vehicleId/archive",
+  express.json({ limit: "8kb" }),
+  archiveVehicleController,
+);
+protectedRouter.delete("/vehicles/:vehicleId", deleteVehicleController);
 // protectedRouter.post("/work-orders", createWorkOrderController);
 // protectedRouter.get("/work-orders/:workOrderId", workOrderByIdController);
 // protectedRouter.delete("/work-orders/:workOrderId", deleteWorkOrderController);

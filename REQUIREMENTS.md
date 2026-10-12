@@ -112,12 +112,12 @@ Métodos/rutas relativos a la base `/functions/v1/api`. Las filas pendientes ref
 | POST `/customers`                                   | Propietario/GOD | Datos y propietario válido → cliente, 201.               | Implementado; propietario MECHANIC.  |
 | PATCH `/customers/:customerId`                      | Propietario/GOD | Parcial no vacío, incluido `isActive` → cliente.         | Implementado; propietario inmutable. |
 | DELETE `/customers/:customerId`                     | Propietario/GOD | Sin dependencias → 204; con vehículos → 409.             | Implementado.                        |
-| GET `/vehicles`                                     | Propietario/GOD | Paginación/filtros → vehículos de clientes operativos.   | Pendiente.                           |
-| GET `/vehicles/:vehicleId`                          | Propietario/GOD | ID → vehículo accesible.                                 | Pendiente.                           |
-| POST `/vehicles`                                    | Propietario/GOD | Cliente activo y datos → vehículo, 201.                  | Pendiente.                           |
-| PUT `/vehicles/:vehicleId`                          | Propietario/GOD | Datos del vehículo, sin reasignarlo → vehículo.          | Pendiente.                           |
-| PATCH `/vehicles/:vehicleId/archive`                | Propietario/GOD | `isActive` → vehículo.                                   | Pendiente.                           |
-| DELETE `/vehicles/:vehicleId`                       | Propietario/GOD | Sin órdenes → 204; con órdenes → 409.                    | Pendiente.                           |
+| GET `/vehicles`                                     | Propietario/GOD | Paginación/filtros → vehículos de clientes operativos.   | Implementado localmente.             |
+| GET `/vehicles/:vehicleId`                          | Propietario/GOD | ID → vehículo accesible.                                 | Implementado localmente.             |
+| POST `/vehicles`                                    | Propietario/GOD | Cliente activo y datos → vehículo, 201.                  | Implementado localmente.             |
+| PUT `/vehicles/:vehicleId`                          | Propietario/GOD | Datos del vehículo, sin reasignarlo → vehículo.          | Implementado localmente.             |
+| PATCH `/vehicles/:vehicleId/archive`                | Propietario/GOD | `isActive` → vehículo.                                   | Implementado localmente.             |
+| DELETE `/vehicles/:vehicleId`                       | Propietario/GOD | Sin órdenes → 204; con órdenes → 409.                    | Implementado localmente.             |
 | GET `/vehicles/:vehicleId/work-orders`              | Propietario/GOD | Paginación y filtro de cierre → órdenes de ese vehículo. | Pendiente.                           |
 | POST `/work-orders`                                 | Propietario/GOD | Vehículo y datos de entrada/hijos → orden abierta, 201.  | Pendiente.                           |
 | GET `/work-orders/:workOrderId`                     | Propietario/GOD | ID → orden con ítems/recomendaciones.                    | Pendiente.                           |
@@ -173,4 +173,12 @@ El detalle permite editar datos y restaurar un cliente archivado con confirmaci�
 
 En el schema local, vehículos exige cliente activo en USING y WITH CHECK. Un vehículo archivado sigue visible para su administración mientras el cliente esté activo; sus órdenes e hijos quedan inaccesibles. Órdenes exige vehículo y cliente activos para lectura/escritura; ítems y recomendaciones heredan esa condición mediante RLS de la orden. GOD respeta las mismas condiciones. Primero se restaura cliente y luego, si corresponde, vehículo; restaurar cliente no restaura vehículos ni modifica órdenes. El detalle y PATCH de cliente siguen admitiendo archivados para administración autorizada.
 
-Estos controles SQL cubren Data API y la frontera transaccional autenticada del backend cuando se aplique el schema. Endpoints y validaciones de service de vehículos/órdenes permanecen en TODO pasos 3/4; no se anuncian como disponibles. Las pruebas de políticas son estáticas y no verifican comportamiento real ni concurrencia. El despliegue y sus datos no cambiaron. El tratamiento financiero de historial archivado sigue pendiente del paso de finanzas.
+Estos controles SQL cubren Data API y la frontera transaccional autenticada del backend cuando se aplique el schema. El paso 3 agrega endpoints y validaciones de service de vehículos; órdenes sigue pendiente del paso 4. Las pruebas de políticas son estáticas y no verifican comportamiento real ni concurrencia. El despliegue y sus datos no cambiaron. El tratamiento financiero de historial archivado sigue pendiente del paso de finanzas.
+
+## Estado del incremento de vehículos — 17/10/2026
+
+Implementados localmente GET/POST de vehículos, GET/PUT/DELETE por ID y PATCH de archivo/restauración. Listado ordenado por ID, misma paginación que clientes y filtros `includeArchived` y `customerId`; conteo y filas comparten transacción y alcance. Incluso con `includeArchived`, el cliente debe estar activo. Detalle/edición/archivo/restauración/eliminación admiten vehículo archivado solo bajo cliente activo. Recurso inexistente, ajeno o bajo padre archivado devuelve 404; alta con padre inaccesible también devuelve 404.
+
+PUT reemplaza patente, marca, modelo y unidad; año/kilometraje omitidos se normalizan a null. `customerId` y `isActive` se rechazan en PUT; el estado se modifica exclusivamente mediante PATCH de archivo. Patente sin espacios extremos y en mayúsculas, marca/modelo no vacíos, año entero >= 1886, kilometraje entero >= 0; números dentro del rango integer de Postgres. La unicidad por mecánico y la restricción al eliminar con órdenes usan las garantías SQL existentes y responden 409 ante sus conflictos.
+
+Frontend con Bearer, cliente fijo al editar, restauración confirmada, búsqueda completa de vehículos y consulta directa del cliente asociado. Errores del historial pendiente de órdenes quedan en su panel y no bloquean edición/archivo. No se carga historial ni se ofrece nueva orden desde un vehículo archivado. No se implementan endpoints de órdenes en este incremento. Verificaciones aisladas en TESTING; sin aplicar ni verificar cambios en Supabase.

@@ -328,6 +328,258 @@ paths:
           description: Supabase rate limit exceeded
         "503":
           description: Authentication unavailable or unconfigured
+  /vehicles:
+    get:
+      operationId: ListVehicles
+      summary: ListVehicles
+      security:
+        - bearerAuth: []
+      description: >-
+        Requires an active accessible customer; MECHANIC owns the customer and GOD has global scope.
+        Archived vehicles remain administratively accessible under active customers.
+        Plate uniqueness is per mechanic, case-insensitive and trimmed, including archived vehicles.
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+        - name: includeArchived
+          in: query
+          schema: { type: boolean, default: false }
+        - name: customerId
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 2147483647 }
+      # Unknown/repeated parameters and unsafe offsets return 400; ordered by ID.
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VehiclePage"
+        "400":
+          description: Invalid body, query or ID
+        "401":
+          description: Invalid or expired Bearer session
+        "404":
+          description: Vehicle or active customer unavailable or outside authorized scope
+        "409":
+          description: Duplicate plate for mechanic or related work orders prevent deletion
+        "403":
+          description: Operation prohibited by database authorization
+        "429":
+          description: Authentication rate limit
+        "503":
+          description: Authentication unavailable
+        "500":
+          description: Unexpected error; no database details
+    post:
+      operationId: CreateVehicle
+      summary: CreateVehicle
+      security:
+        - bearerAuth: []
+      description: >-
+        Requires an active accessible customer; MECHANIC owns the customer and GOD has global scope.
+        Archived vehicles remain administratively accessible under active customers.
+        Plate uniqueness is per mechanic, case-insensitive and trimmed, including archived vehicles.
+        Bodies reject undeclared keys. Vehicle parent cannot change.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVehicleInput"
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VehicleResponse"
+        "400":
+          description: Invalid body, query or ID
+        "401":
+          description: Invalid or expired Bearer session
+        "404":
+          description: Vehicle or active customer unavailable or outside authorized scope
+        "409":
+          description: Duplicate plate for mechanic or related work orders prevent deletion
+        "403":
+          description: Operation prohibited by database authorization
+        "429":
+          description: Authentication rate limit
+        "503":
+          description: Authentication unavailable
+        "500":
+          description: Unexpected error; no database details
+        "413":
+          description: Body exceeds 32 KB (8 KB for archive)
+  /vehicles/{vehicleId}:
+    get:
+      operationId: GetVehicle
+      summary: GetVehicle
+      security:
+        - bearerAuth: []
+      description: >-
+        Requires an active accessible customer; MECHANIC owns the customer and GOD has global scope.
+        Archived vehicles remain administratively accessible under active customers.
+        Plate uniqueness is per mechanic, case-insensitive and trimmed, including archived vehicles.
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 2147483647 }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VehicleResponse"
+        "400":
+          description: Invalid body, query or ID
+        "401":
+          description: Invalid or expired Bearer session
+        "404":
+          description: Vehicle or active customer unavailable or outside authorized scope
+        "409":
+          description: Duplicate plate for mechanic or related work orders prevent deletion
+        "403":
+          description: Operation prohibited by database authorization
+        "429":
+          description: Authentication rate limit
+        "503":
+          description: Authentication unavailable
+        "500":
+          description: Unexpected error; no database details
+    put:
+      operationId: UpdateVehicle
+      summary: UpdateVehicle
+      security:
+        - bearerAuth: []
+      description: >-
+        Requires an active accessible customer; MECHANIC owns the customer and GOD has global scope.
+        Archived vehicles remain administratively accessible under active customers.
+        Plate uniqueness is per mechanic, case-insensitive and trimmed, including archived vehicles.
+        Bodies reject undeclared keys. Vehicle parent cannot change.
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 2147483647 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateVehicleInput"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VehicleResponse"
+        "400":
+          description: Invalid body, query or ID
+        "401":
+          description: Invalid or expired Bearer session
+        "404":
+          description: Vehicle or active customer unavailable or outside authorized scope
+        "409":
+          description: Duplicate plate for mechanic or related work orders prevent deletion
+        "403":
+          description: Operation prohibited by database authorization
+        "429":
+          description: Authentication rate limit
+        "503":
+          description: Authentication unavailable
+        "500":
+          description: Unexpected error; no database details
+        "413":
+          description: Body exceeds 32 KB (8 KB for archive)
+    delete:
+      operationId: DeleteVehicle
+      summary: DeleteVehicle
+      security:
+        - bearerAuth: []
+      description: >-
+        Requires an active accessible customer; MECHANIC owns the customer and GOD has global scope.
+        Archived vehicles remain administratively accessible under active customers.
+        Plate uniqueness is per mechanic, case-insensitive and trimmed, including archived vehicles.
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 2147483647 }
+      responses:
+        "204":
+          description: Success; no body
+        "400":
+          description: Invalid body, query or ID
+        "401":
+          description: Invalid or expired Bearer session
+        "404":
+          description: Vehicle or active customer unavailable or outside authorized scope
+        "409":
+          description: Duplicate plate for mechanic or related work orders prevent deletion
+        "403":
+          description: Operation prohibited by database authorization
+        "429":
+          description: Authentication rate limit
+        "503":
+          description: Authentication unavailable
+        "500":
+          description: Unexpected error; no database details
+  /vehicles/{vehicleId}/archive:
+    patch:
+      operationId: ArchiveVehicle
+      summary: ArchiveVehicle
+      security:
+        - bearerAuth: []
+      description: >-
+        Requires an active accessible customer; MECHANIC owns the customer and GOD has global scope.
+        Archived vehicles remain administratively accessible under active customers.
+        Plate uniqueness is per mechanic, case-insensitive and trimmed, including archived vehicles.
+        Bodies reject undeclared keys. Vehicle parent cannot change.
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 2147483647 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArchiveVehicleInput"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VehicleResponse"
+        "400":
+          description: Invalid body, query or ID
+        "401":
+          description: Invalid or expired Bearer session
+        "404":
+          description: Vehicle or active customer unavailable or outside authorized scope
+        "409":
+          description: Duplicate plate for mechanic or related work orders prevent deletion
+        "403":
+          description: Operation prohibited by database authorization
+        "429":
+          description: Authentication rate limit
+        "503":
+          description: Authentication unavailable
+        "500":
+          description: Unexpected error; no database details
+        "413":
+          description: Body exceeds 32 KB (8 KB for archive)
 components:
   securitySchemes:
     bearerAuth:
@@ -540,3 +792,75 @@ components:
           $ref: "#/components/schemas/CreateCustomerInput/properties/notes"
         isActive:
           type: boolean
+    UpdateVehicleInput:
+      description: Full replacement of writable vehicle data; omitted year and initialOdometer become null.
+      type: object
+      additionalProperties: false
+      required: [licensePlate, make, model, odometerUnit]
+      properties:
+        licensePlate:
+          { type: string, minLength: 1, maxLength: 100, description: Trimmed and uppercased }
+        make: { type: string, minLength: 1, maxLength: 200 }
+        model: { type: string, minLength: 1, maxLength: 200 }
+        year: { type: integer, nullable: true, minimum: 1886, maximum: 2147483647 }
+        initialOdometer: { type: integer, nullable: true, minimum: 0, maximum: 2147483647 }
+        odometerUnit: { type: string, enum: [km, mi] }
+    CreateVehicleInput:
+      type: object
+      additionalProperties: false
+      required: [customerId, licensePlate, make, model, odometerUnit]
+      properties:
+        customerId: { type: integer, minimum: 1, maximum: 2147483647 }
+        licensePlate:
+          { type: string, minLength: 1, maxLength: 100, description: Trimmed and uppercased }
+        make: { type: string, minLength: 1, maxLength: 200 }
+        model: { type: string, minLength: 1, maxLength: 200 }
+        year: { type: integer, nullable: true, minimum: 1886, maximum: 2147483647 }
+        initialOdometer: { type: integer, nullable: true, minimum: 0, maximum: 2147483647 }
+        odometerUnit: { type: string, enum: [km, mi] }
+    ArchiveVehicleInput:
+      type: object
+      additionalProperties: false
+      required: [isActive]
+      properties:
+        isActive: { type: boolean }
+    VehicleResponse:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          customerId,
+          licensePlate,
+          make,
+          model,
+          year,
+          initialOdometer,
+          odometerUnit,
+          isActive,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id: { type: integer }
+        customerId: { type: integer }
+        licensePlate:
+          { type: string, minLength: 1, maxLength: 100, description: Trimmed and uppercased }
+        make: { type: string, minLength: 1, maxLength: 200 }
+        model: { type: string, minLength: 1, maxLength: 200 }
+        year: { type: integer, nullable: true, minimum: 1886, maximum: 2147483647 }
+        initialOdometer: { type: integer, nullable: true, minimum: 0, maximum: 2147483647 }
+        odometerUnit: { type: string, enum: [km, mi] }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    VehiclePage:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/VehicleResponse"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"

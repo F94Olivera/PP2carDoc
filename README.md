@@ -23,7 +23,7 @@ Los flujos están integrados en REQUIREMENTS. El [informe de performance del 17/
 - `supabase`: configuración, esquema SQL y entrada de la función.
 - `scripts`: herramientas compartidas.
 
-Existen endpoints de salud, login, identidad, logout y CRUD de clientes. Los endpoints de vehículos, órdenes, finanzas y PDF siguen pendientes. Clientes también necesita ajustes para las reglas confirmadas de propietario y archivo; ver TODO.
+Existen endpoints de salud, login, identidad, logout, CRUD de clientes y CRUD de vehículos con archivo/restauración. Los incrementos locales de propiedad, clientes/archivo y vehículos están implementados; órdenes, finanzas y PDF siguen pendientes. El schema y la API desplegada no se actualizaron con estos incrementos; ver TODO y TESTING.
 
 ## Desarrollo local
 

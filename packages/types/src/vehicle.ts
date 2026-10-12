@@ -21,3 +21,5 @@ export type VehicleResponse = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type UpdateVehicleRequest = Omit<CreateVehicleRequest, "customerId">;

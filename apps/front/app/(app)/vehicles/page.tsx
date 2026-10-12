@@ -9,7 +9,7 @@ import {
   listPageSizeOptions,
   storeListPageSize,
 } from "../pagination-preferences";
-import { archiveVehicle, deleteVehicle, listVehicles } from "./vehicle-api";
+import { archiveVehicle, deleteVehicle, listAllVehicles, listVehicles } from "./vehicle-api";
 
 type PendingAction =
   | { type: "archive"; vehicle: VehicleResponse }
@@ -34,7 +34,7 @@ export default function VehiclesPage() {
     setIsLoading(true);
 
     try {
-      const response = await listVehicles({
+      const response = await (query.trim() ? listAllVehicles : listVehicles)({
         fallbackError: t.vehicles.loadError,
         includeArchived,
         page,

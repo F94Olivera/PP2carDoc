@@ -1,7 +1,7 @@
 "use client";
 
 import type {
-  CreateVehicleRequest,
+  UpdateVehicleRequest,
   CustomerResponse,
   PaginationMeta,
   VehicleResponse,
@@ -11,7 +11,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { type SyntheticEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useI18n } from "../../../i18n/use-i18n";
-import { getCustomerName, listCustomers } from "../../customers/customer-api";
+import { getCustomerName, getCustomer } from "../../customers/customer-api";
 import {
   archiveVehicle,
   deleteVehicle,
@@ -38,6 +38,7 @@ export default function VehicleDetailPage() {
   const { t } = useI18n();
   const [vehicle, setVehicle] = useState<VehicleResponse | null>(null);
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const [workOrdersError, setWorkOrdersError] = useState<string | null>(null);
   const [workOrders, setWorkOrders] = useState<WorkOrderResponse[]>([]);
   const [workOrdersMeta, setWorkOrdersMeta] = useState<PaginationMeta | null>(null);
   const [workOrdersPage, setWorkOrdersPage] = useState(1);
@@ -45,7 +46,7 @@ export default function VehicleDetailPage() {
   const [form, setForm] = useState<VehicleForm | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [confirmMode, setConfirmMode] = useState<"archive" | "delete" | null>(null);
+  const [confirmMode, setConfirmMode] = useState<"archive" | "restore" | "delete" | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const vehicleId = params.vehicleId;
@@ -67,12 +68,13 @@ export default function VehicleDetailPage() {
     setIsLoading(true);
 
     try {
-      const [vehicleResponse, customersResponse] = await Promise.all([
-        getVehicle(vehicleId, t.vehicles.loadDetailError),
-        listCustomers({ fallbackError: t.vehicles.loadCustomersError, includeArchived: true }),
-      ]);
+      const vehicleResponse = await getVehicle(vehicleId, t.vehicles.loadDetailError);
       setVehicle(vehicleResponse);
-      setCustomers(customersResponse.data);
+      const customer = await getCustomer(
+        String(vehicleResponse.customerId),
+        t.vehicles.loadCustomersError,
+      );
+      setCustomers([customer]);
       setForm(toForm(vehicleResponse));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : t.vehicles.loadDetailError);
@@ -82,10 +84,14 @@ export default function VehicleDetailPage() {
   }, [t.vehicles.loadCustomersError, t.vehicles.loadDetailError, vehicleId]);
 
   const loadWorkOrders = useCallback(async () => {
-    if (!vehicle) {
+    if (!vehicle || !vehicle.isActive) {
+      setWorkOrders([]);
+      setWorkOrdersMeta(null);
+      setWorkOrdersError(null);
       return;
     }
 
+    setWorkOrdersError(null);
     try {
       const response = await listWorkOrdersByVehicle({
         fallbackError: t.vehicles.loadWorkOrdersError,
@@ -102,7 +108,9 @@ export default function VehicleDetailPage() {
       setWorkOrders(response.data);
       setWorkOrdersMeta(response.meta);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : t.vehicles.loadWorkOrdersError);
+      setWorkOrdersError(
+        loadError instanceof Error ? loadError.message : t.vehicles.loadWorkOrdersError,
+      );
     }
   }, [t.vehicles.loadWorkOrdersError, vehicle, workOrdersPage]);
 
@@ -128,8 +136,7 @@ export default function VehicleDetailPage() {
     setIsSubmitting(true);
     setError(null);
 
-    const payload: CreateVehicleRequest = {
-      customerId: Number(form.customerId),
+    const payload: UpdateVehicleRequest = {
       initialOdometer: toOptionalNumber(form.initialOdometer),
       licensePlate: form.licensePlate.trim().toUpperCase(),
       make: form.make.trim(),
@@ -165,7 +172,11 @@ export default function VehicleDetailPage() {
         return;
       }
 
-      const updatedVehicle = await archiveVehicle(vehicle.id, false, t.vehicles.archiveError);
+      const updatedVehicle = await archiveVehicle(
+        vehicle.id,
+        confirmMode === "restore",
+        t.vehicles.archiveError,
+      );
       setVehicle(updatedVehicle);
       setForm(toForm(updatedVehicle));
       setConfirmMode(null);
@@ -230,6 +241,15 @@ export default function VehicleDetailPage() {
                 {t.vehicles.archiveAction}
               </button>
             ) : null}
+            {!vehicle.isActive ? (
+              <button
+                className={secondaryButtonClasses}
+                onClick={() => setConfirmMode("restore")}
+                type="button"
+              >
+                {t.customers.restoreAction}
+              </button>
+            ) : null}
             <button
               className={dangerButtonClasses}
               onClick={() => setConfirmMode("delete")}
@@ -248,18 +268,7 @@ export default function VehicleDetailPage() {
             onSubmit={handleSubmit}
           >
             <Field label={t.vehicles.customerLabel} required>
-              <select
-                className={inputClasses}
-                onChange={(event) => updateField("customerId", event.target.value)}
-                required
-                value={form.customerId}
-              >
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {getCustomerName(customer)}
-                  </option>
-                ))}
-              </select>
+              <p className="py-3 text-sm">{customerName}</p>
             </Field>
             <Field label={t.vehicles.licensePlateLabel} required>
               <input
@@ -374,98 +383,113 @@ export default function VehicleDetailPage() {
           </div>
         )}
 
-        <section className="mt-10">
-          <h3 className="text-lg font-semibold">
-            {t.vehicles.workOrdersTitle(workOrdersMeta?.total ?? workOrders.length)}
-          </h3>
+        {vehicle.isActive ? (
+          <section className="mt-10">
+            {workOrdersError ? <ErrorMessage message={workOrdersError} /> : null}
+            <h3 className="text-lg font-semibold">
+              {t.vehicles.workOrdersTitle(workOrdersMeta?.total ?? workOrders.length)}
+            </h3>
 
-          <div className="mt-4 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
-            <table className="hidden w-full table-fixed text-left text-sm md:table">
-              <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 dark:bg-slate-950 dark:text-slate-400">
-                <tr>
-                  <th className="px-4 py-3">{t.vehicles.dateColumn}</th>
-                  <th className="px-4 py-3">{t.vehicles.problemColumn}</th>
-                  <th className="w-32 px-4 py-3">{t.vehicles.statusColumn}</th>
-                  <th className="w-32 px-4 py-3">{t.vehicles.totalColumn}</th>
-                  <th className="w-28 px-4 py-3 text-right">{t.vehicles.actionsColumn}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {workOrders.map((workOrder) => (
-                  <tr key={workOrder.id}>
-                    <td className="px-4 py-3">{formatDate(workOrder.entryDate)}</td>
-                    <td className="truncate px-4 py-3">{workOrder.reportedProblem}</td>
-                    <td className="px-4 py-3">
-                      {workOrder.exitDate ? t.vehicles.finishedStatus : t.vehicles.pendingStatus}
-                    </td>
-                    <td className="px-4 py-3">{formatMoney(getWorkOrderTotal(workOrder))}</td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        className="font-semibold text-blue-700 transition hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
-                        href={`/work-orders/${workOrder.id}`}
-                      >
-                        {t.workOrders.viewAction}
-                      </Link>
-                    </td>
+            <div className="mt-4 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+              <table className="hidden w-full table-fixed text-left text-sm md:table">
+                <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+                  <tr>
+                    <th className="px-4 py-3">{t.vehicles.dateColumn}</th>
+                    <th className="px-4 py-3">{t.vehicles.problemColumn}</th>
+                    <th className="w-32 px-4 py-3">{t.vehicles.statusColumn}</th>
+                    <th className="w-32 px-4 py-3">{t.vehicles.totalColumn}</th>
+                    <th className="w-28 px-4 py-3 text-right">{t.vehicles.actionsColumn}</th>
                   </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                  {workOrders.map((workOrder) => (
+                    <tr key={workOrder.id}>
+                      <td className="px-4 py-3">{formatDate(workOrder.entryDate)}</td>
+                      <td className="truncate px-4 py-3">{workOrder.reportedProblem}</td>
+                      <td className="px-4 py-3">
+                        {workOrder.exitDate ? t.vehicles.finishedStatus : t.vehicles.pendingStatus}
+                      </td>
+                      <td className="px-4 py-3">{formatMoney(getWorkOrderTotal(workOrder))}</td>
+                      <td className="px-4 py-3 text-right">
+                        <Link
+                          className="font-semibold text-blue-700 transition hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
+                          href={`/work-orders/${workOrder.id}`}
+                        >
+                          {t.workOrders.viewAction}
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="divide-y divide-slate-200 dark:divide-slate-800 md:hidden">
+                {workOrders.map((workOrder) => (
+                  <article className="p-4" key={workOrder.id}>
+                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                      {formatDate(workOrder.entryDate)}
+                    </p>
+                    <p className="mt-2 text-sm">{workOrder.reportedProblem}</p>
+                    <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                      {workOrder.exitDate ? t.vehicles.finishedStatus : t.vehicles.pendingStatus}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold">
+                      {formatMoney(getWorkOrderTotal(workOrder))}
+                    </p>
+                    <Link
+                      className="mt-3 inline-flex text-sm font-semibold text-blue-700 transition hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
+                      href={`/work-orders/${workOrder.id}`}
+                    >
+                      {t.workOrders.viewAction}
+                    </Link>
+                  </article>
                 ))}
-              </tbody>
-            </table>
-            <div className="divide-y divide-slate-200 dark:divide-slate-800 md:hidden">
-              {workOrders.map((workOrder) => (
-                <article className="p-4" key={workOrder.id}>
-                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-                    {formatDate(workOrder.entryDate)}
-                  </p>
-                  <p className="mt-2 text-sm">{workOrder.reportedProblem}</p>
-                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                    {workOrder.exitDate ? t.vehicles.finishedStatus : t.vehicles.pendingStatus}
-                  </p>
-                  <p className="mt-2 text-sm font-semibold">
-                    {formatMoney(getWorkOrderTotal(workOrder))}
-                  </p>
-                  <Link
-                    className="mt-3 inline-flex text-sm font-semibold text-blue-700 transition hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
-                    href={`/work-orders/${workOrder.id}`}
-                  >
-                    {t.workOrders.viewAction}
-                  </Link>
-                </article>
-              ))}
+              </div>
+              {!workOrdersError && workOrders.length === 0 ? (
+                <p className="py-8 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
+                  {t.vehicles.noWorkOrders}
+                </p>
+              ) : null}
             </div>
-            {workOrders.length === 0 ? (
-              <p className="py-8 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
-                {t.vehicles.noWorkOrders}
-              </p>
-            ) : null}
-          </div>
 
-          {workOrdersMeta && workOrdersMeta.totalPages > 1 ? (
-            <Pagination
-              hasNextPage={workOrdersMeta.hasNextPage}
-              hasPreviousPage={workOrdersMeta.hasPreviousPage}
-              page={currentWorkOrdersPage}
-              pageCount={workOrdersMeta.totalPages}
-              setPage={setWorkOrdersPage}
-            />
-          ) : null}
-        </section>
+            {workOrdersMeta && workOrdersMeta.totalPages > 1 ? (
+              <Pagination
+                hasNextPage={workOrdersMeta.hasNextPage}
+                hasPreviousPage={workOrdersMeta.hasPreviousPage}
+                page={currentWorkOrdersPage}
+                pageCount={workOrdersMeta.totalPages}
+                setPage={setWorkOrdersPage}
+              />
+            ) : null}
+          </section>
+        ) : null}
       </div>
 
       {confirmMode ? (
         <ConfirmDialog
           confirmLabel={
-            confirmMode === "delete" ? t.vehicles.deleteConfirm : t.vehicles.archiveConfirm
+            confirmMode === "delete"
+              ? t.vehicles.deleteConfirm
+              : confirmMode === "restore"
+                ? t.customers.restoreAction
+                : t.vehicles.archiveConfirm
           }
           isSubmitting={isSubmitting}
           message={
             confirmMode === "delete"
               ? t.vehicles.deleteMessage(vehicle.licensePlate)
-              : t.vehicles.archiveMessage(vehicle.licensePlate)
+              : confirmMode === "restore"
+                ? t.customers.restoreAction + ": " + vehicle.licensePlate
+                : t.vehicles.archiveMessage(vehicle.licensePlate)
           }
           onCancel={() => setConfirmMode(null)}
           onConfirm={confirmAction}
-          title={confirmMode === "delete" ? t.vehicles.deleteTitle : t.vehicles.archiveTitle}
+          title={
+            confirmMode === "delete"
+              ? t.vehicles.deleteTitle
+              : confirmMode === "restore"
+                ? t.customers.restoreAction
+                : t.vehicles.archiveTitle
+          }
           tone={confirmMode === "delete" ? "danger" : "default"}
         />
       ) : null}

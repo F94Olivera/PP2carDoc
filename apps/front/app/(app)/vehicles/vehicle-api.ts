@@ -1,15 +1,19 @@
 import type {
   CreateVehicleRequest,
+  UpdateVehicleRequest,
   CreateWorkOrderRequest,
   PaginatedResponse,
   VehicleResponse,
   WorkOrderResponse,
 } from "@cardoc/types";
-import { fetchApi, getErrorMessage, handleUnauthorizedResponse } from "../../lib/auth-client";
+import {
+  fetchAuthenticated,
+  getErrorMessage,
+  handleUnauthorizedResponse,
+} from "../../lib/auth-client";
 
 const requestJson = async <T>(path: string, fallbackError: string, init?: RequestInit) => {
-  const response = await fetchApi(path, {
-    credentials: "include",
+  const response = await fetchAuthenticated(path, {
     headers: {
       Accept: "application/json",
       ...(init?.body ? { "Content-Type": "application/json" } : {}),
@@ -60,7 +64,7 @@ export const getVehicle = (vehicleId: string, fallbackError: string) =>
 
 export const updateVehicle = (
   vehicleId: number,
-  vehicle: CreateVehicleRequest,
+  vehicle: UpdateVehicleRequest,
   fallbackError: string,
 ) =>
   requestJson<VehicleResponse>(`/vehicles/${vehicleId}`, fallbackError, {
@@ -75,8 +79,7 @@ export const archiveVehicle = (vehicleId: number, isActive: boolean, fallbackErr
   });
 
 export const deleteVehicle = async (vehicleId: number, fallbackError: string) => {
-  const response = await fetchApi(`/vehicles/${vehicleId}`, {
-    credentials: "include",
+  const response = await fetchAuthenticated(`/vehicles/${vehicleId}`, {
     headers: {
       Accept: "application/json",
     },
@@ -142,8 +145,7 @@ export const updateWorkOrder = (
   );
 
 export const deleteWorkOrder = async (workOrderId: number, fallbackError: string) => {
-  const response = await fetchApi(`/work-orders/${workOrderId}`, {
-    credentials: "include",
+  const response = await fetchAuthenticated(`/work-orders/${workOrderId}`, {
     headers: {
       Accept: "application/json",
     },
@@ -153,5 +155,19 @@ export const deleteWorkOrder = async (workOrderId: number, fallbackError: string
   if (!response.ok) {
     handleUnauthorizedResponse(response);
     throw new Error(await getErrorMessage(response, fallbackError));
+  }
+};
+
+export const listAllVehicles = async (options: {
+  fallbackError: string;
+  includeArchived?: boolean;
+}) => {
+  const data: VehicleResponse[] = [];
+  let page = 1;
+  while (true) {
+    const response = await listVehicles({ ...options, page, pageSize: 100 });
+    data.push(...response.data);
+    if (!response.meta.hasNextPage) return { ...response, data };
+    page++;
   }
 };

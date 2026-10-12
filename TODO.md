@@ -1,6 +1,6 @@
 # Cambios de código pendientes
 
-El backlog se inició tras la reorganización documental del 17/10/2026. Los pasos 1 y 2 fueron implementados localmente por solicitud del usuario; no se aplicaron al despliegue. Los demás pasos siguen pendientes. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
+El backlog se inició tras la reorganización documental del 17/10/2026. Los pasos 1, 2 y 3 fueron implementados localmente por solicitud del usuario; no se aplicaron al despliegue. Los demás pasos siguen pendientes. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
 
 ## 1. Propiedad y autorización — primero
 
@@ -20,14 +20,16 @@ Verificación local y límites en TESTING. Para alinear una demo existente, cons
 - [x] Aplicar estado activo de padres en políticas de vehículos, órdenes e hijos, sin excepción para GOD. Vehículos archivados conservan acceso administrativo bajo cliente activo; restaurar cliente no cambia el estado propio de sus vehículos.
 - [x] Agregar unitarios aislados de archivo/restauración, transporte PATCH, paginación y errores; comprobaciones estáticas de políticas para IDs directos y validación de ambos padres. Estas comprobaciones no ejecutan ni demuestran RLS real.
 
-El detalle de cliente sigue funcionando aunque falle el listado de vehículos, cuyo endpoint aún pertenece al paso 3. Las políticas se aplican a Data API y a operaciones bajo `withUserDatabase` una vez aplicado el schema; los endpoints de vehículos/órdenes siguen pendientes en pasos 3/4, incluidos sus filtros operativos, validación de padres en services y unitarios por operación. No hay cambios remotos ni verificación contra base viva. Resultados en TESTING.
+El detalle de cliente sigue funcionando aunque falle el listado de vehículos, implementado en el paso 3. Las políticas se aplican a Data API y a operaciones bajo `withUserDatabase` una vez aplicado el schema; el paso 3 completa vehículos; órdenes sigue pendiente del paso 4, incluidos sus filtros operativos, validación de padres en services y unitarios por operación. No hay cambios remotos ni verificación contra base viva. Resultados en TESTING.
 
 ## 3. Vehículos
 
-- [ ] Implementar endpoints pendientes con schema/controller/service/repository/mapper: listar, consultar, crear, editar, archivar/restaurar y eliminar.
-- [ ] Mantener `customerId` fijo al editar; el contrato actual `CreateVehicleRequest` se reutiliza para PUT y permite enviarlo. Diferenciar tipos de alta/edición y rechazar reasignaciones.
-- [ ] Validar patente, marca, modelo, año, kilometraje y unidad; manejar patente duplicada por mecánico y conflicto al eliminar vehículos con órdenes.
-- [ ] Conectar las pantallas existentes y aplicar paginación completa, evitando asumir que los primeros 100 registros representan todo el conjunto.
+- [x] Implementar listado, detalle, alta, edición, archivo/restauración y eliminación con schema/controller/service/repository/mapper.
+- [x] Separar alta/edición: PUT rechaza `customerId` y campos generados; padre inmutable.
+- [x] Validar patente, marca, modelo, año, kilometraje y unidad. Normalizar patente y traducir conflictos SQL de unicidad por mecánico/dependencias a 409.
+- [x] Conectar pantallas con Bearer, restauración explícita y búsqueda por todas las páginas. Consultar directamente al cliente del detalle sin limitarse a los primeros 100.
+
+Implementación y verificaciones locales en TESTING. Las restricciones de patente y parentesco usan el schema SQL existente; no se aplicó schema, seed ni deploy. Unitarios con dobles no demuestran RLS ni concurrencia reales. El historial de órdenes muestra su propio error sin bloquear la administración del vehículo; su endpoint sigue pendiente del paso 4.
 
 ## 4. Órdenes, ítems y recomendaciones
 
@@ -41,7 +43,7 @@ El detalle de cliente sigue funcionando aunque falle el listado de vehículos, c
 
 ## 5. Transporte y contratos compartidos
 
-- [ ] Usar `fetchAuthenticated` en vehículos/órdenes, finanzas y PDF: hoy llaman a `fetchApi` con `credentials: include` sin Bearer, a diferencia de clientes.
+- [ ] Completar `fetchAuthenticated` en finanzas y PDF. El módulo compartido de vehículos/órdenes ya usa Bearer desde el paso 3, al igual que clientes.
 - [ ] Revisar logout del frontend y renovación para mantener coherencia con revocación de sesión y límite de 15 minutos de la API.
 - [ ] Alinear `packages/types/src/api-error.ts` y consumidores con el formato implementado `{ error: string }`; no mantener contratos divergentes por módulo.
 - [ ] Actualizar `docs/openapi.yaml` en la misma entrega que cambie endpoints. Los contratos de propiedad de clientes se alinearon en el paso 1; mantenerlos actualizados en los siguientes módulos.
