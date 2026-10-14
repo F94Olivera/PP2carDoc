@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CarDoc | Presupuesto de servicio</title>
+  <link rel="stylesheet" href="./cardoc-racing.css" />
+</head>
+<body>
+  <article class="document" aria-label="Presupuesto de servicio CarDoc">
+    <!-- La imagen es decorativa. El logo y toda la información importante son texto real. -->
+    <header class="racing-hero">
+      <div class="hero-tint"></div>
+      <div class="hero-brand">
+        <div class="brand-mark" aria-label="CarDoc">Car<span>Doc</span><i></i></div>
+        <div class="brand-tagline">TU AUTO EN BUENAS MANOS</div>
+        <div class="brand-stripes" aria-hidden="true"><span></span><span></span><span></span></div>
+      </div>
+      <div class="hero-bottom" aria-hidden="true">
+        <span>PERFORMANCE</span>
+        <span class="hero-chevrons">///</span>
+        <span>RACING EDITION</span>
+      </div>
+    </header>
+
+    <main class="content">
+      <section class="document-title" aria-label="Tipo de documento">
+        <div class="title-accent"></div>
+        <h1>PRESUPUESTO <span>DE SERVICIO</span></h1>
+        <div class="checkers" aria-hidden="true"></div>
+      </section>
+
+      <section class="details" aria-label="Datos del servicio">
+        <div class="detail">
+          <div class="detail-label">CLIENTE</div>
+          <div class="detail-value" id="cliente"></div>
+        </div>
+        <div class="detail">
+          <div class="detail-label">DOMINIO</div>
+          <div class="detail-value detail-plate" id="dominio"></div>
+        </div>
+        <div class="detail">
+          <div class="detail-label">VEHÍCULO</div>
+          <div class="detail-value" id="vehiculo"></div>
+        </div>
+        <div class="detail">
+          <div class="detail-label">FECHA</div>
+          <div class="detail-value detail-date" id="fecha"></div>
+        </div>
+      </section>
+
+      <section class="items-section" aria-label="Ítems del presupuesto">
+        <div class="section-eyebrow"><span class="small-red-stripe"></span> DETALLE DE ÍTEMS <span class="eyebrow-trail" aria-hidden="true">///</span></div>
+        <table class="items-table">
+          <colgroup>
+            <col class="col-desc" />
+            <col class="col-qty" />
+            <col class="col-price" />
+            <col class="col-subtotal" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col">Descripción</th>
+              <th scope="col" class="number-col">Cantidad</th>
+              <th scope="col" class="number-col">Precio unitario</th>
+              <th scope="col" class="number-col">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody id="items-body"></tbody>
+        </table>
+      </section>
+
+      <section class="summary" aria-label="Totales del presupuesto">
+        <div class="summary-decoration" aria-hidden="true">
+          <span class="summary-checker"></span>
+          <span class="summary-rule"></span>
+        </div>
+        <div class="summary-numbers">
+          <div class="summary-row"><span>Subtotal</span><strong id="subtotal"></strong></div>
+          <div class="summary-row summary-total"><span>Total</span><strong id="total"></strong></div>
+        </div>
+      </section>
+    </main>
+    <footer class="page-footer" aria-hidden="true">
+      <div class="footer-track"></div>
+      <div class="footer-logo">Car<span>Doc</span></div>
+      <div class="footer-stripe"></div>
+    </footer>
+  </article>
+
+  <script>
+    "use strict";
+    /**
+     * REEMPLAZAR ESTOS DATOS DESDE EL BACKEND.
+     * Solo se requieren: cliente, dominio, vehiculo, fecha e items[].
+     * Cada item tiene descripcion, cantidad y precioUnitario.
+     * El subtotal de cada fila, el subtotal general y el total se calculan solos.
+     * Se admite cualquier cantidad de ítems (y cantidades decimales).
+     */
+    const datosEjemplo = {
+      cliente: "Cliente de prueba cuenta A",
+      dominio: "AB123CD",
+      vehiculo: "Vehículo de prueba",
+      fecha: "06/10/2026",
+      items: [
+        { descripcion: "Prueba PDF", cantidad: 1, precioUnitario: 100 }
+        // { descripcion: "Segundo concepto", cantidad: 2, precioUnitario: 2500 },
+        // { descripcion: "Mano de obra", cantidad: 1.5, precioUnitario: 7000 },
+      ]
+    };
+
+    const moneda = new Intl.NumberFormat("es-AR", {
+      style: "currency", currency: "ARS", minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    const numero = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 3 });
+
+    function renderCarDoc(datos) {
+      if (!datos || !Array.isArray(datos.items)) {
+        throw new TypeError("Se requiere un objeto con un array items.");
+      }
+
+      for (const campo of ["cliente", "dominio", "vehiculo", "fecha"]) {
+        document.getElementById(campo).textContent = String(datos[campo] ?? "");
+      }
+
+      const tbody = document.getElementById("items-body");
+      const fragment = document.createDocumentFragment();
+      let subtotalCentavos = 0;
+
+      datos.items.forEach((item, indice) => {
+        const cantidad = Number(item.cantidad);
+        const precio = Number(item.precioUnitario);
+        if (!Number.isFinite(cantidad) || cantidad < 0 ||
+            !Number.isFinite(precio) || precio < 0) {
+          throw new TypeError(`Cantidad o precio inválido en el ítem ${indice + 1}.`);
+        }
+
+        // Calculamos en centavos para evitar errores comunes de coma flotante.
+        const precioCentavos = Math.round((precio + Number.EPSILON) * 100);
+        const lineaCentavos = Math.round(cantidad * precioCentavos);
+        subtotalCentavos += lineaCentavos;
+
+        const fila = document.createElement("tr");
+        const celdas = [
+          String(item.descripcion ?? ""),
+          numero.format(cantidad),
+          moneda.format(precioCentavos / 100),
+          moneda.format(lineaCentavos / 100)
+        ];
+
+        celdas.forEach((valor, col) => {
+          const celda = document.createElement("td");
+          celda.textContent = valor; // Evita inyectar HTML desde descripciones.
+          if (col !== 0) celda.className = "number-col";
+          fila.appendChild(celda);
+        });
+        fragment.appendChild(fila);
+      });
+
+      tbody.replaceChildren(fragment);
+      const subtotal = subtotalCentavos / 100;
+      document.getElementById("subtotal").textContent = moneda.format(subtotal);
+      document.getElementById("total").textContent = moneda.format(subtotal);
+
+      // El pie decorativo queda al fondo cuando hay pocos ítems.
+      // Con una lista grande se oculta para no generar una página vacía.
+      const hoja = document.querySelector(".document");
+      const pie = document.querySelector(".page-footer");
+      hoja.classList.remove("no-footer");
+      const limitePrimeraPagina = hoja.getBoundingClientRect().top + (297 - 9) * 96 / 25.4;
+      const finContenido = document.querySelector(".summary").getBoundingClientRect().bottom;
+      if (finContenido + pie.getBoundingClientRect().height > limitePrimeraPagina) {
+        hoja.classList.add("no-footer");
+      }
+    }
+
+    // En una integración real, asignar window.CARDOC_DATA antes de este script,
+    // o invocar window.renderCarDoc(datos) después de cargar la página.
+    window.renderCarDoc = renderCarDoc;
+    renderCarDoc(window.CARDOC_DATA ?? datosEjemplo);
+  </script>
+</body>
+</html>

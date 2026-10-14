@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer";
 import { test } from "node:test";
 import { PDFDocument } from "pdf-lib";
 import { budgetPdfSchema, budgetItemAmount } from "@cardoc/types";
+import { budgetRacingHero } from "../src/assets/budget-racing-hero.js";
 import { createBudgetPdf } from "../src/services/budget-service.js";
 import { createBudgetPdfController } from "../src/controllers/budget-controller.js";
 import type { Request, Response } from "express";
@@ -60,21 +61,60 @@ test("budget strictly validates independent fields, calendar, limits and numeric
   assert.equal(budgetItemAmount({ description: "", quantity: 1.005, unitPrice: 1 }), 1.01);
 });
 
-test("generator produces a single A4 hello-world PDF without external services", async () => {
-  const bytes = await createBudgetPdf();
-  assert.equal(Buffer.from(bytes).subarray(0, 5).toString(), "%PDF-");
-  const doc = await PDFDocument.load(bytes);
-  assert.equal(doc.getPageCount(), 1);
-  assert.equal(Math.round(doc.getPage(0).getWidth()), 595);
-  assert.equal(Math.round(doc.getPage(0).getHeight()), 842);
+test("racing PDF embeds the hero, form data and rounded totals on A4, paginating complete rows", async () => {
   const { PDFArray, PDFRawStream, decodePDFRawStream } = await import("pdf-lib");
-  const contents = doc.getPage(0).node.Contents();
-  assert.ok(contents instanceof PDFArray);
-  const stream = contents.lookup(0, PDFRawStream);
-  const operators = Buffer.from(decodePDFRawStream(stream).decode()).toString();
-  const text = Buffer.from("hola mundo").toString("hex").toUpperCase();
-  assert.ok(operators.includes(`<${text}> Tj`));
-  assert.equal((operators.match(/ Tj/g) ?? []).length, 1);
+  const inspect = (doc: PDFDocument) =>
+    doc.getPages().map((page) => {
+      assert.equal(Math.round(page.getWidth()), 595);
+      assert.equal(Math.round(page.getHeight()), 842);
+      const contents = page.node.Contents();
+      assert.ok(contents instanceof PDFArray);
+      return Array.from({ length: contents.size() }, (_, i) =>
+        Buffer.from(decodePDFRawStream(contents.lookup(i, PDFRawStream)).decode()).toString(),
+      ).join("\n");
+    });
+  const hasText = (operators: string, value: string) =>
+    operators.includes(`<${Buffer.from(value, "latin1").toString("hex").toUpperCase()}> Tj`);
+  assert.equal(
+    budgetRacingHero,
+    readFileSync(
+      new URL("../../../docs/templates/cardoc-racing/racing-hero.jpg", import.meta.url),
+    ).toString("base64"),
+  );
+  const one = await PDFDocument.load(await createBudgetPdf(budgetPdfSchema.parse(input)));
+  assert.equal(one.getPageCount(), 1);
+  const [operators] = inspect(one);
+  for (const value of [
+    "María Núñez",
+    "Peugeot 208",
+    "AB123CD",
+    "17/10/2026",
+    "$ 2.250,38",
+    "Total",
+  ])
+    assert.ok(hasText(operators, value), value);
+  assert.match(operators, / Do/);
+  assert.ok(!hasText(operators, "hola mundo"));
+  const many = await PDFDocument.load(
+    await createBudgetPdf(
+      budgetPdfSchema.parse({
+        ...input,
+        customer: { fullName: "Á".repeat(120) },
+        vehicle: { name: "Ñ".repeat(120), plate: "A".repeat(30) },
+        items: Array.from({ length: 100 }, (_, i) => ({
+          description: `Item ${i} ${"X".repeat(290)}`,
+          quantity: 1.005,
+          unitPrice: 1,
+        })),
+      }),
+    ),
+  );
+  assert.ok(many.getPageCount() > 1);
+  const pages = inspect(many);
+  assert.equal(pages.filter((value) => hasText(value, "Descripción")).length, pages.length);
+  assert.ok(hasText(pages.at(-1)!, "$ 101,00"));
+  for (let i = 0; i < 100; i++)
+    assert.equal(pages.filter((value) => hasText(value, `Item ${i}`)).length, 1, `Item ${i} once`);
 });
 
 test("controller rejects bad inputs and returns a private downloadable PDF", async () => {

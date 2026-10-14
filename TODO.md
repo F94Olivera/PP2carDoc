@@ -105,3 +105,5 @@ Segundo cierre del paso 9 — 17/10/2026, solicitado expresamente por el usuario
 - [ ] Paso 7: restaurar el presupuesto detallado cuando se cierre el diagnóstico de descarga; la salida actual solicitada es una hoja A4 con `hola mundo`. Investigar el fallo remoto reportado: el generador anterior pasa las pruebas locales, sin reproducción contra API viva.
 
 Diagnóstico paso 7: fallo 500 reproducido en navegador y corregido con import explícito de `Buffer` para Edge. API v11 devuelve 200 en la repetición real; restaurar plantilla detallada sigue pendiente.
+
+Paso 7 — 18/10/2026: reemplazada la salida de diagnóstico por el presupuesto Racing solicitado, con los datos reales del formulario, imagen integrada, tabla paginada y totales. El pendiente anterior de restauración de plantilla queda resuelto mediante este nuevo modelo.

@@ -217,3 +217,9 @@ Publicada API v8 en la demo `lsbgegbghlgxkqxpmgyx`, incluidos los endpoints de �
 POST `/budgets/pdf` conserva autenticación, validación del formulario y headers de descarga, pero devuelve temporalmente una única hoja blanca A4 con el texto `hola mundo`. Los datos del formulario no se imprimen. Esta salida reemplaza la plantilla detallada del paso 7 durante el diagnóstico; no persiste archivos. El frontend conserva la ruta `/budgets/pdf` sobre `NEXT_PUBLIC_API_URL`.
 
 Compatibilidad Edge del PDF: el controller importa `Buffer` desde `node:buffer` para enviar el archivo binario sin depender de globals de Node. Corrección publicada en API v11; no cambia validación, permisos ni contrato HTTP.
+
+### Presupuesto Racing — 18/10/2026
+
+La salida de diagnóstico `hola mundo` queda reemplazada por el diseño aportado en CarDoc_Racing_HTML_CSS, adaptado como PDF nativo A4: fondo oscuro, foto de automovilismo, marca CarDoc y acentos rojos, cliente/dominio/vehículo/fecha, tabla y resumen. Se conservan el identificador `classic`, la validación compartida, autenticación y descarga binaria. Las filas muestran cantidad, precio unitario e importe; subtotal y total son la suma redondeada de los renglones, sin IVA ni conceptos adicionales. Nombres y descripciones se ajustan en líneas; importes extensos ajustan tamaño para respetar su columna. Paginación sin dividir filas, encabezados repetidos y total en la última página.
+
+HTML/CSS/imagen originales conservados en `docs/templates/cardoc-racing`; el servicio reproduce su composición mediante pdf-lib y fuentes estándar Helvetica, sin ejecutar Chromium ni el JavaScript de ejemplo. Imagen integrada al bundle mediante base64; sin filesystem, recursos externos ni servicios de renderizado durante el request. Los gradientes y detalles CSS se adaptan a formas y colores PDF, por lo que no se promete reproducción píxel a píxel del HTML.

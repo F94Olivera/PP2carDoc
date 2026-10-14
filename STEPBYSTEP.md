@@ -132,3 +132,7 @@ Backend recompilado con `pnpm build:api` y función `api` desplegada mediante la
 ### Corrección Edge del PDF (17/10/2026)
 
 Reproducido 500 desde Budget local con sesión existente; import explícito de `Buffer` en controller y regresión aislada sin global Node. API v11 publicada; repetición desde navegador y logs confirman HTTP 200 sin error en formulario. 87 unitarios, typecheck, lint enfocado y build API aprobados.
+
+### Presupuesto Racing (18/10/2026)
+
+Reemplazado `hola mundo` por diseño aportado, adaptado a PDF nativo con imagen integrada, datos del formulario, tabla paginada y subtotales/totales. Referencias HTML/CSS/JPEG conservadas. 87 unitarios y controles locales aprobados; muestras renderizadas e inspeccionadas. API v12 ACTIVE publicada en Supabase; descarga remota pendiente de la prueba del usuario.

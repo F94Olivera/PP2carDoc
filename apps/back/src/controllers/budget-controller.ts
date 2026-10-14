@@ -11,7 +11,7 @@ export const createBudgetPdfController: AuthenticatedHandler = async (req, res) 
     });
     return;
   }
-  const pdf = await createBudgetPdf();
+  const pdf = await createBudgetPdf(input.data);
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `attachment; filename="presupuesto-${input.data.date}.pdf"`);
   res.setHeader("Cache-Control", "no-store");

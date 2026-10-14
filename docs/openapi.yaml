@@ -211,7 +211,7 @@ paths:
           description: Authentication unavailable
   /budgets/pdf:
     post:
-      summary: Generate an A4 hello-world PDF
+      summary: Generate a racing-style A4 service budget PDF
       description: >-
         Uses only form data; no database, Storage or email writes. Requires an
         authenticated MECHANIC or GOD. Text is trimmed printable Latin-1 (Spanish
@@ -230,7 +230,7 @@ paths:
               $ref: "#/components/schemas/BudgetPdfInput"
       responses:
         "200":
-          description: Single white A4 page containing only "hola mundo", generated in memory; budget inputs are validated but not rendered
+          description: Racing-style A4 budget with embedded hero image, form data, rounded line amounts, subtotal and total; complete rows and repeated table headers across pages
           headers:
             Content-Disposition:
               description: Exposed through CORS for browser downloads
