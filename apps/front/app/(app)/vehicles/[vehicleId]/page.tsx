@@ -9,7 +9,7 @@ import type {
 } from "@cardoc/types";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { type SyntheticEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type SyntheticEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../../../i18n/use-i18n";
 import { getCustomerName, getCustomer } from "../../customers/customer-api";
 import {
@@ -63,27 +63,36 @@ export default function VehicleDetailPage() {
       )
     : "-";
 
+  const loadDetailVersion = useRef(0);
+
   const loadDetail = useCallback(async () => {
+    const version = ++loadDetailVersion.current;
     setError(null);
     setIsLoading(true);
 
     try {
       const vehicleResponse = await getVehicle(vehicleId, t.vehicles.loadDetailError);
+      if (version !== loadDetailVersion.current) return;
       setVehicle(vehicleResponse);
       const customer = await getCustomer(
         String(vehicleResponse.customerId),
         t.vehicles.loadCustomersError,
       );
+      if (version !== loadDetailVersion.current) return;
       setCustomers([customer]);
       setForm(toForm(vehicleResponse));
     } catch (loadError) {
+      if (version !== loadDetailVersion.current) return;
       setError(loadError instanceof Error ? loadError.message : t.vehicles.loadDetailError);
     } finally {
-      setIsLoading(false);
+      if (version === loadDetailVersion.current) setIsLoading(false);
     }
   }, [t.vehicles.loadCustomersError, t.vehicles.loadDetailError, vehicleId]);
 
+  const loadWorkOrdersVersion = useRef(0);
+
   const loadWorkOrders = useCallback(async () => {
+    const version = ++loadWorkOrdersVersion.current;
     if (!vehicle || !vehicle.isActive) {
       setWorkOrders([]);
       setWorkOrdersMeta(null);
@@ -99,6 +108,7 @@ export default function VehicleDetailPage() {
         pageSize: workOrdersPageSize,
         vehicleId: vehicle.id,
       });
+      if (version !== loadWorkOrdersVersion.current) return;
 
       if (response.meta.totalPages > 0 && workOrdersPage > response.meta.totalPages) {
         setWorkOrdersPage(response.meta.totalPages);
@@ -108,6 +118,7 @@ export default function VehicleDetailPage() {
       setWorkOrders(response.data);
       setWorkOrdersMeta(response.meta);
     } catch (loadError) {
+      if (version !== loadWorkOrdersVersion.current) return;
       setWorkOrdersError(
         loadError instanceof Error ? loadError.message : t.vehicles.loadWorkOrdersError,
       );
@@ -115,11 +126,27 @@ export default function VehicleDetailPage() {
   }, [t.vehicles.loadWorkOrdersError, vehicle, workOrdersPage]);
 
   useEffect(() => {
-    queueMicrotask(() => void loadDetail());
+    const requestVersion = loadDetailVersion;
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void loadDetail();
+    });
+    return () => {
+      active = false;
+      requestVersion.current++;
+    };
   }, [loadDetail]);
 
   useEffect(() => {
-    queueMicrotask(() => void loadWorkOrders());
+    const requestVersion = loadWorkOrdersVersion;
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void loadWorkOrders();
+    });
+    return () => {
+      active = false;
+      requestVersion.current++;
+    };
   }, [loadWorkOrders]);
 
   const updateField = (field: keyof VehicleForm, value: string) => {

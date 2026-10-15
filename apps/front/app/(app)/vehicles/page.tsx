@@ -2,7 +2,7 @@
 
 import type { PaginationMeta, VehicleResponse } from "@cardoc/types";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../../i18n/use-i18n";
 import {
   getStoredListPageSize,
@@ -29,7 +29,10 @@ export default function VehiclesPage() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const loadVersion = useRef(0);
+
   const loadVehicles = useCallback(async () => {
+    const version = ++loadVersion.current;
     setError(null);
     setIsLoading(true);
 
@@ -40,6 +43,7 @@ export default function VehiclesPage() {
         page,
         pageSize: query.trim() ? 100 : pageSize,
       });
+      if (version !== loadVersion.current) return;
       setVehicles(response.data);
       setMeta(response.meta);
 
@@ -47,14 +51,24 @@ export default function VehiclesPage() {
         setPage(response.meta.totalPages);
       }
     } catch (loadError) {
+      if (version !== loadVersion.current) return;
+      setVehicles([]);
       setError(loadError instanceof Error ? loadError.message : t.vehicles.loadError);
     } finally {
-      setIsLoading(false);
+      if (version === loadVersion.current) setIsLoading(false);
     }
   }, [includeArchived, page, pageSize, query, t.vehicles.loadError]);
 
   useEffect(() => {
-    queueMicrotask(() => void loadVehicles());
+    const requestVersion = loadVersion;
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void loadVehicles();
+    });
+    return () => {
+      active = false;
+      requestVersion.current++;
+    };
   }, [loadVehicles]);
 
   const visibleVehicles = useMemo(() => {
@@ -79,7 +93,7 @@ export default function VehiclesPage() {
     ? visibleVehicles.slice((currentPage - 1) * pageSize, currentPage * pageSize)
     : visibleVehicles;
   const shouldShowPagination =
-    !isLoading && (query.trim() ? visibleVehicles.length > 0 : !!meta?.total);
+    !isLoading && !error && (query.trim() ? visibleVehicles.length > 0 : !!meta?.total);
 
   const handlePageSizeChange = (nextPageSize: number) => {
     setPageSize(nextPageSize);
@@ -231,7 +245,7 @@ export default function VehiclesPage() {
           ))}
         </div>
 
-        {!isLoading && paginatedVehicles.length === 0 ? (
+        {!isLoading && !error && paginatedVehicles.length === 0 ? (
           <p className="py-10 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
             {query ? t.vehicles.emptySearch : t.vehicles.emptyList}
           </p>

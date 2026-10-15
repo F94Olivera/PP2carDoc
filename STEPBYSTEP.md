@@ -59,11 +59,11 @@ Salida: PDF legible descargable con importes y datos del formulario, independien
 
 ## 6. Cierre funcional y documental
 
-- [ ] Revisar todos los recorridos del frontend, autorización, estados vacíos y errores; no confundir compilación con verificación de flujo real.
-- [ ] Ejecutar formato enfocado, lint, typecheck, unitarios, build y diff-check según el cambio.
-- [ ] Actualizar OpenAPI, REQUIREMENTS, TESTING y TODO con el estado real y resultados fechados.
-- [ ] Solo ante autorización explícita, ejecutar las integraciones existentes. Pedir aprobación separada antes de crear nuevas integraciones.
-- [ ] Después de completar funcionalidades, evaluar optimizaciones justificadas por el informe de performance; no reducir controles de acceso para ganar tiempo.
+- [x] Revisar estáticamente todos los recorridos del frontend, autorización, estados vacíos y errores; corregir cargas obsoletas. Recorrido real conectado pendiente de autorización de servicios externos; no se acredita con compilación.
+- [x] Ejecutar formato enfocado, lint, typecheck, unitarios, build y diff-check según el cambio.
+- [x] Actualizar OpenAPI, REQUIREMENTS, TESTING y TODO con el estado real y resultados fechados.
+- [x] Mantener integraciones condicionadas a autorización explícita: no solicitadas ni ejecutadas en este cierre local; no se crean nuevas suites.
+- [x] Después de completar funcionalidades, evaluar optimizaciones justificadas por el informe de performance; no reducir controles de acceso para ganar tiempo.
 
 Salida: alcance implementado, comprobaciones registradas y limitaciones explícitas. No se requiere commit ni despliegue como parte de este plan.
 
@@ -112,3 +112,7 @@ Resultado del paso 9: 60/60 unitarios, formato, lint, TypeScript, build, enlaces
 ### 17/10/2026 — STEPBYSTEP pasos 1, 2 y 3
 
 Pasos 1 y 2 ya implementados, revalidados con la suite local. Completado órdenes e hijos (TODO paso 4): contratos separados, cinco rutas autenticadas, transacciones de agregado, mappers de estados, validación estricta, edición/cierre/reapertura, eliminación con cascada existente y pantallas con paginación completa. OpenAPI y REQUIREMENTS actualizados. Verificaciones y límites en TESTING. Cierre remoto ya contemplado al final de TODO paso 9; no se repite ni ejecuta en esta entrega.
+
+### 17/10/2026 — STEPBYSTEP 4, 5 y 6: cierre local
+
+Finanzas y PDF existentes revalidados sin duplicar implementación. Revisión estática de navegación, permisos, transporte, paginación, estados vacíos/errores y cargas de pantallas. Corregidas carreras en listados, detalles y contexto de altas; cleanup evita iniciar cargas encoladas de efectos descartados. Los listados no presentan un fallo como vacío ni conservan filas accionables tras error. Evaluadas consultas y pool sin mediciones nuevas: se mantienen las fronteras de autenticación y `max: 1`. OpenAPI revisado, sin cambio HTTP que requiera modificar contratos. Resultados y límites en TESTING. El cierre remoto ya está en TODO paso 9 y no se ejecuta ni duplica.

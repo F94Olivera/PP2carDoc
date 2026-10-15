@@ -11,7 +11,7 @@ import type {
 } from "@cardoc/types";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { type SyntheticEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type SyntheticEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../../../../../i18n/use-i18n";
 import { getCustomerName, getCustomer } from "../../../../customers/customer-api";
 import { createWorkOrder, getVehicle } from "../../../vehicle-api";
@@ -88,23 +88,29 @@ export default function NewWorkOrderPage() {
       )
     : "-";
 
+  const loadContextVersion = useRef(0);
+
   const loadContext = useCallback(async () => {
+    const version = ++loadContextVersion.current;
     setError(null);
     setIsLoading(true);
 
     try {
       const vehicleResponse = await getVehicle(params.vehicleId, t.vehicles.loadDetailError);
+      if (version !== loadContextVersion.current) return;
       if (!vehicleResponse.isActive) throw new Error(t.workOrders.loadError);
       const customer = await getCustomer(
         String(vehicleResponse.customerId),
         t.vehicles.loadCustomersError,
       );
+      if (version !== loadContextVersion.current) return;
       setVehicle(vehicleResponse);
       setCustomers([customer]);
     } catch (loadError) {
+      if (version !== loadContextVersion.current) return;
       setError(loadError instanceof Error ? loadError.message : t.workOrders.loadError);
     } finally {
-      setIsLoading(false);
+      if (version === loadContextVersion.current) setIsLoading(false);
     }
   }, [
     params.vehicleId,
@@ -114,7 +120,15 @@ export default function NewWorkOrderPage() {
   ]);
 
   useEffect(() => {
-    queueMicrotask(() => void loadContext());
+    const requestVersion = loadContextVersion;
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void loadContext();
+    });
+    return () => {
+      active = false;
+      requestVersion.current++;
+    };
   }, [loadContext]);
 
   const setItem = (index: number, nextItem: ItemForm) => {

@@ -2,7 +2,7 @@
 
 import type { CustomerResponse, PaginationMeta } from "@cardoc/types";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../../i18n/use-i18n";
 import {
   getStoredListPageSize,
@@ -35,13 +35,18 @@ export default function CustomersPage() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const loadVersion = useRef(0);
+
   const loadCustomers = useCallback(async () => {
+    const version = ++loadVersion.current;
     setError(null);
     setIsLoading(true);
 
     try {
       if (query.trim()) {
-        setCustomers(await listAllCustomers(t.customers.loadError, includeArchived));
+        const customers = await listAllCustomers(t.customers.loadError, includeArchived);
+        if (version !== loadVersion.current) return;
+        setCustomers(customers);
         setMeta(null);
         return;
       }
@@ -51,6 +56,7 @@ export default function CustomersPage() {
         page,
         pageSize: query.trim() ? 100 : pageSize,
       });
+      if (version !== loadVersion.current) return;
       setCustomers(response.data);
       setMeta(response.meta);
 
@@ -58,14 +64,24 @@ export default function CustomersPage() {
         setPage(response.meta.totalPages);
       }
     } catch (loadError) {
+      if (version !== loadVersion.current) return;
+      setCustomers([]);
       setError(loadError instanceof Error ? loadError.message : t.customers.loadError);
     } finally {
-      setIsLoading(false);
+      if (version === loadVersion.current) setIsLoading(false);
     }
   }, [includeArchived, page, pageSize, query, t.customers.loadError]);
 
   useEffect(() => {
-    queueMicrotask(() => void loadCustomers());
+    const requestVersion = loadVersion;
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void loadCustomers();
+    });
+    return () => {
+      active = false;
+      requestVersion.current++;
+    };
   }, [loadCustomers]);
 
   const visibleCustomers = useMemo(() => {
@@ -96,7 +112,7 @@ export default function CustomersPage() {
     ? visibleCustomers.slice((currentPage - 1) * pageSize, currentPage * pageSize)
     : visibleCustomers;
   const shouldShowPagination =
-    !isLoading && (query.trim() ? visibleCustomers.length > 0 : !!meta?.total);
+    !isLoading && !error && (query.trim() ? visibleCustomers.length > 0 : !!meta?.total);
 
   const handlePageSizeChange = (nextPageSize: number) => {
     setPageSize(nextPageSize);
@@ -275,7 +291,7 @@ export default function CustomersPage() {
           ))}
         </div>
 
-        {!isLoading && paginatedCustomers.length === 0 ? (
+        {!isLoading && !error && paginatedCustomers.length === 0 ? (
           <p className="py-10 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
             {query ? t.customers.emptySearch : t.customers.emptyList}
           </p>

@@ -1,6 +1,6 @@
 # Cambios de código pendientes
 
-El backlog se inició tras la reorganización documental del 17/10/2026. Los pasos 1, 2, 3, 5, 6 y 7 fueron implementados y publicados en la demo mediante el cierre del paso 9. El paso 8 tiene verificación local y revisión final de rendimiento pendiente del paso 4. El paso 9 se completó para el alcance disponible de la demo; el paso 4 está implementado localmente y pendiente de publicación. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
+El backlog se inició tras la reorganización documental del 17/10/2026. Los pasos 1, 2, 3, 5, 6 y 7 fueron implementados y publicados en la demo mediante el cierre del paso 9. El paso 8 tiene verificación local y revisión estática final completadas; no hay nuevas mediciones remotas. El paso 9 se completó para el alcance disponible de la demo; el paso 4 está implementado localmente y pendiente de publicación. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
 
 ## 1. Propiedad y autorización — primero
 
@@ -74,7 +74,7 @@ Implementación y verificación local en TESTING. PDF generado en memoria; no re
 
 - [x] Agregar unitarios por caso de uso con dobles de repositories/Auth; ampliar cobertura de controllers y mappers según los módulos implementados. No usar APIs ni base real. Cobertura ampliada de clientes y Auth; órdenes se cubre al implementar el paso 4.
 - [x] Fijar/documentar versión compatible de Node: 26.3.0 en `.nvmrc`, rango `>=26.3.0 <27` en engines y pnpm 11.7.0 existente. Verificados unitarios y compilación local; arranque Docker/Edge no ejecutado.
-- [ ] Al terminar funcionalidades, revisar requests duplicadas/carreras en efectos y viajes secuenciales a Postgres; evaluar instrumentación Pino/Server-Timing y volumen antes de modificar el pool `max: 1`.
+- [x] Al terminar funcionalidades, revisar requests duplicadas/carreras en efectos y viajes secuenciales a Postgres; evaluar instrumentación Pino/Server-Timing y volumen antes de modificar el pool `max: 1`.
 - [x] La selección regional `x-region: us-west-2` ya existe en el transporte actual: no registrarla como optimización pendiente de implementar. Las mediciones nuevas con Auth/base/API requieren autorización explícita.
 - [x] Actualizar TESTING con resultados reales y cerrar casillas solo tras implementar y verificar. Ningún resultado histórico demuestra el estado remoto o la conformidad con las nuevas reglas.
 
@@ -97,3 +97,5 @@ El 17/10/2026 el usuario autorizó reinicio destructivo, seed, las tres integrac
 Resultado: schema reiniciado, seed aplicado y API versión 7 ACTIVE; 60/60 unitarios y las tres integraciones aprobados, con limpieza comprobada. No se duplicó este bloque al final: seed/schema/integraciones/deploy ya estaban contemplados aquí. Las notas de los pasos anteriores conservan el estado histórico de sus entregas; el estado remoto actual está en el informe. Al implementar órdenes (paso 4), revisar nuevamente seed/contratos y preparar otra ejecución autorizada de integraciones/deploy; la revisión final del paso 8 también permanece abierta.
 
 Revisión posterior a STEPBYSTEP 1–3 (17/10/2026): órdenes y sus contratos ya están implementados localmente. El bloque anterior contempla seed, aplicación de schema, integraciones y deploy; no se agrega otro paso. Antes del próximo cierre autorizado, revisar fixtures contra los contratos finales de órdenes, conservar el schema existente si no hay cambios necesarios y publicar el nuevo bundle. El resultado histórico v7 no valida esta implementación; las casillas cerradas del paso 9 corresponden exclusivamente a ese cierre anterior. La revisión final de rendimiento del paso 8 sigue abierta.
+
+Revisión final de STEPBYSTEP 4–6 (17/10/2026): completada revisión estática del paso 8 y corregidas carreras de cargas en listados de clientes/vehículos/órdenes, detalles e inicio de altas. Cleanup descarta microtareas canceladas y versiones impiden aplicar respuestas/errores/finalizaciones anteriores. Los listados limpian filas ante fallo y no muestran vacío/paginación como éxito. Se mantienen pool y consultas protegidas; instrumentación y ajustes adicionales requieren necesidad/mediciones, sin beneficio medido atribuido. Las notas anteriores sobre revisión pendiente son históricas. El paso 9 ya contempla seed, schema, integraciones y deploy: no se agrega otro bloque ni se ejecuta. Sigue pendiente publicar órdenes y estas correcciones, y verificar recorridos reales en un cierre autorizado.

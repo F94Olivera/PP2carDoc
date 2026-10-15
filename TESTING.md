@@ -187,3 +187,26 @@ Pasos 1 y 2 existentes revalidados por la suite aislada completa. Agregados 18 u
 Resultado final local: **78/78 unitarios aprobados**. `pnpm lint`, `pnpm typecheck`, `pnpm build` (API Edge, tipos y Next.js), formato enfocado y `git diff --check` aprobados. OpenAPI revisado frente a schemas y rutas; enlaces locales revisados. Durante la implementación se corrigieron fallos de lint/tipado de los tests y una aserción que debía inspeccionar el error original envuelto por Drizzle; no quedan checks fallidos.
 
 No se modificó ni ejecutó schema/seed; no se ejecutaron integraciones, deploy ni recorridos de navegador contra API. Las FK cascade se conservan sin recrearlas. Los dobles no prueban RLS, concurrencia ni transacciones reales. El cierre remoto histórico v7 no incluye estos nuevos endpoints y requiere otra ejecución autorizada conforme a TODO paso 9. La revisión final de rendimiento del paso 8 sigue pendiente.
+
+## 17/10/2026 — STEPBYSTEP 4, 5 y 6: cierre funcional local
+
+Finanzas y presupuesto PDF ya implementados revalidados mediante la suite aislada existente. No se modifican endpoints ni contratos; OpenAPI revisado frente a rutas protegidas, schemas y consumidores. No se vuelve a generar una muestra visual del PDF: la inspección de la entrega anterior queda como evidencia histórica.
+
+Revisión estática del frontend:
+
+| Recorrido                                                                           | Resultado de revisión                                                                                              |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Login, guard, renovación y logout                                                   | Identidad verificada en servidor, aviso central de 401 y transporte Bearer conservados; sin reintentar mutaciones. |
+| Clientes: listado, alta, detalle, edición y archivo/restauración                    | Paginación y selección activa conservadas; cargas de listado/detalle descartan respuestas obsoletas.               |
+| Vehículos: listado, alta, detalle, edición y archivo/restauración                   | Contexto de alta, detalle e historial paginado protegidos de cargas obsoletas; permisos siguen en servidor.        |
+| Órdenes: listado por vehículos, alta, detalle, edición, cierre/reapertura y borrado | Contratos separados y acceso por vehículo conservados; listado/contexto/detalle descartan cargas anteriores.       |
+| Finanzas                                                                            | Filtros por días de Buenos Aires, total cero distinto de error y cleanup existentes conservados.                   |
+| PDF                                                                                 | Validación compartida, descarga autenticada, estado de generación y errores existentes conservados.                |
+
+Corregidas carreras de efectos en ocho pantallas: una carga anterior no puede escribir datos, errores ni finalizar el indicador de la vigente. Cleanup invalida las versiones y evita iniciar microtareas descartadas (incluido el ciclo inicial de Strict Mode); no cancela requests que ya comenzaron. Listados limpian filas tras error y no muestran mensajes de vacío ni paginación de éxito ante un fallo.
+
+Tres unitarios nuevos en `list-lifecycle.test.ts` evalúan los componentes reales de los listados empaquetados con dobles locales de hooks, API y JSX. Simulan cleanup antes de iniciar, cargas superpuestas, error obsoleto después de éxito vigente y fallo vigente que limpia datos. No montan React ni prueban DOM/navegador; las extensiones a detalles/formularios se revisan estáticamente y por lint/TypeScript/build. No se realizan requests externos.
+
+Resultado: `pnpm test:unit` **81/81 aprobados**. Formato enfocado, `pnpm lint` sin warnings, `pnpm typecheck`, `pnpm build` y `git diff --check` aprobados; enlaces locales de documentación modificada resueltos. Durante la edición se detectó y corrigió un import de `useRef` faltante antes de repetir los controles finales; no se conserva ese intento como build aprobado.
+
+Revisión final de rendimiento: se preservan claims/rol/sesión por transacción, COUNT/SELECT y pool `max: 1`; no se agrega instrumentación sin una necesidad concreta ni se atribuyen mejoras medidas. Sigue pendiente validar recorridos visuales conectados y comportamiento PostgreSQL/RLS/concurrencia real. Sin integraciones nuevas o existentes ejecutadas, schema, seed, servicios externos ni deploy. Esas operaciones ya están contempladas al final de TODO paso 9; el cierre histórico v7 no incluye órdenes ni estas correcciones.

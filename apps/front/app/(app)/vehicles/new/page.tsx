@@ -3,7 +3,7 @@
 import type { CreateVehicleRequest, CustomerResponse } from "@cardoc/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type SyntheticEvent, useCallback, useEffect, useState } from "react";
+import { type SyntheticEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "../../../i18n/use-i18n";
 import { getCustomerName, listAllCustomers } from "../../customers/customer-api";
 import { createVehicle } from "../vehicle-api";
@@ -39,21 +39,34 @@ export default function NewVehiclePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const selectedCustomer = customers.find((customer) => customer.id.toString() === form.customerId);
 
+  const loadCustomersVersion = useRef(0);
+
   const loadCustomers = useCallback(async () => {
+    const version = ++loadCustomersVersion.current;
     setIsLoadingCustomers(true);
 
     try {
       const response = await listAllCustomers(t.vehicles.loadCustomersError);
+      if (version !== loadCustomersVersion.current) return;
       setCustomers(response.filter((customer) => customer.isActive));
     } catch (loadError) {
+      if (version !== loadCustomersVersion.current) return;
       setError(loadError instanceof Error ? loadError.message : t.vehicles.loadCustomersError);
     } finally {
-      setIsLoadingCustomers(false);
+      if (version === loadCustomersVersion.current) setIsLoadingCustomers(false);
     }
   }, [t.vehicles.loadCustomersError]);
 
   useEffect(() => {
-    queueMicrotask(() => void loadCustomers());
+    const requestVersion = loadCustomersVersion;
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void loadCustomers();
+    });
+    return () => {
+      active = false;
+      requestVersion.current++;
+    };
   }, [loadCustomers]);
 
   useEffect(() => {

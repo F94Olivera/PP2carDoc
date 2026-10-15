@@ -3,7 +3,7 @@
 import type { CustomerResponse, VehicleResponse } from "@cardoc/types";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../../../i18n/use-i18n";
 import {
   archiveCustomer,
@@ -32,34 +32,49 @@ export default function CustomerDetailPage() {
     [customer?.id, vehicles],
   );
 
+  const loadDetailVersion = useRef(0);
+
   const loadDetail = useCallback(async () => {
+    const version = ++loadDetailVersion.current;
     setError(null);
     setIsLoading(true);
 
     try {
       const customerResponse = await getCustomer(customerId, t.customers.loadDetailError);
+      if (version !== loadDetailVersion.current) return;
       setCustomer(customerResponse);
       setVehicles([]);
       setVehiclesError(null);
       if (customerResponse.isActive) {
         try {
           const response = await listVehicles(t.customers.loadVehiclesError, true);
+          if (version !== loadDetailVersion.current) return;
           setVehicles(response.data);
         } catch (reason) {
+          if (version !== loadDetailVersion.current) return;
           setVehiclesError(
             reason instanceof Error ? reason.message : t.customers.loadVehiclesError,
           );
         }
       }
     } catch (loadError) {
+      if (version !== loadDetailVersion.current) return;
       setError(loadError instanceof Error ? loadError.message : t.customers.loadDetailError);
     } finally {
-      setIsLoading(false);
+      if (version === loadDetailVersion.current) setIsLoading(false);
     }
   }, [customerId, t.customers.loadDetailError, t.customers.loadVehiclesError]);
 
   useEffect(() => {
-    queueMicrotask(() => void loadDetail());
+    const requestVersion = loadDetailVersion;
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void loadDetail();
+    });
+    return () => {
+      active = false;
+      requestVersion.current++;
+    };
   }, [loadDetail]);
 
   const confirmAction = async () => {

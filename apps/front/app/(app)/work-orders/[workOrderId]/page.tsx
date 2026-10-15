@@ -13,7 +13,7 @@ import type {
 } from "@cardoc/types";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { type SyntheticEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type SyntheticEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../../../i18n/use-i18n";
 import { getCustomerName, getCustomer } from "../../customers/customer-api";
 import {
@@ -94,29 +94,36 @@ export default function WorkOrderDetailPage() {
       )
     : "-";
 
+  const loadDetailVersion = useRef(0);
+
   const loadDetail = useCallback(async () => {
+    const version = ++loadDetailVersion.current;
     setError(null);
     setIsLoading(true);
 
     try {
       const workOrderResponse = await getWorkOrder(workOrderId, t.workOrders.loadDetailError);
+      if (version !== loadDetailVersion.current) return;
       const vehicleResponse = await getVehicle(
         workOrderResponse.vehicleId.toString(),
         t.vehicles.loadDetailError,
       );
+      if (version !== loadDetailVersion.current) return;
       const customer = await getCustomer(
         String(vehicleResponse.customerId),
         t.vehicles.loadCustomersError,
       );
+      if (version !== loadDetailVersion.current) return;
 
       setWorkOrder(workOrderResponse);
       setVehicle(vehicleResponse);
       setCustomers([customer]);
       setForm(toForm(workOrderResponse));
     } catch (loadError) {
+      if (version !== loadDetailVersion.current) return;
       setError(loadError instanceof Error ? loadError.message : t.workOrders.loadDetailError);
     } finally {
-      setIsLoading(false);
+      if (version === loadDetailVersion.current) setIsLoading(false);
     }
   }, [
     t.vehicles.loadCustomersError,
@@ -126,7 +133,15 @@ export default function WorkOrderDetailPage() {
   ]);
 
   useEffect(() => {
-    queueMicrotask(() => void loadDetail());
+    const requestVersion = loadDetailVersion;
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void loadDetail();
+    });
+    return () => {
+      active = false;
+      requestVersion.current++;
+    };
   }, [loadDetail]);
 
   const validateForm = () => {

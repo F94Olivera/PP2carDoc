@@ -2,7 +2,7 @@
 
 import type { VehicleResponse, WorkOrderResponse } from "@cardoc/types";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../../i18n/use-i18n";
 import {
   deleteWorkOrder,
@@ -24,7 +24,10 @@ export default function WorkOrdersPage() {
   const [pendingDelete, setPendingDelete] = useState<PendingWorkOrder | null>(null);
   const [showFinishedWorkOrders, setShowFinishedWorkOrders] = useState(false);
 
+  const loadVersion = useRef(0);
+
   const loadOrders = useCallback(async () => {
+    const version = ++loadVersion.current;
     setError(null);
     setIsLoading(true);
 
@@ -32,6 +35,7 @@ export default function WorkOrdersPage() {
       const vehiclesResponse = await listAllVehicles({
         fallbackError: t.vehicles.loadError,
       });
+      if (version !== loadVersion.current) return;
       const ordersByVehicle = await Promise.all(
         vehiclesResponse.data
           .filter((vehicle) => vehicle.isActive)
@@ -50,16 +54,27 @@ export default function WorkOrdersPage() {
           }),
       );
 
+      if (version !== loadVersion.current) return;
       setOrders(ordersByVehicle.flat());
     } catch (loadError) {
+      if (version !== loadVersion.current) return;
+      setOrders([]);
       setError(loadError instanceof Error ? loadError.message : t.workOrders.loadError);
     } finally {
-      setIsLoading(false);
+      if (version === loadVersion.current) setIsLoading(false);
     }
   }, [showFinishedWorkOrders, t.vehicles.loadError, t.workOrders.loadError]);
 
   useEffect(() => {
-    queueMicrotask(() => void loadOrders());
+    const requestVersion = loadVersion;
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void loadOrders();
+    });
+    return () => {
+      active = false;
+      requestVersion.current++;
+    };
   }, [loadOrders]);
 
   const confirmDelete = async () => {
@@ -241,7 +256,7 @@ export default function WorkOrdersPage() {
           ))}
         </div>
 
-        {!isLoading && orderedWorkOrders.length === 0 ? (
+        {!isLoading && !error && orderedWorkOrders.length === 0 ? (
           <p className="py-10 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
             {showFinishedWorkOrders ? t.workOrders.emptyDone : t.workOrders.emptyPending}
           </p>
