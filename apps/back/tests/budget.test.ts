@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import { test } from "node:test";
 import { PDFDocument } from "pdf-lib";
 import { budgetPdfSchema, budgetItemAmount } from "@cardoc/types";
@@ -59,25 +60,21 @@ test("budget strictly validates independent fields, calendar, limits and numeric
   assert.equal(budgetItemAmount({ description: "", quantity: 1.005, unitPrice: 1 }), 1.01);
 });
 
-test("classic generator produces parseable A4 PDFs and paginates long rows without external services", async () => {
-  const one = await createBudgetPdf(budgetPdfSchema.parse(input));
-  assert.equal(Buffer.from(one).subarray(0, 5).toString(), "%PDF-");
-  const doc = await PDFDocument.load(one);
+test("generator produces a single A4 hello-world PDF without external services", async () => {
+  const bytes = await createBudgetPdf();
+  assert.equal(Buffer.from(bytes).subarray(0, 5).toString(), "%PDF-");
+  const doc = await PDFDocument.load(bytes);
   assert.equal(doc.getPageCount(), 1);
   assert.equal(Math.round(doc.getPage(0).getWidth()), 595);
-  const many = await PDFDocument.load(
-    await createBudgetPdf(
-      budgetPdfSchema.parse({
-        ...input,
-        items: Array.from({ length: 100 }, (_, i) => ({
-          description: `${i} ${"Descripción larga áéíóú ñ ".repeat(11)}`,
-          quantity: 100,
-          unitPrice: 999999999.99,
-        })),
-      }),
-    ),
-  );
-  assert.ok(many.getPageCount() > 1);
+  assert.equal(Math.round(doc.getPage(0).getHeight()), 842);
+  const { PDFArray, PDFRawStream, decodePDFRawStream } = await import("pdf-lib");
+  const contents = doc.getPage(0).node.Contents();
+  assert.ok(contents instanceof PDFArray);
+  const stream = contents.lookup(0, PDFRawStream);
+  const operators = Buffer.from(decodePDFRawStream(stream).decode()).toString();
+  const text = Buffer.from("hola mundo").toString("hex").toUpperCase();
+  assert.ok(operators.includes(`<${text}> Tj`));
+  assert.equal((operators.match(/ Tj/g) ?? []).length, 1);
 });
 
 test("controller rejects bad inputs and returns a private downloadable PDF", async () => {
@@ -107,11 +104,19 @@ test("controller rejects bad inputs and returns a private downloadable PDF", asy
   assert.equal(status, 400);
   assert.ok((body as { error: string }).error);
   status = 200;
-  await createBudgetPdfController(
-    { body: input } as Parameters<typeof createBudgetPdfController>[0],
-    response,
-    () => {},
-  );
+  // Edge does not provide Node's global Buffer. Keep the real binary response path covered.
+  const originalBuffer = Object.getOwnPropertyDescriptor(globalThis, "Buffer");
+  try {
+    Object.defineProperty(globalThis, "Buffer", { value: undefined, configurable: true });
+    await createBudgetPdfController(
+      { body: input } as Parameters<typeof createBudgetPdfController>[0],
+      response,
+      () => {},
+    );
+  } finally {
+    if (originalBuffer) Object.defineProperty(globalThis, "Buffer", originalBuffer);
+    else Reflect.deleteProperty(globalThis, "Buffer");
+  }
   assert.equal(status, 200);
   assert.equal(headers["Content-Type"], "application/pdf");
   assert.equal(headers["Content-Disposition"], 'attachment; filename="presupuesto-2026-10-17.pdf"');

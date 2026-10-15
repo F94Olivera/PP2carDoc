@@ -211,3 +211,9 @@ Listados de clientes, vehículos y órdenes: al cambiar filtros o paginación so
 ### Segundo cierre remoto — 17/10/2026
 
 Publicada API v8 en la demo `lsbgegbghlgxkqxpmgyx`, incluidos los endpoints de órdenes del incremento local y la API vigente de finanzas/PDF. Seed regenerado sin cambios de fixtures ni aplicación de DDL: se conserva el schema compatible de v7. La publicación no acredita por sí sola cada flujo HTTP ni un recorrido visual; alcance de integraciones y resultados en TESTING y [el segundo informe](docs/supabase-closure-repeat-2026-10-17.md). Las notas previas de v7 son históricas; frontend sin desplegar.
+
+### Salida PDF de diagnóstico solicitada — 17/10/2026
+
+POST `/budgets/pdf` conserva autenticación, validación del formulario y headers de descarga, pero devuelve temporalmente una única hoja blanca A4 con el texto `hola mundo`. Los datos del formulario no se imprimen. Esta salida reemplaza la plantilla detallada del paso 7 durante el diagnóstico; no persiste archivos. El frontend conserva la ruta `/budgets/pdf` sobre `NEXT_PUBLIC_API_URL`.
+
+Compatibilidad Edge del PDF: el controller importa `Buffer` desde `node:buffer` para enviar el archivo binario sin depender de globals de Node. Corrección publicada en API v11; no cambia validación, permisos ni contrato HTTP.

@@ -211,7 +211,7 @@ paths:
           description: Authentication unavailable
   /budgets/pdf:
     post:
-      summary: Generate an independent classic budget PDF
+      summary: Generate an A4 hello-world PDF
       description: >-
         Uses only form data; no database, Storage or email writes. Requires an
         authenticated MECHANIC or GOD. Text is trimmed printable Latin-1 (Spanish
@@ -230,7 +230,7 @@ paths:
               $ref: "#/components/schemas/BudgetPdfInput"
       responses:
         "200":
-          description: A4 classic budget with pagination, generated in memory
+          description: Single white A4 page containing only "hola mundo", generated in memory; budget inputs are validated but not rendered
           headers:
             Content-Disposition:
               description: Exposed through CORS for browser downloads

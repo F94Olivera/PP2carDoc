@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import type { AuthenticatedHandler } from "../middlewares/auth-middleware.js";
 import { budgetPdfSchema } from "../schemas/budget.js";
 import { createBudgetPdf } from "../services/budget-service.js";
@@ -10,7 +11,7 @@ export const createBudgetPdfController: AuthenticatedHandler = async (req, res) 
     });
     return;
   }
-  const pdf = await createBudgetPdf(input.data);
+  const pdf = await createBudgetPdf();
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `attachment; filename="presupuesto-${input.data.date}.pdf"`);
   res.setHeader("Cache-Control", "no-store");

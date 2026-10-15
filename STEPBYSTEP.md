@@ -120,3 +120,15 @@ Finanzas y PDF existentes revalidados sin duplicar implementación. Revisión es
 ### 17/10/2026 — Repetición autorizada de TODO paso 9
 
 Publicado backend API v8 en la demo documentada, incluidos los endpoints de órdenes; archivos remotos idénticos al build. Seed regenerado sin modificar fixtures y schema compatible conservado sin DDL. 81/81 unitarios, lint, TypeScript y build aprobados; Auth, clientes y autorización existentes terminaron con salida 0. Assertions finales confirman inventario del seed, roles restaurados y ausencia de fixtures/sesiones temporales. Formato/enlaces/diff-check aprobados. Evidencia y recuperación en [el segundo cierre](docs/supabase-closure-repeat-2026-10-17.md); v7 permanece histórico. Frontend sin desplegar y cobertura HTTP/visual limitada a lo descrito en TESTING.
+
+### Diagnóstico PDF mínimo (17/10/2026)
+
+Ruta frontend/backend coincidente. Salida temporal solicitada: una página blanca A4 con `hola mundo`, manteniendo autenticación y validación. 87 unitarios aprobados, typecheck y build API aprobados; muestra renderizada e inspeccionada. Fallo remoto no reproducido; pendiente despliegue y cierre del diagnóstico. Resultados y límites en TESTING; restauración de plantilla detallada registrada en TODO paso 7.
+
+### Publicación del PDF mínimo — 17/10/2026
+
+Backend recompilado con `pnpm build:api` y función `api` desplegada mediante la conexión Supabase en `lsbgegbghlgxkqxpmgyx`: versión **10**, estado **ACTIVE**. Incluye la hoja A4 con `hola mundo`. La CLI no tenía access token; se utilizó el conector autenticado. Sin cambios de schema, seed, integraciones ni llamadas manuales a endpoints de aplicación. El estado de publicación no acredita la descarga autenticada desde navegador.
+
+### Corrección Edge del PDF (17/10/2026)
+
+Reproducido 500 desde Budget local con sesión existente; import explícito de `Buffer` en controller y regresión aislada sin global Node. API v11 publicada; repetición desde navegador y logs confirman HTTP 200 sin error en formulario. 87 unitarios, typecheck, lint enfocado y build API aprobados.
