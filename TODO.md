@@ -1,6 +1,6 @@
 # Cambios de código pendientes
 
-El backlog se inició tras la reorganización documental del 17/10/2026. Los pasos 1, 2, 3, 5, 6 y 7 fueron implementados y publicados en la demo mediante el cierre del paso 9. El paso 8 tiene verificación local y revisión final de rendimiento pendiente del paso 4. El paso 9 se completó para el alcance disponible de la demo; el paso 4 continúa pendiente. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
+El backlog se inició tras la reorganización documental del 17/10/2026. Los pasos 1, 2, 3, 5, 6 y 7 fueron implementados y publicados en la demo mediante el cierre del paso 9. El paso 8 tiene verificación local y revisión final de rendimiento pendiente del paso 4. El paso 9 se completó para el alcance disponible de la demo; el paso 4 está implementado localmente y pendiente de publicación. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
 
 ## 1. Propiedad y autorización — primero
 
@@ -33,13 +33,15 @@ Implementación y verificaciones locales en TESTING. Las restricciones de patent
 
 ## 4. Órdenes, ítems y recomendaciones
 
-- [ ] Implementar creación, detalle, edición, eliminación y listado exclusivamente por vehículo; no crear GET global `/work-orders`.
-- [ ] Separar contratos de creación/edición en `packages/types/src/work-order.ts`. Hoy `reportedProblem` es opcional aunque el modelo lo requiere; `exitDate` en creación permite nacer cerrada. Asegurar salida nula al crear y problema reportado obligatorio; revisar formulario de nueva orden que hoy admite salida.
-- [ ] No permitir cambiar `vehicleId` al editar. Validar que IDs de ruta y parentesco coinciden y pertenecen al alcance autorizado.
-- [ ] Usar transacciones para orden e hijos; comprobar cascada existente de ítems/recomendaciones sin recrearla innecesariamente. Editar cerradas, cerrar con salida válida y reabrir con salida nula.
-- [ ] Normalizar estados: persistencia `pending/accepted/rejected`, contrato `PENDING/ACCEPTED/REJECTED`; prioridad `low/medium/high`. No generar ítems al aceptar recomendaciones.
-- [ ] Alinear números entre modelos, contratos y formularios: el precio de ítem es entero en base; no aceptar decimales que fallen después en persistencia ni cambiar tablas silenciosamente. Validar cantidad positiva, precio no negativo y valores finitos.
-- [ ] Revisar la vista frontend `/work-orders`: hoy compone un listado recorriendo vehículos y tiene enlaces directos. Mantener el acceso autorizado por vehículo, sin introducir un endpoint global; corregir truncamiento a la primera página de vehículos/órdenes.
+- [x] Implementar creación, detalle, edición, eliminación y listado exclusivamente por vehículo; no crear GET global `/work-orders`.
+- [x] Separar contratos de creación/edición en `packages/types/src/work-order.ts`. Hoy `reportedProblem` es opcional aunque el modelo lo requiere; `exitDate` en creación permite nacer cerrada. Asegurar salida nula al crear y problema reportado obligatorio; revisar formulario de nueva orden que hoy admite salida.
+- [x] No permitir cambiar `vehicleId` al editar. Validar que IDs de ruta y parentesco coinciden y pertenecen al alcance autorizado.
+- [x] Usar transacciones para orden e hijos; comprobar cascada existente de ítems/recomendaciones sin recrearla innecesariamente. Editar cerradas, cerrar con salida válida y reabrir con salida nula.
+- [x] Normalizar estados: persistencia `pending/accepted/rejected`, contrato `PENDING/ACCEPTED/REJECTED`; prioridad `low/medium/high`. No generar ítems al aceptar recomendaciones.
+- [x] Alinear números entre modelos, contratos y formularios: el precio de ítem es entero en base; no aceptar decimales que fallen después en persistencia ni cambiar tablas silenciosamente. Validar cantidad positiva, precio no negativo y valores finitos.
+- [x] Revisar la vista frontend `/work-orders`: hoy compone un listado recorriendo vehículos y tiene enlaces directos. Mantener el acceso autorizado por vehículo, sin introducir un endpoint global; corregir truncamiento a la primera página de vehículos/órdenes.
+
+Implementado localmente el 17/10/2026; resultados en TESTING. Pendiente publicar y verificar contra Supabase con autorización nueva, dentro del cierre del paso 9.
 
 ## 5. Transporte y contratos compartidos
 
@@ -93,3 +95,5 @@ El 17/10/2026 el usuario autorizó reinicio destructivo, seed, las tres integrac
 - [x] Actualizar README, REQUIREMENTS, STEPBYSTEP y TESTING con la versión efectivamente aplicada, fecha, proyecto sin secretos, cambios de schema/seed, comandos ejecutados, resultados y pendientes. Cerrar estas casillas únicamente con evidencia de cada operación.
 
 Resultado: schema reiniciado, seed aplicado y API versión 7 ACTIVE; 60/60 unitarios y las tres integraciones aprobados, con limpieza comprobada. No se duplicó este bloque al final: seed/schema/integraciones/deploy ya estaban contemplados aquí. Las notas de los pasos anteriores conservan el estado histórico de sus entregas; el estado remoto actual está en el informe. Al implementar órdenes (paso 4), revisar nuevamente seed/contratos y preparar otra ejecución autorizada de integraciones/deploy; la revisión final del paso 8 también permanece abierta.
+
+Revisión posterior a STEPBYSTEP 1–3 (17/10/2026): órdenes y sus contratos ya están implementados localmente. El bloque anterior contempla seed, aplicación de schema, integraciones y deploy; no se agrega otro paso. Antes del próximo cierre autorizado, revisar fixtures contra los contratos finales de órdenes, conservar el schema existente si no hay cambios necesarios y publicar el nuevo bundle. El resultado histórico v7 no valida esta implementación; las casillas cerradas del paso 9 corresponden exclusivamente a ese cierre anterior. La revisión final de rendimiento del paso 8 sigue abierta.

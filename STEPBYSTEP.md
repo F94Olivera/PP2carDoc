@@ -29,12 +29,12 @@ Salida: un mecánico puede gestionar sus vehículos y GOD los de cualquier mecá
 
 ## 3. Completar órdenes e hijos
 
-- [ ] Separar contratos de creación y edición para que toda orden nazca abierta y respete los obligatorios del modelo.
-- [ ] Implementar listado por vehículo, detalle, creación, edición/cierre/reapertura y eliminación.
-- [ ] Guardar orden, ítems y recomendaciones atómicamente; conservar cascada al eliminar.
-- [ ] Normalizar estados de recomendaciones en mappers, sin generar ítems automáticamente.
-- [ ] Conectar formularios con Bearer; revisar navegación por vehículo y paginación sin truncar resultados a los primeros 100.
-- [ ] Cubrir fechas, padres ajenos/inactivos, edición de cerradas, reapertura y eliminación con unitarios.
+- [x] Separar contratos de creación y edición para que toda orden nazca abierta y respete los obligatorios del modelo.
+- [x] Implementar listado por vehículo, detalle, creación, edición/cierre/reapertura y eliminación.
+- [x] Guardar orden, ítems y recomendaciones atómicamente; conservar cascada al eliminar.
+- [x] Normalizar estados de recomendaciones en mappers, sin generar ítems automáticamente.
+- [x] Conectar formularios con Bearer; revisar navegación por vehículo y paginación sin truncar resultados a los primeros 100.
+- [x] Cubrir fechas, padres ajenos/inactivos, edición de cerradas, reapertura y eliminación con unitarios.
 
 Salida: recorrido vehículo → orden → edición/cierre/reapertura funciona, sin `isActive` de orden ni endpoint global de listado.
 
@@ -108,3 +108,7 @@ Ampliada cobertura aislada de casos de uso, controllers y mappers de clientes/Au
 Con autorización explícita se ejecutó reinicio destructivo de `lsbgegbghlgxkqxpmgyx`, con inventario y copia local de dominio/fuentes anteriores. Seed ampliado con casos de archivo de cliente/vehículo e integración existente alineada con los nuevos totales y padres operativos. Schema aplicado y API versión 7 publicada mediante conector Supabase; la CLI carece de access token. Resultados de seed e integraciones en [el informe de cierre](docs/supabase-closure-2026-10-17.md) y TESTING. Este cierre corresponde a las funcionalidades disponibles: TODO paso 4 y revisión final del paso 8 siguen pendientes y exigirán revalidación y otro despliegue cuando se implementen.
 
 Resultado del paso 9: 60/60 unitarios, formato, lint, TypeScript, build, enlaces y diff-check aprobados; las tres integraciones terminaron con salida 0. Inventario final igual al seed, roles restaurados, sin fixtures ni sesiones temporales. Bundle remoto idéntico al build local.
+
+### 17/10/2026 — STEPBYSTEP pasos 1, 2 y 3
+
+Pasos 1 y 2 ya implementados, revalidados con la suite local. Completado órdenes e hijos (TODO paso 4): contratos separados, cinco rutas autenticadas, transacciones de agregado, mappers de estados, validación estricta, edición/cierre/reapertura, eliminación con cascada existente y pantallas con paginación completa. OpenAPI y REQUIREMENTS actualizados. Verificaciones y límites en TESTING. Cierre remoto ya contemplado al final de TODO paso 9; no se repite ni ejecuta en esta entrega.

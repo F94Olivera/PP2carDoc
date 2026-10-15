@@ -19,13 +19,16 @@ export type CreateWorkOrderRecommendationRequest = {
 export type CreateWorkOrderRequest = {
   vehicleId: number;
   entryDate: string;
-  exitDate?: string | null;
   intakeOdometer?: number | null;
-  reportedProblem?: string;
+  reportedProblem: string;
   notes?: string | null;
   diagnosis?: string | null;
   items: CreateWorkOrderItemRequest[];
   recommendations?: CreateWorkOrderRecommendationRequest[];
+};
+
+export type UpdateWorkOrderRequest = Omit<CreateWorkOrderRequest, "vehicleId"> & {
+  exitDate: string | null;
 };
 
 export type WorkOrderItemResponse = {

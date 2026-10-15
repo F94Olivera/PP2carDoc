@@ -2,6 +2,7 @@ import type {
   CreateVehicleRequest,
   UpdateVehicleRequest,
   CreateWorkOrderRequest,
+  UpdateWorkOrderRequest,
   PaginatedResponse,
   VehicleResponse,
   WorkOrderResponse,
@@ -132,7 +133,7 @@ export const getWorkOrder = (workOrderId: number | string, fallbackError: string
 export const updateWorkOrder = (
   vehicleId: number,
   workOrderId: number,
-  workOrder: CreateWorkOrderRequest,
+  workOrder: UpdateWorkOrderRequest,
   fallbackError: string,
 ) =>
   requestJson<WorkOrderResponse>(
@@ -169,5 +170,18 @@ export const listAllVehicles = async (options: {
     data.push(...response.data);
     if (!response.meta.hasNextPage) return { ...response, data };
     page++;
+  }
+};
+
+export const listAllWorkOrdersByVehicle = async (options: {
+  fallbackError: string;
+  vehicleId: number;
+  withEndDate?: boolean;
+}) => {
+  const data: WorkOrderResponse[] = [];
+  for (let page = 1; ; page++) {
+    const response = await listWorkOrdersByVehicle({ ...options, page, pageSize: 100 });
+    data.push(...response.data);
+    if (!response.meta.hasNextPage) return { ...response, data };
   }
 };

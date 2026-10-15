@@ -4,7 +4,11 @@ import type { VehicleResponse, WorkOrderResponse } from "@cardoc/types";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useI18n } from "../../i18n/use-i18n";
-import { deleteWorkOrder, listVehicles, listWorkOrdersByVehicle } from "../vehicles/vehicle-api";
+import {
+  deleteWorkOrder,
+  listAllVehicles,
+  listAllWorkOrdersByVehicle,
+} from "../vehicles/vehicle-api";
 
 type PendingWorkOrder = {
   vehicle: VehicleResponse;
@@ -25,18 +29,15 @@ export default function WorkOrdersPage() {
     setIsLoading(true);
 
     try {
-      const vehiclesResponse = await listVehicles({
+      const vehiclesResponse = await listAllVehicles({
         fallbackError: t.vehicles.loadError,
-        pageSize: 100,
       });
       const ordersByVehicle = await Promise.all(
         vehiclesResponse.data
           .filter((vehicle) => vehicle.isActive)
           .map(async (vehicle) => {
-            const workOrdersResponse = await listWorkOrdersByVehicle({
+            const workOrdersResponse = await listAllWorkOrdersByVehicle({
               fallbackError: t.workOrders.loadError,
-              page: 1,
-              pageSize: 100,
               vehicleId: vehicle.id,
               withEndDate: showFinishedWorkOrders,
             });

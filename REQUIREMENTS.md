@@ -65,7 +65,7 @@ Crear orden → comprobar vehículo y cliente accesibles/activos → validar ent
 
 Completar la fecha de salida cierra la orden; debe ser igual o posterior a la entrada. La orden puede editarse abierta o cerrada. Quitar la salida la reabre; no se agrega un estado redundante ni `isActive`. Su vehículo no se cambia al editar.
 
-Eliminar orden elimina también sus ítems y recomendaciones. Las claves foráneas actuales ya declaran cascada para ambos hijos; el endpoint aún no está implementado. La edición de orden e hijos debe ser atómica para evitar actualizaciones parciales.
+Eliminar orden elimina también sus ítems y recomendaciones. Las claves foráneas actuales ya declaran cascada para ambos hijos; el endpoint local las conserva. La edición de orden e hijos debe ser atómica para evitar actualizaciones parciales.
 
 ### Recomendaciones
 
@@ -121,11 +121,11 @@ Métodos/rutas relativos a la base `/functions/v1/api`. Las filas pendientes ref
 | PUT `/vehicles/:vehicleId`                          | Propietario/GOD | Datos del vehículo, sin reasignarlo → vehículo.          | Implementado localmente.             |
 | PATCH `/vehicles/:vehicleId/archive`                | Propietario/GOD | `isActive` → vehículo.                                   | Implementado localmente.             |
 | DELETE `/vehicles/:vehicleId`                       | Propietario/GOD | Sin órdenes → 204; con órdenes → 409.                    | Implementado localmente.             |
-| GET `/vehicles/:vehicleId/work-orders`              | Propietario/GOD | Paginación y filtro de cierre → órdenes de ese vehículo. | Pendiente.                           |
-| POST `/work-orders`                                 | Propietario/GOD | Vehículo y datos de entrada/hijos → orden abierta, 201.  | Pendiente.                           |
-| GET `/work-orders/:workOrderId`                     | Propietario/GOD | ID → orden con ítems/recomendaciones.                    | Pendiente.                           |
-| PUT `/vehicles/:vehicleId/work-orders/:workOrderId` | Propietario/GOD | Editar orden e hijos sin reasignarla.                    | Pendiente.                           |
-| DELETE `/work-orders/:workOrderId`                  | Propietario/GOD | Eliminar orden e hijos → 204.                            | Pendiente.                           |
+| GET `/vehicles/:vehicleId/work-orders`              | Propietario/GOD | Paginación y filtro de cierre → órdenes de ese vehículo. | Implementado localmente.             |
+| POST `/work-orders`                                 | Propietario/GOD | Vehículo y datos de entrada/hijos → orden abierta, 201.  | Implementado localmente.             |
+| GET `/work-orders/:workOrderId`                     | Propietario/GOD | ID → orden con ítems/recomendaciones.                    | Implementado localmente.             |
+| PUT `/vehicles/:vehicleId/work-orders/:workOrderId` | Propietario/GOD | Editar orden e hijos sin reasignarla.                    | Implementado localmente.             |
+| DELETE `/work-orders/:workOrderId`                  | Propietario/GOD | Eliminar orden e hijos → 204.                            | Implementado localmente.             |
 | GET `/finances`                                     | Propietario/GOD | `startDate`, `endDate` por salida → `{ total }`.         | Implementado localmente.             |
 | POST `/budgets/pdf`                                 | Bearer          | Datos independientes del formulario → PDF descargable.   | Implementado localmente (paso 7).    |
 
@@ -195,3 +195,11 @@ El frontend conserva Bearer y manejo de sesión expirada; explica período y arc
 El seed conserva dos propietarios MECHANIC y GOD sin clientes. Crea todos los árboles antes de archivar a Oliver Queen y Jean Grey (un cliente por mecánico); sus vehículos mantienen `isActive=true`. Archiva por separado Kimoyo Cruiser bajo T'Challa activo, después de crear sus órdenes e hijos. Así la demo distingue los dos niveles de archivo y conserva historial de órdenes abiertas/cerradas para finanzas. Se mantienen los 20 clientes, 19 vehículos, 48 órdenes, 143 ítems y 47 recomendaciones; los precios siguen siendo enteros. Las credenciales y sesiones demo se restablecen al ejecutar el seed.
 
 El schema se aplicó a `lsbgegbghlgxkqxpmgyx`, se ejecutó este seed y se publicó la API versión 7; las tres integraciones existentes aprobaron. La evidencia y sus límites se registran en [el cierre de Supabase](docs/supabase-closure-2026-10-17.md); los registros de incrementos anteriores describen su verificación histórica. Órdenes HTTP sigue pendiente del paso 4; este cierre no implementa ese módulo.
+
+## Órdenes — implementación local del 17/10/2026
+
+Completado el paso 3 de STEPBYSTEP (paso 4 de TODO). Los cinco endpoints de órdenes usan Bearer y la frontera autenticada existente, con padres activos y alcance MECHANIC/GOD tanto en service como en consulta. POST exige problema reportado y entrada ISO con zona; rechaza salida y campos no declarados. PUT exige salida nullable, permite editar cerradas y reabrir, rechaza vehicleId y comprueba coincidencia con ruta. Orden e hijos se crean/reemplazan en una transacción; los hijos reemplazados reciben nuevos IDs. Eliminar conserva las FK cascade existentes. Recomendaciones convierten estados explícitamente y nunca generan ítems. Cantidad finita positiva representable en real, precio entero entre 0 y 2147483647; no cambia el modelo ni el schema SQL. Arrays de ítems vacíos son válidos en API porque el modelo no exige al menos uno; la interfaz conserva su requisito de un ítem.
+
+GET por vehículo pagina con orden estable de ID y `withEndDate=false` para abiertas (predeterminado), `true` para cerradas; no hay GET global. La vista compuesta recorre todas las páginas de vehículos y órdenes. Alta y detalle consultan directamente el cliente asociado; el alta ya no ofrece salida y exige problema. Edición preserva reason de recomendaciones y timestamps sin cambios; los días modificados se convierten desde medianoche de Buenos Aires. El historial del vehículo conserva paginación y filtros de cierre.
+
+Esta entrega es local: unitarios/dobles y compilación no demuestran RLS, rollback PostgreSQL real ni recorrido de navegador contra API. El cierre remoto histórico v7 precede estos endpoints y debe repetirse con autorización específica según TODO paso 9. Las notas anteriores conservan el estado histórico de cada incremento.

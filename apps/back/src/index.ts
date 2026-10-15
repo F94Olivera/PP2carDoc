@@ -1,3 +1,10 @@
+import {
+  createWorkOrderController,
+  workOrderByIdController,
+  deleteWorkOrderController,
+  workOrdersByVehicleController,
+  replaceWorkOrderController,
+} from "./controllers/work-order-controller.js";
 import { createBudgetPdfController } from "./controllers/budget-controller.js";
 import {
   listVehiclesController,
@@ -67,11 +74,15 @@ protectedRouter.patch(
   archiveVehicleController,
 );
 protectedRouter.delete("/vehicles/:vehicleId", deleteVehicleController);
-// protectedRouter.post("/work-orders", createWorkOrderController);
-// protectedRouter.get("/work-orders/:workOrderId", workOrderByIdController);
-// protectedRouter.delete("/work-orders/:workOrderId", deleteWorkOrderController);
-// protectedRouter.get("/vehicles/:vehicleId/work-orders", workOrdersByVehicleController);
-// protectedRouter.put("/vehicles/:vehicleId/work-orders/:workOrderId", replaceWorkOrderController);
+protectedRouter.post("/work-orders", express.json({ limit: "256kb" }), createWorkOrderController);
+protectedRouter.get("/work-orders/:workOrderId", workOrderByIdController);
+protectedRouter.delete("/work-orders/:workOrderId", deleteWorkOrderController);
+protectedRouter.get("/vehicles/:vehicleId/work-orders", workOrdersByVehicleController);
+protectedRouter.put(
+  "/vehicles/:vehicleId/work-orders/:workOrderId",
+  express.json({ limit: "256kb" }),
+  replaceWorkOrderController,
+);
 
 router.use(protectedRouter);
 app.use("/api", router);

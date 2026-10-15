@@ -21,6 +21,7 @@ export type {
   CreateWorkOrderItemRequest,
   CreateWorkOrderRecommendationRequest,
   CreateWorkOrderRequest,
+  UpdateWorkOrderRequest,
   WorkOrderItemCategory,
   WorkOrderItemResponse,
   WorkOrderRecommendationPriority,

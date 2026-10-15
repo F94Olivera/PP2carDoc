@@ -173,3 +173,17 @@ Seed: `pnpm seed:superheroes` aprobado; consulta de assertions posterior aprobad
 El advisor de seguridad posterior al schema solo informó protección de contraseñas filtradas desactivada; remediación y alcance en el informe. Sin despliegue de frontend ni validación de sus recorridos visuales. Estas suites no demuestran todo el CRUD HTTP de vehículos, finanzas o PDF; tampoco órdenes HTTP todavía pendientes del paso 4. No se declara terminada la revisión final de rendimiento del paso 8.
 
 Formato enfocado final, 24 enlaces locales resueltos y `git diff --check`: aprobados. Los intentos iniciales de comandos temporales con rutas relativas incorrectas de entorno/import fallaron antes de acceder a base; se corrigieron usando el `.env` raíz y rutas de workspace correctas. La consulta de secretos por CLI falló por falta de login; el conector autenticado permitió completar el deploy. No se registran esos intentos como verificaciones aprobadas.
+
+## 17/10/2026 — STEPBYSTEP 1, 2 y 3: órdenes e hijos
+
+Pasos 1 y 2 existentes revalidados por la suite aislada completa. Agregados 18 unitarios de órdenes en cuatro archivos (`work-order.test.ts`, `work-order-repository.test.ts`, `work-order-controller.test.ts`, `work-order-api.test.ts`), sin Auth/API/base reales:
+
+- Schemas: alta siempre abierta, problema/entrada obligatorios, ISO con offset y fechas reales, salida ordenada, reapertura, claves y padres inmutables, enums, cantidades finitas positivas representables en real y precios integer no negativos.
+- Services/mappers con dobles: padres ajenos/archivados para todas las operaciones y ambos roles, acceso global GOD con padres activos, paginación, edición de cerradas/reapertura, eliminación, normalización de estados sin crear ítems y conservación de reason.
+- Controllers con servicios sustituidos: validación antes de acceder a servicios, contexto/IDs/query correctos, 201/200/204 y 400/404.
+- Repository real compilado contra callback Drizzle local: alcance/archivo, filtro abiertas/cerradas, snapshot de listado, lock de padres, orden e hijos bajo la misma frontera autenticada, padre/ruta antes de reemplazar hijos y eliminación de orden. Fallo de inserción de un hijo se propaga fuera del callback transaccional; esto no ejecuta ni demuestra rollback PostgreSQL.
+- Transporte frontend sustituido: alta/edición con contratos separados y métodos correctos, eliminación, todas las páginas, conservación de filtros y rechazo de resultados parciales ante 401/404.
+
+Resultado final local: **78/78 unitarios aprobados**. `pnpm lint`, `pnpm typecheck`, `pnpm build` (API Edge, tipos y Next.js), formato enfocado y `git diff --check` aprobados. OpenAPI revisado frente a schemas y rutas; enlaces locales revisados. Durante la implementación se corrigieron fallos de lint/tipado de los tests y una aserción que debía inspeccionar el error original envuelto por Drizzle; no quedan checks fallidos.
+
+No se modificó ni ejecutó schema/seed; no se ejecutaron integraciones, deploy ni recorridos de navegador contra API. Las FK cascade se conservan sin recrearlas. Los dobles no prueban RLS, concurrencia ni transacciones reales. El cierre remoto histórico v7 no incluye estos nuevos endpoints y requiere otra ejecución autorizada conforme a TODO paso 9. La revisión final de rendimiento del paso 8 sigue pendiente.

@@ -13,7 +13,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { type SyntheticEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useI18n } from "../../../../../i18n/use-i18n";
-import { getCustomerName, listCustomers } from "../../../../customers/customer-api";
+import { getCustomerName, getCustomer } from "../../../../customers/customer-api";
 import { createWorkOrder, getVehicle } from "../../../vehicle-api";
 
 type ItemForm = {
@@ -30,7 +30,7 @@ type RecommendationForm = {
 
 type WorkOrderForm = {
   entryDate: string;
-  exitDate: string;
+  reportedProblem: string;
   items: ItemForm[];
   recommendations: RecommendationForm[];
 };
@@ -47,16 +47,16 @@ const newRecommendation = (): RecommendationForm => ({
   status: "REJECTED",
 });
 
-const toDateInput = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-};
+const toDateInput = (date: Date) =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
 
 const toIsoDateTime = (date: string) => {
-  return new Date(`${date}T00:00:00`).toISOString();
+  return new Date(`${date}T00:00:00-03:00`).toISOString();
 };
 
 export default function NewWorkOrderPage() {
@@ -67,7 +67,7 @@ export default function NewWorkOrderPage() {
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
   const [form, setForm] = useState<WorkOrderForm>({
     entryDate: toDateInput(new Date()),
-    exitDate: "",
+    reportedProblem: "",
     items: [newItem()],
     recommendations: [],
   });
@@ -93,12 +93,14 @@ export default function NewWorkOrderPage() {
     setIsLoading(true);
 
     try {
-      const [vehicleResponse, customersResponse] = await Promise.all([
-        getVehicle(params.vehicleId, t.vehicles.loadDetailError),
-        listCustomers(t.vehicles.loadCustomersError),
-      ]);
+      const vehicleResponse = await getVehicle(params.vehicleId, t.vehicles.loadDetailError);
+      if (!vehicleResponse.isActive) throw new Error(t.workOrders.loadError);
+      const customer = await getCustomer(
+        String(vehicleResponse.customerId),
+        t.vehicles.loadCustomersError,
+      );
       setVehicle(vehicleResponse);
-      setCustomers(customersResponse.data);
+      setCustomers([customer]);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : t.workOrders.loadError);
     } finally {
@@ -132,6 +134,7 @@ export default function NewWorkOrderPage() {
   };
 
   const validateForm = () => {
+    if (!form.reportedProblem.trim()) return t.workOrders.problemRequiredError;
     if (form.items.length === 0) {
       return t.workOrders.noItemsError;
     }
@@ -140,9 +143,10 @@ export default function NewWorkOrderPage() {
       (item) =>
         !item.description.trim() ||
         Number(item.quantity) <= 0 ||
-        Number.isNaN(Number(item.quantity)) ||
+        !Number.isFinite(Number(item.quantity)) ||
         Number(item.unitPrice) < 0 ||
-        Number.isNaN(Number(item.unitPrice)),
+        !Number.isInteger(Number(item.unitPrice)) ||
+        Number(item.unitPrice) > 2147483647,
     );
 
     if (hasInvalidItem) {
@@ -151,10 +155,6 @@ export default function NewWorkOrderPage() {
 
     if (form.recommendations.some((recommendation) => !recommendation.description.trim())) {
       return t.workOrders.recommendationRequiredError;
-    }
-
-    if (form.exitDate && new Date(form.exitDate) < new Date(form.entryDate)) {
-      return t.workOrders.exitDateError;
     }
 
     return null;
@@ -177,7 +177,7 @@ export default function NewWorkOrderPage() {
     const payload: CreateWorkOrderRequest = {
       vehicleId: vehicle.id,
       entryDate: toIsoDateTime(form.entryDate),
-      exitDate: form.exitDate ? toIsoDateTime(form.exitDate) : null,
+      reportedProblem: form.reportedProblem.trim(),
       items: form.items.map<CreateWorkOrderItemRequest>((item) => ({
         category: item.category,
         description: item.description.trim(),
@@ -262,15 +262,14 @@ export default function NewWorkOrderPage() {
               value={form.entryDate}
             />
           </Field>
-          <Field label={t.workOrders.exitDateLabel}>
-            <input
+          <Field label={t.workOrders.reportedProblemLabel} required>
+            <textarea
               className={inputClasses}
-              min={form.entryDate}
+              required
+              value={form.reportedProblem}
               onChange={(event) =>
-                setForm((currentForm) => ({ ...currentForm, exitDate: event.target.value }))
+                setForm((current) => ({ ...current, reportedProblem: event.target.value }))
               }
-              type="date"
-              value={form.exitDate}
             />
           </Field>
         </section>
@@ -341,7 +340,7 @@ export default function NewWorkOrderPage() {
                     min="0"
                     onChange={(event) => setItem(index, { ...item, unitPrice: event.target.value })}
                     required
-                    step="0.01"
+                    step="1"
                     type="number"
                     value={item.unitPrice}
                   />

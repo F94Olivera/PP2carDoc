@@ -3,7 +3,7 @@
 import type {
   CreateWorkOrderItemRequest,
   CreateWorkOrderRecommendationRequest,
-  CreateWorkOrderRequest,
+  UpdateWorkOrderRequest,
   CustomerResponse,
   VehicleResponse,
   WorkOrderItemCategory,
@@ -15,7 +15,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { type SyntheticEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useI18n } from "../../../i18n/use-i18n";
-import { getCustomerName, listCustomers } from "../../customers/customer-api";
+import { getCustomerName, getCustomer } from "../../customers/customer-api";
 import {
   deleteWorkOrder,
   getVehicle,
@@ -32,8 +32,9 @@ type ItemForm = {
 
 type RecommendationForm = {
   description: string;
+  reason: string | null;
   priority: WorkOrderRecommendationPriority | null;
-  status: WorkOrderRecommendationStatus;
+  status: WorkOrderRecommendationStatus | null;
 };
 
 type WorkOrderForm = {
@@ -56,6 +57,7 @@ const newItem = (): ItemForm => ({
 
 const newRecommendation = (): RecommendationForm => ({
   description: "",
+  reason: null,
   priority: null,
   status: "PENDING",
 });
@@ -98,14 +100,18 @@ export default function WorkOrderDetailPage() {
 
     try {
       const workOrderResponse = await getWorkOrder(workOrderId, t.workOrders.loadDetailError);
-      const [vehicleResponse, customersResponse] = await Promise.all([
-        getVehicle(workOrderResponse.vehicleId.toString(), t.vehicles.loadDetailError),
-        listCustomers({ fallbackError: t.vehicles.loadCustomersError, includeArchived: true }),
-      ]);
+      const vehicleResponse = await getVehicle(
+        workOrderResponse.vehicleId.toString(),
+        t.vehicles.loadDetailError,
+      );
+      const customer = await getCustomer(
+        String(vehicleResponse.customerId),
+        t.vehicles.loadCustomersError,
+      );
 
       setWorkOrder(workOrderResponse);
       setVehicle(vehicleResponse);
-      setCustomers(customersResponse.data);
+      setCustomers([customer]);
       setForm(toForm(workOrderResponse));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : t.workOrders.loadDetailError);
@@ -141,9 +147,10 @@ export default function WorkOrderDetailPage() {
         (item) =>
           !item.description.trim() ||
           Number(item.quantity) <= 0 ||
-          Number.isNaN(Number(item.quantity)) ||
+          !Number.isFinite(Number(item.quantity)) ||
           Number(item.unitPrice) < 0 ||
-          Number.isNaN(Number(item.unitPrice)),
+          !Number.isInteger(Number(item.unitPrice)) ||
+          Number(item.unitPrice) > 2147483647,
       )
     ) {
       return t.workOrders.itemRequiredError;
@@ -174,10 +181,17 @@ export default function WorkOrderDetailPage() {
       return;
     }
 
-    const payload: CreateWorkOrderRequest = {
+    const payload: UpdateWorkOrderRequest = {
       diagnosis: toOptionalText(form.diagnosis),
-      entryDate: form.entryDate,
-      exitDate: form.exitDate ? form.exitDate : null,
+      entryDate:
+        form.entryDate === toDateInput(new Date(workOrder.entryDate))
+          ? workOrder.entryDate
+          : new Date(`${form.entryDate}T00:00:00-03:00`).toISOString(),
+      exitDate: form.exitDate
+        ? workOrder.exitDate && form.exitDate === toDateInput(new Date(workOrder.exitDate))
+          ? workOrder.exitDate
+          : new Date(`${form.exitDate}T00:00:00-03:00`).toISOString()
+        : null,
       intakeOdometer: toOptionalNumber(form.intakeOdometer),
       items: form.items.map<CreateWorkOrderItemRequest>((item) => ({
         category: item.category,
@@ -189,12 +203,12 @@ export default function WorkOrderDetailPage() {
       recommendations: form.recommendations.map<CreateWorkOrderRecommendationRequest>(
         (recommendation) => ({
           description: recommendation.description.trim(),
+          reason: recommendation.reason,
           priority: recommendation.priority,
           status: recommendation.status,
         }),
       ),
       reportedProblem: form.reportedProblem.trim(),
-      vehicleId: vehicle.id,
     };
 
     setIsSubmitting(true);
@@ -594,7 +608,7 @@ function WorkOrderFormView({
                   min="0"
                   onChange={(event) => setItem(index, { ...item, unitPrice: event.target.value })}
                   required
-                  step="0.01"
+                  step="1"
                   type="number"
                   value={item.unitPrice}
                 />
@@ -655,11 +669,14 @@ function WorkOrderFormView({
                   onChange={(event) =>
                     setRecommendation(index, {
                       ...recommendation,
-                      status: event.target.value as WorkOrderRecommendationStatus,
+                      status: event.target.value
+                        ? (event.target.value as WorkOrderRecommendationStatus)
+                        : null,
                     })
                   }
-                  value={recommendation.status}
+                  value={recommendation.status ?? ""}
                 >
+                  <option value="">-</option>
                   <option value="REJECTED">{t.workOrders.rejectedRecommendation}</option>
                   <option value="PENDING">{t.workOrders.pendingRecommendation}</option>
                   <option value="ACCEPTED">{t.workOrders.acceptedRecommendation}</option>
@@ -715,19 +732,20 @@ const toForm = (workOrder: WorkOrderResponse): WorkOrderForm => ({
   notes: workOrder.notes ?? "",
   recommendations: workOrder.recommendations.map((recommendation) => ({
     description: recommendation.description,
+    reason: recommendation.reason,
     priority: recommendation.priority,
-    status: recommendation.status ?? "PENDING",
+    status: recommendation.status,
   })),
   reportedProblem: workOrder.reportedProblem,
 });
 
-const toDateInput = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-};
+const toDateInput = (date: Date) =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
 
 const toOptionalText = (value: string) => {
   const trimmed = value.trim();

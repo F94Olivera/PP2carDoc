@@ -16,6 +16,199 @@ servers:
 # OPTIONS is public and handled by the gateway or Express CORS middleware.
 # Bearer tokens authenticate protected routes; browser cookies are not used.
 paths:
+  /work-orders:
+    post:
+      summary: Create an open order and its children atomically
+      description: Requires an active vehicle and active customer within owner/GOD scope. exitDate and undeclared fields are rejected; persisted exitDate is always null. Dates are ISO timestamps with explicit UTC offset. No global GET exists.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorkOrderInput"
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkOrderResponse"
+        "400":
+          description: Invalid ID, query, body, dates or undeclared fields
+        "401":
+          description: Invalid or inactive Bearer session
+        "403":
+          description: Database permission denied
+        "404":
+          description: Resource missing, foreign or under inactive ancestors
+        "409":
+          description: Related record conflict
+        "413":
+          description: JSON body exceeds 256 KiB
+        "429":
+          description: Authentication rate limit
+        "500":
+          description: Unexpected error without database details
+        "503":
+          description: Authentication unavailable
+  /work-orders/{workOrderId}:
+    get:
+      summary: Read an accessible order with items and recommendations
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: workOrderId
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 2147483647 }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkOrderResponse"
+        "400":
+          description: Invalid ID, query, body, dates or undeclared fields
+        "401":
+          description: Invalid or inactive Bearer session
+        "403":
+          description: Database permission denied
+        "404":
+          description: Resource missing, foreign or under inactive ancestors
+        "409":
+          description: Related record conflict
+        "413":
+          description: JSON body exceeds 256 KiB
+        "429":
+          description: Authentication rate limit
+        "500":
+          description: Unexpected error without database details
+        "503":
+          description: Authentication unavailable
+    delete:
+      summary: Delete an accessible order, cascading to both child tables
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: workOrderId
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 2147483647 }
+      responses:
+        "204":
+          description: Success
+        "400":
+          description: Invalid ID, query, body, dates or undeclared fields
+        "401":
+          description: Invalid or inactive Bearer session
+        "403":
+          description: Database permission denied
+        "404":
+          description: Resource missing, foreign or under inactive ancestors
+        "409":
+          description: Related record conflict
+        "413":
+          description: JSON body exceeds 256 KiB
+        "429":
+          description: Authentication rate limit
+        "500":
+          description: Unexpected error without database details
+        "503":
+          description: Authentication unavailable
+  /vehicles/{vehicleId}/work-orders:
+    get:
+      summary: List orders exclusively under an active accessible vehicle
+      description: Both ancestors must be active, including for GOD. Stable ascending ID order; count and rows share a snapshot. withEndDate=false (default) selects open orders, true selects closed orders. Out-of-range pages are empty. Unknown/repeated query keys are rejected.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: vehicleId
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 2147483647 }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+        - in: query
+          name: withEndDate
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedWorkOrders"
+        "400":
+          description: Invalid ID, query, body, dates or undeclared fields
+        "401":
+          description: Invalid or inactive Bearer session
+        "403":
+          description: Database permission denied
+        "404":
+          description: Resource missing, foreign or under inactive ancestors
+        "409":
+          description: Related record conflict
+        "413":
+          description: JSON body exceeds 256 KiB
+        "429":
+          description: Authentication rate limit
+        "500":
+          description: Unexpected error without database details
+        "503":
+          description: Authentication unavailable
+  /vehicles/{vehicleId}/work-orders/{workOrderId}:
+    put:
+      summary: Replace order data and children atomically, including closed orders
+      description: Route vehicle must match the stored parent. vehicleId in body is rejected. exitDate is required and nullable; null reopens, otherwise it must be at or after entryDate. Omitted optional text/odometer fields are cleared. Child arrays replace previous children with new IDs; omitted recommendations clears them. Accepted recommendations never create items.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: vehicleId
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 2147483647 }
+        - in: path
+          name: workOrderId
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 2147483647 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWorkOrderInput"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkOrderResponse"
+        "400":
+          description: Invalid ID, query, body, dates or undeclared fields
+        "401":
+          description: Invalid or inactive Bearer session
+        "403":
+          description: Database permission denied
+        "404":
+          description: Resource missing, foreign or under inactive ancestors
+        "409":
+          description: Related record conflict
+        "413":
+          description: JSON body exceeds 256 KiB
+        "429":
+          description: Authentication rate limit
+        "500":
+          description: Unexpected error without database details
+        "503":
+          description: Authentication unavailable
   /budgets/pdf:
     post:
       summary: Generate an independent classic budget PDF
@@ -682,6 +875,129 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    WorkOrderItemInput:
+      type: object
+      additionalProperties: false
+      required: [description, quantity, unitPrice]
+      properties:
+        description: { type: string, minLength: 1 }
+        category: { type: string, enum: [labor, part, other], default: other }
+        quantity:
+          {
+            type: number,
+            minimum: 0,
+            exclusiveMinimum: true,
+            maximum: 3.4028234663852886e38,
+            description: Must remain positive when stored as PostgreSQL real.,
+          }
+        unitPrice: { type: integer, minimum: 0, maximum: 2147483647 }
+    WorkOrderRecommendationInput:
+      type: object
+      additionalProperties: false
+      required: [description]
+      properties:
+        description: { type: string, minLength: 1 }
+        reason: { type: string, nullable: true }
+        status: { type: string, enum: [PENDING, ACCEPTED, REJECTED], nullable: true }
+        priority: { type: string, enum: [low, medium, high], nullable: true }
+    CreateWorkOrderInput:
+      type: object
+      additionalProperties: false
+      required: [vehicleId, entryDate, reportedProblem, items]
+      properties:
+        vehicleId: { type: integer, minimum: 1, maximum: 2147483647 }
+        entryDate: { type: string, format: date-time }
+        reportedProblem: { type: string, minLength: 1 }
+        intakeOdometer: { type: integer, minimum: 0, maximum: 2147483647, nullable: true }
+        notes: { type: string, nullable: true }
+        diagnosis: { type: string, nullable: true }
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkOrderItemInput"
+        recommendations:
+          type: array
+          default: []
+          items:
+            $ref: "#/components/schemas/WorkOrderRecommendationInput"
+    UpdateWorkOrderInput:
+      type: object
+      additionalProperties: false
+      required: [entryDate, reportedProblem, items, exitDate]
+      properties:
+        exitDate: { type: string, format: date-time, nullable: true }
+        entryDate: { type: string, format: date-time }
+        reportedProblem: { type: string, minLength: 1 }
+        intakeOdometer: { type: integer, minimum: 0, maximum: 2147483647, nullable: true }
+        notes: { type: string, nullable: true }
+        diagnosis: { type: string, nullable: true }
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkOrderItemInput"
+        recommendations:
+          type: array
+          default: []
+          items:
+            $ref: "#/components/schemas/WorkOrderRecommendationInput"
+    WorkOrderResponse:
+      type: object
+      required:
+        [
+          id,
+          vehicleId,
+          entryDate,
+          exitDate,
+          intakeOdometer,
+          reportedProblem,
+          notes,
+          diagnosis,
+          items,
+          recommendations,
+        ]
+      properties:
+        id: { type: integer }
+        vehicleId: { type: integer }
+        entryDate: { type: string, format: date-time }
+        exitDate: { type: string, format: date-time, nullable: true }
+        intakeOdometer: { type: integer, nullable: true }
+        reportedProblem: { type: string }
+        notes: { type: string, nullable: true }
+        diagnosis: { type: string, nullable: true }
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, workOrderId, description, category, quantity, unitPrice]
+            properties:
+              id: { type: integer }
+              workOrderId: { type: integer }
+              description: { type: string }
+              category: { type: string, enum: [labor, part, other] }
+              quantity: { type: number }
+              unitPrice: { type: integer }
+        recommendations:
+          type: array
+          items:
+            type: object
+            required: [id, workOrderId, description, reason, status, priority]
+            properties:
+              id: { type: integer }
+              workOrderId: { type: integer }
+              description: { type: string }
+              reason: { type: string, nullable: true }
+              status: { type: string, enum: [PENDING, ACCEPTED, REJECTED], nullable: true }
+              priority: { type: string, enum: [low, medium, high], nullable: true }
+    PaginatedWorkOrders:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkOrderResponse"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
     FinanceResponse:
       type: object
       additionalProperties: false
