@@ -1,6 +1,6 @@
 # Cambios de código pendientes
 
-El backlog se inició tras la reorganización documental del 17/10/2026. Los pasos 1, 2, 3, 5, 6 y 7 fueron implementados y publicados en la demo mediante el cierre del paso 9. El paso 8 tiene verificación local y revisión estática final completadas; no hay nuevas mediciones remotas. El paso 9 se completó para el alcance disponible de la demo; el paso 4 está implementado localmente y pendiente de publicación. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
+El backlog se inició tras la reorganización documental del 17/10/2026. Los pasos 1, 2, 3, 5, 6 y 7 fueron implementados y publicados en la demo mediante el cierre del paso 9. El paso 8 tiene verificación local y revisión estática final completadas; no hay nuevas mediciones remotas. El paso 9 se repitió tras completar órdenes y el cierre local; la API v8 incluye los endpoints del paso 4. Orden de entrega en [STEPBYSTEP.md](STEPBYSTEP.md); reglas en [REQUIREMENTS.md](REQUIREMENTS.md).
 
 ## 1. Propiedad y autorización — primero
 
@@ -41,7 +41,7 @@ Implementación y verificaciones locales en TESTING. Las restricciones de patent
 - [x] Alinear números entre modelos, contratos y formularios: el precio de ítem es entero en base; no aceptar decimales que fallen después en persistencia ni cambiar tablas silenciosamente. Validar cantidad positiva, precio no negativo y valores finitos.
 - [x] Revisar la vista frontend `/work-orders`: hoy compone un listado recorriendo vehículos y tiene enlaces directos. Mantener el acceso autorizado por vehículo, sin introducir un endpoint global; corregir truncamiento a la primera página de vehículos/órdenes.
 
-Implementado localmente el 17/10/2026; resultados en TESTING. Pendiente publicar y verificar contra Supabase con autorización nueva, dentro del cierre del paso 9.
+Implementado localmente el 17/10/2026; resultados en TESTING. Publicado en API v8 mediante el segundo cierre autorizado del paso 9; las suites existentes no cubren todo su CRUD HTTP.
 
 ## 5. Transporte y contratos compartidos
 
@@ -99,3 +99,5 @@ Resultado: schema reiniciado, seed aplicado y API versión 7 ACTIVE; 60/60 unita
 Revisión posterior a STEPBYSTEP 1–3 (17/10/2026): órdenes y sus contratos ya están implementados localmente. El bloque anterior contempla seed, aplicación de schema, integraciones y deploy; no se agrega otro paso. Antes del próximo cierre autorizado, revisar fixtures contra los contratos finales de órdenes, conservar el schema existente si no hay cambios necesarios y publicar el nuevo bundle. El resultado histórico v7 no valida esta implementación; las casillas cerradas del paso 9 corresponden exclusivamente a ese cierre anterior. La revisión final de rendimiento del paso 8 sigue abierta.
 
 Revisión final de STEPBYSTEP 4–6 (17/10/2026): completada revisión estática del paso 8 y corregidas carreras de cargas en listados de clientes/vehículos/órdenes, detalles e inicio de altas. Cleanup descarta microtareas canceladas y versiones impiden aplicar respuestas/errores/finalizaciones anteriores. Los listados limpian filas ante fallo y no muestran vacío/paginación como éxito. Se mantienen pool y consultas protegidas; instrumentación y ajustes adicionales requieren necesidad/mediciones, sin beneficio medido atribuido. Las notas anteriores sobre revisión pendiente son históricas. El paso 9 ya contempla seed, schema, integraciones y deploy: no se agrega otro bloque ni se ejecuta. Sigue pendiente publicar órdenes y estas correcciones, y verificar recorridos reales en un cierre autorizado.
+
+Segundo cierre del paso 9 — 17/10/2026, solicitado expresamente por el usuario: **completado** para API v8 y las tres integraciones existentes. Órdenes ya publicadas; schema compatible preservado sin DDL, seed revisado y regenerado sin modificar fixtures. 81/81 unitarios, lint, TypeScript, build, formato, enlaces y diff-check aprobados; Auth/clientes/autorización salida 0. Inventario final del seed, roles y sesiones verificados sin residuos. No se crean nuevas integraciones ni se despliega frontend. Recuperación, advisor y límites en [el segundo informe](docs/supabase-closure-repeat-2026-10-17.md). Los pendientes de publicación/revisión final mencionados en registros anteriores quedan superados por este cierre; las casillas históricas de v7 no sustituyen esta evidencia.

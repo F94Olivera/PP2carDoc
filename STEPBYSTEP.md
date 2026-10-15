@@ -116,3 +116,7 @@ Pasos 1 y 2 ya implementados, revalidados con la suite local. Completado órdene
 ### 17/10/2026 — STEPBYSTEP 4, 5 y 6: cierre local
 
 Finanzas y PDF existentes revalidados sin duplicar implementación. Revisión estática de navegación, permisos, transporte, paginación, estados vacíos/errores y cargas de pantallas. Corregidas carreras en listados, detalles y contexto de altas; cleanup evita iniciar cargas encoladas de efectos descartados. Los listados no presentan un fallo como vacío ni conservan filas accionables tras error. Evaluadas consultas y pool sin mediciones nuevas: se mantienen las fronteras de autenticación y `max: 1`. OpenAPI revisado, sin cambio HTTP que requiera modificar contratos. Resultados y límites en TESTING. El cierre remoto ya está en TODO paso 9 y no se ejecuta ni duplica.
+
+### 17/10/2026 — Repetición autorizada de TODO paso 9
+
+Publicado backend API v8 en la demo documentada, incluidos los endpoints de órdenes; archivos remotos idénticos al build. Seed regenerado sin modificar fixtures y schema compatible conservado sin DDL. 81/81 unitarios, lint, TypeScript y build aprobados; Auth, clientes y autorización existentes terminaron con salida 0. Assertions finales confirman inventario del seed, roles restaurados y ausencia de fixtures/sesiones temporales. Formato/enlaces/diff-check aprobados. Evidencia y recuperación en [el segundo cierre](docs/supabase-closure-repeat-2026-10-17.md); v7 permanece histórico. Frontend sin desplegar y cobertura HTTP/visual limitada a lo descrito en TESTING.

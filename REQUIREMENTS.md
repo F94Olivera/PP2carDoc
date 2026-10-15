@@ -207,3 +207,7 @@ Esta entrega es local: unitarios/dobles y compilación no demuestran RLS, rollba
 ### Cierre local de recorridos — 17/10/2026
 
 Listados de clientes, vehículos y órdenes: al cambiar filtros o paginación solo la carga vigente puede actualizar datos, error y estado de carga. Un fallo limpia las filas y no se presenta como lista vacía exitosa. Detalles de cliente, vehículo y orden, historial paginado del vehículo y contexto de nuevas altas descartan respuestas obsoletas y cargas encoladas de efectos cancelados. Se conserva la autorización del servidor, transporte Bearer, paginación completa y validación independiente del PDF. Revisión estática y unitarios aislados en TESTING; no acredita un recorrido visual conectado ni modifica contratos HTTP.
+
+### Segundo cierre remoto — 17/10/2026
+
+Publicada API v8 en la demo `lsbgegbghlgxkqxpmgyx`, incluidos los endpoints de órdenes del incremento local y la API vigente de finanzas/PDF. Seed regenerado sin cambios de fixtures ni aplicación de DDL: se conserva el schema compatible de v7. La publicación no acredita por sí sola cada flujo HTTP ni un recorrido visual; alcance de integraciones y resultados en TESTING y [el segundo informe](docs/supabase-closure-repeat-2026-10-17.md). Las notas previas de v7 son históricas; frontend sin desplegar.
