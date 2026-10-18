@@ -52,7 +52,7 @@ const readChildren = async (
 };
 const selectOrder = (tx: Transaction, context: AuthorizationContext, id: number) =>
   tx
-    .select({ order: workOrders })
+    .select({ order: workOrders, vehicle: vehicles, customer: customers })
     .from(workOrders)
     .innerJoin(vehicles, eq(workOrders.vehicleId, vehicles.id))
     .innerJoin(customers, eq(vehicles.customerId, customers.id))
@@ -62,7 +62,9 @@ export const findWorkOrderById = (context: AuthorizationContext, id: number) =>
     context,
     async (tx) => {
       const [row] = await selectOrder(tx, context, id);
-      return row ? (await readChildren(tx, [row.order]))[0] : undefined;
+      if (!row) return undefined;
+      const aggregate = (await readChildren(tx, [row.order]))[0]!;
+      return { ...aggregate, vehicle: row.vehicle, customer: row.customer };
     },
     true,
   );

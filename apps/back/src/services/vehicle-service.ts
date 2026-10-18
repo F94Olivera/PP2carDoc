@@ -43,10 +43,10 @@ export const getVehicleById = async (
   id: number,
   deps = dependencies,
 ) => {
-  const row = await deps.findVehicleById(context, id);
-  return row && (await accessibleCustomer(context, row.customerId, deps))
-    ? toVehicleResponse(row)
-    : null;
+  const row = await deps.findVehicleDetailById(context, id);
+  if (!row?.customer.isActive) return null;
+  if (context.role !== "GOD" && row.customer.mechanicId !== context.userId) return null;
+  return toVehicleResponse(row.vehicle);
 };
 export const createVehicle = async (
   context: AuthorizationContext,

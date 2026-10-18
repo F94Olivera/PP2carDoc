@@ -36,9 +36,9 @@ export const getWorkOrderById = async (
   deps = dependencies,
 ) => {
   const row = await deps.findWorkOrderById(context, id);
-  return row && (await accessibleParent(context, row.order.vehicleId, deps))
-    ? toWorkOrderResponse(row)
-    : null;
+  if (!row?.vehicle.isActive || !row.customer.isActive) return null;
+  if (context.role !== "GOD" && row.customer.mechanicId !== context.userId) return null;
+  return toWorkOrderResponse(row);
 };
 export const listWorkOrders = async (
   context: AuthorizationContext,

@@ -94,6 +94,7 @@ Implementado localmente en el paso 7: generación en memoria con plantilla `clas
 - Login del frontend mediante Supabase SSR; `/login` del backend también permite obtener una sesión. Ambos apuntan al mismo proyecto.
 - API privada con Bearer explícito. CORS no sustituye autorización; no usar cookies entre orígenes como credencial de API.
 - Middleware verifica token con Auth, identidad, `session_id` activo y rol actual del perfil. La aplicación limita tokens a 900 segundos desde `iat` o a su expiración si ocurre antes. No autorizar con `user_metadata` ni roles obsoletos del token.
+- Todas las llamadas del frontend a la API Edge pasan por el transporte común, que impone `x-region: us-west-2` (Oregon) en cada método, conservando Bearer, headers de contenido y cuerpo. Las llamadas directas a Supabase Auth mantienen el SDK de autenticación.
 - El transporte frontend renueva 30 segundos antes del límite de 900 segundos, comparte la renovación entre pedidos simultáneos del mismo contexto y notifica 401 sin reintentar escrituras. Conserva el Accept de cada módulo, incluido PDF, y omite cookies en requests privados. Finanzas y PDF ya tienen endpoints implementados localmente.
 - Logout del frontend llama POST `/logout` con Bearer y después limpia tokens/cookies mediante el SDK con alcance local. Un error 429/503 conserva el estado de error y permite reintentar. Logout revoca solo la sesión actual; los controles de sesión la rechazan en requests posteriores. Otras sesiones permanecen activas.
 - Repositories usan `withUserDatabase`: transacción, claims locales, rol authenticated y sesión vigente. RLS controla propiedad heredada; no debe haber fuga de identidad entre conexiones del pool.
@@ -211,6 +212,10 @@ Listados de clientes, vehículos y órdenes: al cambiar filtros o paginación so
 ### Segundo cierre remoto — 17/10/2026
 
 Publicada API v8 en la demo `lsbgegbghlgxkqxpmgyx`, incluidos los endpoints de órdenes del incremento local y la API vigente de finanzas/PDF. Seed regenerado sin cambios de fixtures ni aplicación de DDL: se conserva el schema compatible de v7. La publicación no acredita por sí sola cada flujo HTTP ni un recorrido visual; alcance de integraciones y resultados en TESTING y [el segundo informe](docs/supabase-closure-repeat-2026-10-17.md). Las notas previas de v7 son históricas; frontend sin desplegar.
+
+### Rendimiento de lecturas y CORS
+
+El permiso CORS de preflight OPTIONS puede reutilizarse 600 segundos. Esto no almacena respuestas de datos ni evita la autenticación y autorización de las requests reales. El detalle de vehículo obtiene vehículo y cliente en una sola transacción autorizada; el detalle de orden obtiene orden, padres e hijos dentro de la misma transacción. Los servicios validan actividad/propiedad sobre ese snapshot, sin reconsultar los padres. Vehículos archivados continúan visibles para restauración bajo cliente activo; órdenes requieren ambos padres activos, incluso para GOD. Contratos de respuesta sin cambios; los mappers no exponen los padres internos.
 
 ### Salida PDF de diagnóstico solicitada — 17/10/2026
 

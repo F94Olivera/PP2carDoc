@@ -256,3 +256,19 @@ test("delete checks parents and deletes only the order; existing child FKs own c
   assert.equal(await api.deleteWorkOrderById(context, 3), undefined);
   assert.equal(queries.length, 1);
 });
+
+test("missing or inaccessible order stops before reading children and scopes both parents", async () => {
+  for (const role of ["MECHANIC", "GOD"] as const) {
+    reset([]);
+    const actor = { ...context, role };
+    assert.equal(await api.findWorkOrderById(actor, 55), undefined);
+    assert.equal(queries.length, 1);
+    assert.deepEqual(transactions, [{ context: actor, readOnly: true }]);
+    assert.match(queries[0]!.sql, /inner join "vehicles"/);
+    assert.match(queries[0]!.sql, /inner join "customers"/);
+    assert.match(queries[0]!.sql, /"vehicles"\."is_active" =/);
+    assert.match(queries[0]!.sql, /"customers"\."is_active" =/);
+    if (role === "MECHANIC") assert.match(queries[0]!.sql, /"customers"\."mechanic_id" =/);
+    else assert.doesNotMatch(queries[0]!.sql, /"customers"\."mechanic_id" =/);
+  }
+});

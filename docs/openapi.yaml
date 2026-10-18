@@ -6,7 +6,9 @@ info:
     Browser API requests send x-region: us-west-2 to execute the hosted Edge Function
     near Postgres. This optional Supabase routing header is ignored locally.
     CORS allows x-region and exposes the x-sb-edge-region response header for
-    execution-region verification. Explicit regional routing disables automatic
+    execution-region verification. OPTIONS responses include Access-Control-Max-Age: 600
+    to cache CORS permissions only; actual requests still authenticate and authorize.
+    Explicit regional routing disables automatic
     cross-region failover.
 servers:
   - url: http://127.0.0.1:54321/functions/v1/api

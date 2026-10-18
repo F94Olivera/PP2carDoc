@@ -135,3 +135,19 @@ test("vehicle writes recheck accessible active parents within authenticated boun
     assert.deepEqual(transactions, [{ context, readOnly: false }]);
   }
 });
+
+test("vehicle detail reads its parent in one scoped read-only snapshot", async () => {
+  for (const role of ["MECHANIC", "GOD"] as const) {
+    reset([]);
+    const actor = { ...context, role };
+    assert.equal(await api.findVehicleDetailById(actor, 31), undefined);
+    assert.equal(queries.length, 1);
+    assert.deepEqual(transactions, [{ context: actor, readOnly: true }]);
+    assert.match(queries[0]!.sql, /inner join "customers"/);
+    assert.match(queries[0]!.sql, /"customers"\."is_active" =/);
+    if (role === "MECHANIC") assert.match(queries[0]!.sql, /"customers"\."mechanic_id" =/);
+    else assert.doesNotMatch(queries[0]!.sql, /"customers"\."mechanic_id" =/);
+    // An archived vehicle remains readable for restoration under an active customer.
+    assert.doesNotMatch(queries[0]!.sql, /"vehicles"\."is_active" =/);
+  }
+});

@@ -13,6 +13,8 @@ export const corsMiddleware: RequestHandler = (req, res, next) => {
     "WWW-Authenticate, x-sb-edge-region, Content-Disposition",
   );
   if (req.method === "OPTIONS") {
+    // Cache permission for preflights only; every actual request still authenticates.
+    res.setHeader("Access-Control-Max-Age", "600");
     res.status(204).end();
     return;
   }

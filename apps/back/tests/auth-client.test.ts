@@ -30,13 +30,18 @@ const loadClient = async () => {
   };
   const bundle = await build({
     stdin: {
-      contents: [
-        "../../front/app/lib/auth-client.ts",
-        "../../front/app/(app)/finances/finance-api.ts",
-        "../../front/app/(app)/budget/budget-api.ts",
-      ]
-        .map((path) => `export * from ${JSON.stringify(new URL(path, import.meta.url).pathname)};`)
-        .join("\n"),
+      contents:
+        [
+          "../../front/app/lib/auth-client.ts",
+          "../../front/app/(app)/finances/finance-api.ts",
+          "../../front/app/(app)/budget/budget-api.ts",
+        ]
+          .map(
+            (path) => `export * from ${JSON.stringify(new URL(path, import.meta.url).pathname)};`,
+          )
+          .join("\n") +
+        `\nexport * as customers from ${JSON.stringify(new URL("../../front/app/(app)/customers/customer-api.ts", import.meta.url).pathname)};` +
+        `\nexport * as vehicles from ${JSON.stringify(new URL("../../front/app/(app)/vehicles/vehicle-api.ts", import.meta.url).pathname)};`,
       resolveDir: process.cwd(),
     },
     bundle: true,
@@ -70,6 +75,9 @@ const loadClient = async () => {
     { dispatchEvent: (event: Event) => events.push(event.type) },
   );
   const api = module.exports as {
+    customers: Record<string, (...args: unknown[]) => Promise<unknown>>;
+    vehicles: Record<string, (...args: unknown[]) => Promise<unknown>>;
+    fetchApi(path: string, init?: RequestInit): Promise<Response>;
     fetchAuthenticated(path: string, init?: RequestInit): Promise<Response>;
     getErrorMessage(response: Response, fallback: string): Promise<string>;
     signOut(): Promise<void>;
@@ -190,6 +198,7 @@ test("logout revokes via API then clears local session; failures do not confirm 
     else await assert.rejects(state.api.signOut(), /Could not sign out/);
     assert.ok(state.calls[0]!.url.endsWith("/logout"));
     assert.equal(state.calls[0]!.init.method, "POST");
+    assert.equal(new Headers(state.calls[0]!.init.headers).get("x-region"), "us-west-2");
     assert.equal(state.counts().cleanups, status === 204 || status === 401 ? 1 : 0);
   }
 });
@@ -225,6 +234,9 @@ test("finance and PDF domain clients use authenticated transport and propagate A
     items: [{ description: "Service", quantity: 1, unitPrice: 20 }],
   };
   const pdf = await state.api.createBudgetPdf(payload, "failed");
+  for (const request of state.calls) {
+    assert.equal(new Headers(request.init.headers).get("x-region"), "us-west-2");
+  }
   assert.equal(await pdf.text(), "fake PDF");
   assert.equal(pdf.headers.get("Content-Disposition"), 'attachment; filename="budget.pdf"');
   assert.equal(new Headers(state.calls[1]!.init.headers).get("Accept"), "application/pdf");
@@ -295,4 +307,60 @@ test("PDF download consumes binary data, uses server/fallback filename and relea
   );
   assert.equal(downloaded, "presupuesto-2026-10-17.pdf");
   scheduled!();
+});
+
+test("all customer, vehicle and work-order operations reach fetch with Oregon routing", async () => {
+  const state = await loadClient();
+  state.setResponse(new Response(JSON.stringify({ data: [], meta: { hasNextPage: false } })));
+  const c = state.api.customers;
+  const v = state.api.vehicles;
+  const customer = { firstName: "Ana", lastName: "Test", phone: "123" };
+  const vehicle = {
+    customerId: 30,
+    licensePlate: "AA123BB",
+    make: "Test",
+    model: "Test",
+    odometerUnit: "km",
+  };
+  const order = {
+    vehicleId: 31,
+    entryDate: "2026-10-17",
+    reportedProblem: "Test",
+    items: [],
+    recommendations: [],
+  };
+  const operations = [
+    () => c.listCustomers("failed"),
+    () => c.listAllCustomers("failed"),
+    () => c.getCustomer("30", "failed"),
+    () => c.createCustomer(customer, "failed"),
+    () => c.updateCustomer("30", customer, "failed"),
+    () => c.archiveCustomer(30, false, "failed"),
+    () => c.deleteCustomer(30, "failed"),
+    () => c.listVehicles("failed"),
+    () => v.listVehicles({ fallbackError: "failed" }),
+    () => v.listAllVehicles({ fallbackError: "failed" }),
+    () => v.getVehicle("31", "failed"),
+    () => v.createVehicle(vehicle, "failed"),
+    () => v.updateVehicle(31, vehicle, "failed"),
+    () => v.archiveVehicle(31, false, "failed"),
+    () => v.deleteVehicle(31, "failed"),
+    () =>
+      v.listWorkOrdersByVehicle({ vehicleId: 31, page: 1, pageSize: 10, fallbackError: "failed" }),
+    () => v.listAllWorkOrdersByVehicle({ vehicleId: 31, fallbackError: "failed" }),
+    () => v.getWorkOrder(55, "failed"),
+    () => v.createWorkOrder(order, "failed"),
+    () => v.updateWorkOrder(31, 55, { ...order, exitDate: null }, "failed"),
+    () => v.deleteWorkOrder(55, "failed"),
+    () => state.api.getFinances({ startDate: "", endDate: "", fallbackError: "failed" }),
+  ];
+  for (const operation of operations) {
+    const before = state.calls.length;
+    await operation();
+    assert.equal(state.calls.length, before + 1);
+    const request = state.calls.at(-1)!;
+    assert.equal(new Headers(request.init.headers).get("x-region"), "us-west-2", request.url);
+  }
+  await state.api.fetchApi("/login", { method: "POST", headers: { "x-region": "sa-east-1" } });
+  assert.equal(new Headers(state.calls.at(-1)!.init.headers).get("x-region"), "us-west-2");
 });

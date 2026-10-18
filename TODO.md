@@ -102,6 +102,19 @@ Revisión final de STEPBYSTEP 4–6 (17/10/2026): completada revisión estática
 
 Segundo cierre del paso 9 — 17/10/2026, solicitado expresamente por el usuario: **completado** para API v8 y las tres integraciones existentes. Órdenes ya publicadas; schema compatible preservado sin DDL, seed revisado y regenerado sin modificar fixtures. 81/81 unitarios, lint, TypeScript, build, formato, enlaces y diff-check aprobados; Auth/clientes/autorización salida 0. Inventario final del seed, roles y sesiones verificados sin residuos. No se crean nuevas integraciones ni se despliega frontend. Recuperación, advisor y límites en [el segundo informe](docs/supabase-closure-repeat-2026-10-17.md). Los pendientes de publicación/revisión final mencionados en registros anteriores quedan superados por este cierre; las casillas históricas de v7 no sustituyen esta evidencia.
 
+### Performance HTTP — exploración autorizada del 17/10/2026
+
+Seguimiento del paso 8, con mediciones nuevas y alcance en [el informe de los cinco endpoints](docs/performance-endpoints-2026-10-17.md). La selección regional ya existe en el frontend; las oportunidades siguientes aún no están implementadas:
+
+- [ ] Instrumentar Auth, adquisición de conexión, perfil y dominio con Pino/Server-Timing, sin secretos ni datos personales.
+- [x] Consolidar lecturas autorizadas de detalle de vehículo/orden y evitar relecturas de padres en transacciones separadas; mantener reglas de archivo, propiedad y sesión, con unitarios.
+- [ ] Evaluar menos viajes de preparación y COUNT/página/hijos en SQL, manteniendo RLS, claims locales y total correcto en páginas vacías.
+- [ ] Medir concurrencia antes de cambiar `max: 1`; evaluar planes/índices con volumen representativo. La medición secuencial no demuestra saturación.
+
+Seguimiento paso 8 — navegador local: llamadas de listados confirmadas en Oregon (Clientes 1,88/1,94 s; Vehículos 2,05 s). Evaluar `Access-Control-Max-Age` explícito en CORS: OPTIONS independiente tardó 702 ms y la respuesta remota no lo incluye. Requiere implementar, verificar y publicar backend para afectar las llamadas desde localhost; la ganancia real debe medirse en navegador. No elimina Auth ni controles de las requests reales.
+
+Implementación posterior del paso 8: detalle de vehículo/orden consolidado y Max-Age 600 publicados en API v9, con unitarios y verificación HTTP. La caché habilitada no demuestra hits en navegador; no se atribuye una mejora general. Sigue pendiente instrumentar etapas comunes y evaluar COUNT/preparación/pool. Resultados en [el informe](docs/performance-endpoints-2026-10-17.md).
+
 - [ ] Paso 7: restaurar el presupuesto detallado cuando se cierre el diagnóstico de descarga; la salida actual solicitada es una hoja A4 con `hola mundo`. Investigar el fallo remoto reportado: el generador anterior pasa las pruebas locales, sin reproducción contra API viva.
 
 Diagnóstico paso 7: fallo 500 reproducido en navegador y corregido con import explícito de `Buffer` para Edge. API v11 devuelve 200 en la repetición real; restaurar plantilla detallada sigue pendiente.

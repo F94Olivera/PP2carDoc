@@ -221,6 +221,24 @@ Assertions antes y después de las suites aprobadas: 20 clientes, 19 vehículos,
 
 La suite de autorización verifica RLS en cinco tablas, aislamiento y patentes concurrentes, inmutabilidad, metadata, rol actual y revocación; no prueba todo el CRUD HTTP de órdenes/vehículos, finanzas/PDF ni recorridos visuales del frontend. Sin deploy frontend ni nuevas mediciones. Advisor conserva una advertencia preexistente de [protección contra contraseñas filtradas desactivada](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection); no se cambió Auth. Detalle de recuperación, resultados e intentos fallidos corregidos en [el segundo informe](docs/supabase-closure-repeat-2026-10-17.md).
 
+## 17/10/2026 — Exploración de performance de cinco endpoints
+
+Pedido explícito del usuario: GET con curl a `/customers`, `/customers/30`, `/vehicles`, `/vehicles/31` y `/work-orders/55`. Comparación secuencial con región automática y `x-region: us-west-2`, autenticada contra la API remota. Metodología, resultados y límites en [el informe específico](docs/performance-endpoints-2026-10-17.md). Es una medición exploratoria HTTP; no una prueba de carga ni validación de todas las reglas de negocio. Sin suites de integración, SQL remoto, seed ni deploy. Solo documentación modificada.
+
+## 17/10/2026 — Header regional en todo el frontend
+
+Transporte HTTP Edge separado en `apps/front/app/lib/api-client.ts`: impone `x-region: us-west-2` para cada request y mantiene los exports previos de auth-client. Auditoría del frontend sin otros fetch directos a la API. Unitario con clientes reales de clientes/vehículos/órdenes y transporte real hasta fetch simulado: 22 operaciones de dominio, incluidos listados paginados, detalles, altas, cambios y borrados, más comprobación de que el transporte reemplaza una región distinta. Aserciones regionales también para finanzas, PDF y logout. No se modifica el SDK de Supabase Auth, que no invoca la función Edge.
+
+Verificación: 82/82 unitarios aprobados; repetición enfocada de los diez unitarios del transporte tras completar las aserciones regionales aprobada. Formato enfocado, lint, TypeScript, build y git diff --check aprobados. Sin llamadas externas ni integraciones.
+
+Recorrido de performance con frontend local y Supabase remoto: login visual y navegación a Clientes/Vehículos. Clientes 1884/1944 ms, Vehículos 2049 ms, HTTP 200 y región efectiva Oregon en las tres cargas; espera de sesión 0 ms. Medición temporal hasta headers, retirada al finalizar. Contraste curl y preflight, metodología y límites en [el informe](docs/performance-endpoints-2026-10-17.md). No se modificó ni desplegó backend; sin suites de integración ni SQL remoto.
+
+## 17/10/2026 — Optimización y publicación API v9
+
+87/87 unitarios aprobados; lint, TypeScript, build completo, formato enfocado y git diff --check aprobados. Sin integraciones nuevas ni ejecución de suites existentes. CORS OPTIONS cacheable por 600 segundos y detalles de vehículo/orden con padres del mismo snapshot; controles de servicio, RLS y sesión conservados. API v9 ACTIVE publicada y sus dos archivos remotos coinciden con el build. Backup de v8 fuera del repo, sin cambios de schema/seed/secretos.
+
+Verificación HTTP explícitamente autorizada: login, 15 GET sobre los cinco endpoints y OPTIONS; todos exitosos, GET en Oregon y Max-Age 600 confirmado. Recorrido visual con sesión vigente: Clientes y Vehículos cargaron correctamente, alrededor de dos segundos en navegaciones posteriores. No se demuestra mejora general ni hits de caché CORS; datos y límites en [el informe](docs/performance-endpoints-2026-10-17.md). Instrumentación temporal frontend retirada y archivos restaurados exactamente.
+
 ## Diagnóstico PDF mínimo — 17/10/2026
 
 Revisión estática: frontend usa POST `/budgets/pdf` mediante transporte autenticado sobre `NEXT_PUBLIC_API_URL`; la configuración actual apunta a la API remota. El backend registra la misma ruta bajo `/api`. Antes del cambio los cuatro unitarios de presupuesto pasan; no se reproduce el fallo remoto ni se atribuye una causa sin evidencia.

@@ -121,6 +121,16 @@ Finanzas y PDF existentes revalidados sin duplicar implementación. Revisión es
 
 Publicado backend API v8 en la demo documentada, incluidos los endpoints de órdenes; archivos remotos idénticos al build. Seed regenerado sin modificar fixtures y schema compatible conservado sin DDL. 81/81 unitarios, lint, TypeScript y build aprobados; Auth, clientes y autorización existentes terminaron con salida 0. Assertions finales confirman inventario del seed, roles restaurados y ausencia de fixtures/sesiones temporales. Formato/enlaces/diff-check aprobados. Evidencia y recuperación en [el segundo cierre](docs/supabase-closure-repeat-2026-10-17.md); v7 permanece histórico. Frontend sin desplegar y cobertura HTTP/visual limitada a lo descrito en TESTING.
 
+### 17/10/2026 — Seguimiento de performance del paso 8
+
+Exploración autorizada con curl de los cinco endpoints de clientes, vehículos y orden solicitados. Comparación regional y opciones pendientes documentadas en [el informe específico](docs/performance-endpoints-2026-10-17.md) y TODO paso 8. Sin optimizaciones permanentes ni despliegue; los resultados no cierran las tareas nuevas de instrumentación y reducción de transacciones.
+
+Seguimiento del paso 8: transporte regional centralizado en api-client y cobertura aislada de todas las operaciones HTTP del frontend, con header Oregon obligatorio. Reglas registradas en REQUIREMENTS y controles en TESTING.
+
+Seguimiento de performance paso 8: caché de permiso CORS OPTIONS de 600 segundos y lecturas de detalle de vehículo/orden con padres dentro del snapshot autorizado, sin transacciones de relectura. Sin cambios de schema ni contratos de datos. La publicación y las mediciones posteriores se registran en TESTING y el informe de performance.
+
+Publicación de ese incremento: API v9 ACTIVE y archivos remotos idénticos al build; 87 unitarios y controles locales aprobados. GET de los cinco endpoints y recorrido local de Clientes/Vehículos verificados. Max-Age confirmado; las mediciones no muestran mejora general. La reducción adicional de latencia sigue pendiente, con evidencia y límites en TESTING y el informe de performance.
+
 ### Diagnóstico PDF mínimo (17/10/2026)
 
 Ruta frontend/backend coincidente. Salida temporal solicitada: una página blanca A4 con `hola mundo`, manteniendo autenticación y validación. 87 unitarios aprobados, typecheck y build API aprobados; muestra renderizada e inspeccionada. Fallo remoto no reproducido; pendiente despliegue y cierre del diagnóstico. Resultados y límites en TESTING; restauración de plantilla detallada registrada en TODO paso 7.

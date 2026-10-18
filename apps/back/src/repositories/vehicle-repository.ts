@@ -1,6 +1,6 @@
 import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { withUserDatabase } from "../database.js";
-import { customers } from "../models/customer.js";
+import { customers, type Customer } from "../models/customer.js";
 import { vehicles, type Vehicle } from "../models/vehicle.js";
 import type { AuthorizationContext } from "../schemas/authorization.js";
 import type {
@@ -53,6 +53,24 @@ export const findVehicleById = (
         .where(and(eq(vehicles.id, id), parentFilter(context)))
         .limit(1);
       return row?.vehicle;
+    },
+    true,
+  );
+// Read the parent in the same authorized snapshot; services keep the business checks.
+export const findVehicleDetailById = (
+  context: AuthorizationContext,
+  id: number,
+): Promise<{ vehicle: Vehicle; customer: Customer } | undefined> =>
+  withUserDatabase(
+    context,
+    async (tx) => {
+      const [row] = await tx
+        .select({ vehicle: vehicles, customer: customers })
+        .from(vehicles)
+        .innerJoin(customers, eq(vehicles.customerId, customers.id))
+        .where(and(eq(vehicles.id, id), parentFilter(context)))
+        .limit(1);
+      return row;
     },
     true,
   );

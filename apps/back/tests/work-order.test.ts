@@ -53,6 +53,8 @@ const customer = {
   updatedAt: now,
 };
 const aggregate = {
+  vehicle,
+  customer,
   order: {
     id: 3,
     vehicleId: 2,
@@ -201,6 +203,11 @@ test("all operations reject inactive/foreign parents, including GOD archive acce
       deps.deleteWorkOrderById = async () => {
         throw new Error("unauthorized delete");
       };
+      deps.findWorkOrderById = async () => ({
+        ...aggregate,
+        vehicle: (await deps.findVehicleById(context, 2))!,
+        customer: (await deps.findCustomerById(context, 1))!,
+      });
       const auth = { ...context, role };
       assert.equal(await service.createWorkOrder(auth, input, deps), null);
       assert.equal(await service.getWorkOrderById(auth, 3, deps), null);
@@ -253,4 +260,13 @@ test("closed orders can be edited/reopened; mismatching vehicle never writes; de
   assert.ok(await service.deleteWorkOrder(context, 3, deps));
   deps.deleteWorkOrderById = async () => undefined;
   assert.equal(await service.deleteWorkOrder(context, 3, deps), false);
+});
+
+test("order detail maps its authorized snapshot without reloading parents", async () => {
+  const deps = {
+    ...doubles(),
+    findVehicleById: async () => assert.fail("redundant vehicle request"),
+    findCustomerById: async () => assert.fail("redundant customer request"),
+  };
+  assert.equal((await service.getWorkOrderById(context, 3, deps))?.id, 3);
 });

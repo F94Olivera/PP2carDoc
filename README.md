@@ -119,3 +119,5 @@ pnpm deploy:api --project-ref lsbgegbghlgxkqxpmgyx
 ```
 
 El comando reconstruye y despliega solo `api`. Los secretos personalizados se configuran por separado; no ejecuta schema ni seed. En CI se necesita `SUPABASE_ACCESS_TOKEN` como secreto. El frontend se publica por separado en un hosting compatible con Next.js, configurado para el mismo proyecto Supabase. Un despliegue no autoriza integraciones ni llamadas manuales equivalentes.
+
+Actualización de rendimiento del 17/10/2026: API v9 publicada con caché de permisos CORS de 600 segundos y detalles de vehículo/orden sin transacciones de relectura de padres. El frontend local continúa apuntando directamente a Supabase remoto. Resultados y límites en [el informe de los cinco endpoints](docs/performance-endpoints-2026-10-17.md); no se afirma una reducción general de latencia.

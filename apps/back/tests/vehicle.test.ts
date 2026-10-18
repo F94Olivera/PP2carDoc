@@ -57,6 +57,7 @@ const customer = {
 const doubles = () => ({
   ...repository,
   findVehicleById: async () => vehicle,
+  findVehicleDetailById: async () => ({ vehicle, customer }),
   findCustomerById: async () => customer,
   insertVehicle: async () => vehicle,
   updateVehicleById: async () => vehicle,
@@ -118,6 +119,7 @@ test("every vehicle operation denies foreign/inactive parents, including GOD on 
       const deps = {
         ...doubles(),
         findCustomerById: async () => parent,
+        findVehicleDetailById: async () => (parent ? { vehicle, customer: parent } : undefined),
         insertVehicle: async () => assert.fail("write"),
         updateVehicleById: async () => assert.fail("write"),
         deleteVehicleById: async () => assert.fail("delete"),
@@ -156,7 +158,10 @@ test("authorized CRUD, archive administration and pagination map public data", a
       (
         await getVehicleById(actor, 7, {
           ...deps,
-          findVehicleById: async () => ({ ...vehicle, isActive: false }),
+          findVehicleDetailById: async () => ({
+            vehicle: { ...vehicle, isActive: false },
+            customer,
+          }),
         })
       )?.isActive,
       false,
@@ -170,7 +175,7 @@ test("authorized CRUD, archive administration and pagination map public data", a
     assert.equal(page.meta.totalPages, 2);
     assert.equal(page.meta.hasNextPage, true);
   }
-  const missing = { ...doubles(), findVehicleById: async () => undefined };
+  const missing = { ...doubles(), findVehicleDetailById: async () => undefined };
   assert.equal(await getVehicleById(context, 7, missing), null);
   assert.equal(await deleteVehicle(context, 7, missing), false);
 });
@@ -289,4 +294,12 @@ test("vehicle controllers reject malformed HTTP inputs before accessing services
     assert.equal(status, 400);
     assert.ok(body && typeof body === "object" && "error" in body);
   }
+});
+
+test("vehicle detail reads the parent once in the repository snapshot", async () => {
+  const deps = {
+    ...doubles(),
+    findCustomerById: async () => assert.fail("redundant customer request"),
+  };
+  assert.equal((await getVehicleById(context, 7, deps))?.id, 7);
 });
