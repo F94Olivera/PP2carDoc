@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentProps } from "react";
 import { isValidPassword } from "@cardoc/types";
 import { verifyRecoveryLink, completePasswordRecovery } from "../../lib/password-recovery";
 import RecoveryShell, { recoveryInputClass, recoveryButtonClass } from "../recovery-shell";
@@ -62,10 +62,9 @@ export default function ResetPasswordPage() {
           <p>Mínimo 8 caracteres y máximo 72 bytes UTF-8.</p>
           <label className="block" htmlFor="new-password">
             Nueva contraseña
-            <input
+            <PasswordInput
               id="new-password"
               className={recoveryInputClass}
-              type="password"
               autoComplete="new-password"
               minLength={8}
               required
@@ -76,10 +75,9 @@ export default function ResetPasswordPage() {
           </label>
           <label className="block" htmlFor="confirm-password">
             Confirmar contraseña
-            <input
+            <PasswordInput
               id="confirm-password"
               className={recoveryInputClass}
-              type="password"
               autoComplete="new-password"
               required
               disabled={busy}
@@ -97,5 +95,41 @@ export default function ResetPasswordPage() {
         Solicitar otro enlace
       </Link>
     </RecoveryShell>
+  );
+}
+
+function PasswordInput({ className, ...props }: ComponentProps<"input">) {
+  const [visible, setVisible] = useState(false);
+  const fieldName =
+    props.id === "confirm-password" ? "confirmación de contraseña" : "nueva contraseña";
+  return (
+    <span className="relative block">
+      <input {...props} className={`${className} pr-12`} type={visible ? "text" : "password"} />
+      <button
+        type="button"
+        aria-label={`${visible ? "Ocultar" : "Mostrar"} ${fieldName}`}
+        aria-controls={props.id}
+        aria-pressed={visible}
+        disabled={props.disabled}
+        className="absolute bottom-0 right-0 flex h-11 w-11 items-center justify-center rounded-r-lg text-slate-500 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-blue-600 disabled:opacity-50 dark:text-slate-400 dark:hover:text-slate-100"
+        onClick={() => setVisible((current) => !current)}
+      >
+        <svg
+          aria-hidden="true"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+          <circle cx="12" cy="12" r="3" />
+          {visible && <path d="m3 3 18 18" />}
+        </svg>
+      </button>
+    </span>
   );
 }

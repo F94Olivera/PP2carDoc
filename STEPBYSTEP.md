@@ -156,3 +156,5 @@ Cierre del incremento: schema recreado sin migraciones y seed completado (20 cue
 - 2026-11-03: recuperación pública de contraseña implementada localmente con Resend demo y Supabase SSR; sin correo de alta, integraciones, SQL remoto, deploy ni commit. Ver TESTING.md para verificaciones y pendientes.
 
 - 2026-11-03: prueba end to end autorizada completada: backend v18 ACTIVE, parche Auth aplicado, OTP remoto verificado en 3600, entrega Resend, canje SSR, cambio de contraseña, cierre de sesión y login manual de Batman con acceso a sus vehículos. Límites en TESTING.md.
+
+- 2026-11-03: controles de ojo independientes en nueva contraseña y confirmación de `/reset-password`. Formato, lint, TypeScript y build completo aprobados; límites en TESTING.md.

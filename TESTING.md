@@ -296,3 +296,7 @@ Solicitud desde login → Olvidé mi contraseña → email de Batman → mensaje
 Canje del enlace recibido verificado visualmente: URL limpia `/reset-password`, formulario con ambos campos habilitado y sin redirección del guard. El usuario completó el formulario de nueva contraseña (requisito de la herramienta de navegador).
 
 Resultado final: observada la pantalla `/login?password_updated=1` con “Contraseña actualizada. Iniciá sesión con tu nueva contraseña”, sin redirección automática a la aplicación. Inicio de sesión manual realizado desde la UI con batman@hero.test y la contraseña nueva indicada por el usuario: acceso correcto a `/myvehicles`, con WayneTech Tumbler 2024 y WayneTech Batmobile Classic 1989. Prueba end to end del camino exitoso completada. No se probó reutilización del enlace real, vencimiento por espera de una hora ni rechazo de la contraseña anterior; no se ejecutaron las tres suites de integración. Sin commit ni nuevos correos en esta verificación final.
+
+### Visibilidad de contraseña — 2026-11-03
+
+La pantalla `/reset-password` incorpora controles independientes para mostrar/ocultar nueva contraseña y confirmación, ocultas inicialmente. Botones con nombre accesible, estado presionado, asociación al campo y deshabilitados al guardar; no envían el formulario. Formato enfocado, `pnpm lint`, `pnpm typecheck`, `pnpm build` y `git diff --check` aprobados. Sin integraciones ni llamadas a Auth/API/base; no se verificó el recorrido en navegador. El frontend requiere publicación separada del deploy de API en Supabase.
