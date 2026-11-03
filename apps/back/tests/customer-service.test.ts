@@ -51,6 +51,7 @@ test("creation defaults to the mechanic and GOD can explicitly assign that mecha
         assert.equal(input.mechanicId, mechanicId);
         return row;
       },
+      async () => {},
     );
     assert.equal(calls, 1);
     assert.equal(result.outcome, "success");
@@ -118,4 +119,53 @@ test("archive administration allows archived detail but preserves missing/foreig
     await updateCustomer(context, row.id, { isActive: true }, async () => undefined),
     { outcome: "not_found" },
   );
+});
+
+test("welcome runs after committed persistence; failure preserves creation without credentials in response", async () => {
+  const input = { firstName: "Clark", email: row.email, password: "secret-initial" };
+  for (const fails of [false, true]) {
+    let committed = false;
+    let sends = 0;
+    const result = await createCustomer(
+      context,
+      input,
+      async () => {
+        await Promise.resolve();
+        committed = true;
+        return { ...row, password: input.password };
+      },
+      async (email, password) => {
+        assert.equal(committed, true);
+        assert.equal(email, row.email);
+        assert.equal(password, input.password);
+        sends++;
+        if (fails) throw new Error("private provider details");
+      },
+    );
+    assert.equal(sends, 1);
+    assert.equal(result.outcome, "success");
+    if (result.outcome === "success") {
+      assert.equal(result.welcomeEmailStatus, fails ? "failed" : "sent");
+      assert.doesNotMatch(JSON.stringify(result), /secret-initial|password|private provider/);
+    }
+  }
+});
+
+test("failed or rejected persistence never sends welcome", async () => {
+  const input = { firstName: "Clark", email: row.email, password: "secret-initial" };
+  const send = async () => assert.fail("Must not send before successful creation");
+  await assert.rejects(
+    createCustomer(
+      context,
+      input,
+      async () => {
+        throw new Error("rollback");
+      },
+      send,
+    ),
+    /rollback/,
+  );
+  assert.deepEqual(await createCustomer(context, input, async () => null, send), {
+    outcome: "forbidden",
+  });
 });

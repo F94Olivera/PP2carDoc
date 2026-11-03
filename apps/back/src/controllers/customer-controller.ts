@@ -57,7 +57,9 @@ export const createCustomerController: AuthenticatedHandler = async (req, res) =
     res.status(403).json({ error: "Customer owner must be an authorized existing MECHANIC." });
     return;
   }
-  res.status(201).json(result.customer);
+  res
+    .status(201)
+    .json({ customer: result.customer, welcomeEmailStatus: result.welcomeEmailStatus });
 };
 export const updateCustomerController: AuthenticatedHandler = async (req, res) => {
   const params = customerByIdParamsSchema.safeParse(req.params);

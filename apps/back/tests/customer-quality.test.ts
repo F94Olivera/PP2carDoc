@@ -49,6 +49,14 @@ const load = async () => {
       {
         name: "repository-double",
         setup(builder) {
+          builder.onResolve({ filter: /\/repositories\/email-repository\.js$/ }, () => ({
+            path: "email",
+            namespace: "mail-double",
+          }));
+          builder.onLoad({ filter: /.*/, namespace: "mail-double" }, () => ({
+            contents:
+              'export const sendCustomerWelcomeEmail = async () => { throw new Error("Mail unavailable"); };',
+          }));
           builder.onResolve({ filter: /\/repositories\/customer-repository\.js$/ }, () => ({
             path: "repository",
             namespace: "double",
@@ -179,7 +187,14 @@ test("customer controllers translate successful CRUD, not found and forbidden ou
     const res = response();
     await handler(req as never, res as never, () => assert.fail("next"));
     assert.equal(res.statusCode, status);
-    if (status === 200 || status === 201) assert.deepEqual(res.body, toCustomerResponse(row));
+    if (status === 200) assert.deepEqual(res.body, toCustomerResponse(row));
+    if (status === 201) {
+      assert.deepEqual(res.body, {
+        customer: toCustomerResponse(row),
+        welcomeEmailStatus: "failed",
+      });
+      assert.doesNotMatch(JSON.stringify(res.body), /password|123qweASD/);
+    }
     if (status === 204) {
       assert.equal(res.ended, true);
       assert.equal(res.body, undefined);

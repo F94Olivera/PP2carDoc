@@ -1,3 +1,4 @@
+import { sendResendEmail } from "./email-repository.js";
 import { createClient } from "@supabase/supabase-js";
 import type { LoginInput } from "../schemas/auth.js";
 
@@ -41,18 +42,8 @@ export const generateRecoveryLink = async (email: string) => {
 };
 
 export const sendRecoveryEmail = async (link: string) => {
-  const { RESEND_API_KEY: key, RESEND_TEST_TO: to, RESEND_FROM: from } = process.env;
-  if (!key || !to || !from) throw new Error("Recovery mail configuration missing");
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from,
-      to: [to],
-      subject: "Restablecer contraseña de carDoc",
-      text: `Abrí este enlace para restablecer tu contraseña de carDoc: ${link}\nEl enlace vence en una hora y es de un solo uso. Si no lo solicitaste, ignorá este correo.`,
-    }),
-    signal: AbortSignal.timeout(10000),
+  await sendResendEmail({
+    subject: "Restablecer contraseña de carDoc",
+    text: `Abrí este enlace para restablecer tu contraseña de carDoc: ${link}\nEl enlace vence en una hora y es de un solo uso. Si no lo solicitaste, ignorá este correo.`,
   });
-  if (!response.ok) throw new Error("Recovery mail delivery failed");
 };

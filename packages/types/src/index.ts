@@ -15,6 +15,7 @@ export type {
 } from "./budget.js";
 export type {
   CreateCustomerRequest,
+  CreateCustomerResponse,
   UpdateCustomerRequest,
   ResetCustomerPasswordRequest,
   CustomerResponse,

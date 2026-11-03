@@ -1,6 +1,6 @@
 "use client";
 
-import type { CustomerResponse } from "@cardoc/types";
+import type { CreateCustomerResponse, CustomerResponse } from "@cardoc/types";
 import { useVerifiedUser } from "../auth-guard";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -57,7 +57,7 @@ export default function CustomerForm({ customer }: { customer?: CustomerResponse
   );
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [createdCustomer, setCreatedCustomer] = useState<CustomerResponse | null>(null);
+  const [createdCustomer, setCreatedCustomer] = useState<CreateCustomerResponse | null>(null);
 
   const updateField = (field: keyof CustomerForm, value: string) => {
     setForm((currentForm) => ({ ...currentForm, [field]: value }));
@@ -97,6 +97,7 @@ export default function CustomerForm({ customer }: { customer?: CustomerResponse
             t.customers.createError,
           ),
         );
+        setPassword("");
       }
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : t.customers.createError);
@@ -114,8 +115,13 @@ export default function CustomerForm({ customer }: { customer?: CustomerResponse
             {t.customers.createdSuccess}
           </p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-            {getCustomerName(createdCustomer)}
+            {getCustomerName(createdCustomer.customer)}
           </h2>
+          <p className="mt-3 text-sm" role="status">
+            {createdCustomer.welcomeEmailStatus === "sent"
+              ? t.customers.welcomeEmailSent
+              : t.customers.welcomeEmailFailed}
+          </p>
           <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Link
               className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-200 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
@@ -125,7 +131,7 @@ export default function CustomerForm({ customer }: { customer?: CustomerResponse
             </Link>
             <Link
               className="inline-flex h-11 items-center justify-center rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700"
-              href={`/vehicles/new?customerId=${createdCustomer.id}`}
+              href={`/vehicles/new?customerId=${createdCustomer.customer.id}`}
             >
               {t.customers.addVehicle}
             </Link>

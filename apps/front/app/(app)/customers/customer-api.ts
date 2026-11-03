@@ -1,5 +1,6 @@
 import type {
   CreateCustomerRequest,
+  CreateCustomerResponse,
   UpdateCustomerRequest,
   CustomerResponse,
   PaginatedResponse,
@@ -59,7 +60,7 @@ export const listCustomers = (options: ListCustomersOptions | string) => {
 };
 
 export const createCustomer = (customer: CreateCustomerRequest, fallbackError: string) =>
-  requestJson<CustomerResponse>("/customers", fallbackError, {
+  requestJson<CreateCustomerResponse>("/customers", fallbackError, {
     body: JSON.stringify(customer),
     method: "POST",
   });

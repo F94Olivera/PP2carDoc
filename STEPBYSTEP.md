@@ -158,3 +158,9 @@ Cierre del incremento: schema recreado sin migraciones y seed completado (20 cue
 - 2026-11-03: prueba end to end autorizada completada: backend v18 ACTIVE, parche Auth aplicado, OTP remoto verificado en 3600, entrega Resend, canje SSR, cambio de contraseña, cierre de sesión y login manual de Batman con acceso a sus vehículos. Límites en TESTING.md.
 
 - 2026-11-03: controles de ojo independientes en nueva contraseña y confirmación de `/reset-password`. Formato, lint, TypeScript y build completo aprobados; límites en TESTING.md.
+
+- 2026-11-03: bienvenida de clientes implementada localmente tras commit, con transporte Resend compartido, estado explícito en respuesta de alta y pantalla traducida. Sin cambios en Auth/SQL/permisos. Pruebas y límites en TESTING.md; E2E con copiloto pendiente, sin commit ni deploy.
+
+- 2026-11-03: por autorización posterior del usuario, bienvenida publicada en API v20 (ACTIVE) y frontend local iniciado en http://localhost:3000 contra backend remoto. E2E de bienvenida pendiente con copiloto.
+
+- 2026-11-03: usuario confirma prueba manual satisfactoria del envío de bienvenida contra API publicada. Login con credenciales iniciales y fallo real de correo no confirmados; límites en TESTING.md.

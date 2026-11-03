@@ -115,7 +115,7 @@ try {
 
   const documentNumber = `AUTH-TEST-${Date.now()}`;
   for (const session of [a, b]) {
-    const customer = await json(
+    const { customer } = await json(
       await api("/customers", session, "POST", {
         firstName: "Authorization fixture",
         documentNumber,
@@ -161,7 +161,7 @@ try {
       403,
     );
   }
-  const assigned = await json(
+  const { customer: assigned } = await json(
     await api("/customers", god, "POST", { firstName: "Assigned", mechanicId: a.id }),
     201,
   );

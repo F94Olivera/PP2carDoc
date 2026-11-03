@@ -1,4 +1,5 @@
-import type { CustomerResponse, PaginatedResponse } from "@cardoc/types";
+import { sendCustomerWelcomeEmail } from "../repositories/email-repository.js";
+import type { CreateCustomerResponse, CustomerResponse, PaginatedResponse } from "@cardoc/types";
 import { toCustomerResponse } from "../mappers/customer-mapper.js";
 import {
   deleteCustomerById,
@@ -48,6 +49,7 @@ export const createCustomer = async (
   context: AuthorizationContext,
   input: CreateCustomerInput,
   persist = insertCustomer,
+  sendWelcome = sendCustomerWelcomeEmail,
 ) => {
   if (!canChooseMechanic(context, input.mechanicId)) return { outcome: "forbidden" } as const;
   const customer = await persist(context, {
@@ -55,7 +57,19 @@ export const createCustomer = async (
     mechanicId: input.mechanicId ?? context.userId,
   });
   if (!customer) return { outcome: "forbidden" } as const;
-  return { outcome: "success", customer: toCustomerResponse(customer) } as const;
+  // insertCustomer resolves only after withUserDatabase commits the transaction.
+  let welcomeEmailStatus: CreateCustomerResponse["welcomeEmailStatus"] = "failed";
+  try {
+    await sendWelcome(customer.email, input.password);
+    welcomeEmailStatus = "sent";
+  } catch {
+    // An accepted account remains successful; never expose provider errors or credentials.
+  }
+  return {
+    outcome: "success",
+    customer: toCustomerResponse(customer),
+    welcomeEmailStatus,
+  } as const;
 };
 export const updateCustomer = async (
   context: AuthorizationContext,

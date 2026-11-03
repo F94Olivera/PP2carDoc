@@ -32,3 +32,8 @@ export type CustomerResponse = {
 };
 
 export type ResetCustomerPasswordRequest = { password: string };
+
+export type CreateCustomerResponse = {
+  customer: CustomerResponse;
+  welcomeEmailStatus: "sent" | "failed";
+};

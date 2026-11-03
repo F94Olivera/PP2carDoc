@@ -300,3 +300,15 @@ Resultado final: observada la pantalla `/login?password_updated=1` con “Contra
 ### Visibilidad de contraseña — 2026-11-03
 
 La pantalla `/reset-password` incorpora controles independientes para mostrar/ocultar nueva contraseña y confirmación, ocultas inicialmente. Botones con nombre accesible, estado presionado, asociación al campo y deshabilitados al guardar; no envían el formulario. Formato enfocado, `pnpm lint`, `pnpm typecheck`, `pnpm build` y `git diff --check` aprobados. Sin integraciones ni llamadas a Auth/API/base; no se verificó el recorrido en navegador. El frontend requiere publicación separada del deploy de API en Supabase.
+
+### 2026-11-03 — bienvenida de clientes (local)
+
+Ejecutado: `pnpm test:unit` (105 tests, todos aprobados), `pnpm lint`, `pnpm typecheck`, `pnpm build`, formato Prettier enfocado y `git diff --check`, aprobados. Los unitarios usan dobles de persistencia y fetch: alta y envío exitosos; alta confirmada con fallo de correo; alta fallida/rechazada sin envío; envío posterior a resolución de persistencia; destinatario fijo, asunto, texto y URL; configuración ausente y fallos de red/proveedor; respuesta sin contraseña ni detalles del proveedor, HTTP 201 aunque falle el correo. Los unitarios existentes de recuperación siguen pasando tras extraer el transporte compartido.
+
+Sin suites de integración, servicios iniciados, cuentas creadas, correos reales, commit ni deploy. El consumidor del alta en smoke-authorization se adapta al envelope; no se ejecutó esa suite ni se valida aquí su compatibilidad general con el alta Auth actual.
+
+Pendiente: E2E de bienvenida con usuario copiloto en navegador. Usar configuración existente de backend (`RESEND_API_KEY`, `RESEND_FROM`, `RESEND_TEST_TO`, `FRONTEND_URL`) en `.env` raíz; iniciar backend local con `pnpm dev` (Docker) y frontend con `pnpm dev:web`, apuntando al API local. Como MECHANIC, crear una única cuenta con email nuevo y contraseña inicial conocida, comprobar pantalla exitosa y ambos botones, HTTP 201 sin contraseña y estado `sent`; revisar el buzón demo para comprobar usuario, contraseña y enlace, y probar login con esas credenciales. La aceptación del proveedor por sí sola no comprueba entrega. En una prueba controlada posterior de configuración faltante, verificar `failed`, advertencia y persistencia de la cuenta, sin repetir su alta. No iniciar estas acciones hasta la sesión conjunta.
+
+- Actualización posterior del 2026-11-03, autorizada por el usuario: backend `api` desplegado mediante conector Supabase como v20 ACTIVE; frontend reiniciado con `pnpm dev:web` en http://localhost:3000, configurado contra API remota. CLI sin sesión, por lo que no se usó para publicar. No se crearon cuentas ni se enviaron correos; E2E de bienvenida sigue pendiente con copiloto.
+
+- Confirmación manual del usuario (2026-11-03): probó el envío del correo de bienvenida y confirmó que se envía. Esto no registra una verificación de login con las credenciales iniciales ni del escenario real de fallo de correo; ambos siguen pendientes. No se ejecutaron suites de integración ni se generaron correos adicionales como parte del cierre.

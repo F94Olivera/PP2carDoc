@@ -567,11 +567,11 @@ paths:
               $ref: "#/components/schemas/CreateCustomerInput"
       responses:
         "201":
-          description: Created customer
+          description: Customer and account committed. Email failure still returns 201; sent means provider acceptance, not confirmed delivery. Demo recipient is exclusively RESEND_TEST_TO.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CustomerResponse"
+                $ref: "#/components/schemas/CreateCustomerResponse"
         "400":
           description: Invalid or undeclared body fields
         "401":
@@ -1134,6 +1134,17 @@ components:
           description: Sum of quantity times integer unit price, without currency conversion
           example: 12500.5
 
+    CreateCustomerResponse:
+      type: object
+      additionalProperties: false
+      required: [customer, welcomeEmailStatus]
+      properties:
+        customer:
+          $ref: "#/components/schemas/CustomerResponse"
+        welcomeEmailStatus:
+          type: string
+          enum: [sent, failed]
+          description: sent indicates Resend accepted the request; failed includes missing configuration. Never includes credentials or provider details.
     CustomerResponse:
       type: object
       additionalProperties: false
