@@ -121,3 +121,15 @@ pnpm deploy:api --project-ref lsbgegbghlgxkqxpmgyx
 El comando reconstruye y despliega solo `api`. Los secretos personalizados se configuran por separado; no ejecuta schema ni seed. En CI se necesita `SUPABASE_ACCESS_TOKEN` como secreto. El frontend se publica por separado en un hosting compatible con Next.js, configurado para el mismo proyecto Supabase. Un despliegue no autoriza integraciones ni llamadas manuales equivalentes.
 
 Actualización de rendimiento del 17/10/2026: API v9 publicada con caché de permisos CORS de 600 segundos y detalles de vehículo/orden sin transacciones de relectura de padres. El frontend local continúa apuntando directamente a Supabase remoto. Resultados y límites en [el informe de los cinco endpoints](docs/performance-endpoints-2026-10-17.md); no se afirma una reducción general de latencia.
+
+## Portal del cliente (USER)
+
+Las altas de customer requieren email único y contraseña y crean su acceso USER; email fijo después del alta. El mecánico puede restablecer la contraseña desde edición; el cliente debe contactarlo si la olvida. La sugerencia del formulario es `123qweASD`, reemplazable. No hay recuperación automática ni cambio propio. Restablecer revoca las sesiones del cliente.
+
+USER inicia en `/myvehicles`, única opción lateral, y consulta vehículos e historial propios sin edición. El GET dedicado no recibe query/body; usa Bearer y el transporte fija `x-region: us-west-2`. El historial incluye abiertas/cerradas y excluye recomendaciones REJECTED. Archivar oculta recursos, sin borrar la cuenta. Borrar customer sin vehículos elimina su acceso; con vehículos se rechaza.
+
+El schema de demo se recrea desde `supabase/schema.sql`, sin migraciones; después se ejecuta `pnpm seed:superheroes`. La recreación es destructiva para las tablas de negocio y perfiles; conserva la infraestructura Auth/Storage. El seed restaura GOD/dos MECHANIC y crea las 20 cuentas USER de los héroes, con los emails `@hero.test` del propio seed. Todas las credenciales demo usan `SEED_DEMO_PASSWORD` del `.env` raíz (no se publican en este documento). Se conservan sus árboles y casos de archivo. No ejecutar schema/seed como verificación incidental; requiere autorización explícita.
+
+El comando unitario construye primero `@cardoc/types` para no depender de un `dist` previo; no llama a Supabase ni ejecuta las integraciones.
+
+Las funciones privadas de ciclo de cuenta escriben Auth y negocio en una misma transacción, con identidad/sesión y propietario comprobados. Usan el mismo formato bcrypt que el seed; no requieren exponer claves administrativas al cliente. El trigger sobre Auth rechaza cambios directos de contraseña/email de USER; el restablecimiento privado del mecánico habilita únicamente su actualización local y revoca sesiones. Los claims de rol/customer UUID se sincronizan mediante metadata administrativa al crear el vínculo, y Auth los firma al iniciar/renovar sesión. No hace falta configurar un Access Token Hook.

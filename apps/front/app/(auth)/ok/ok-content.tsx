@@ -1,6 +1,6 @@
 "use client";
 
-import type { User } from "@supabase/supabase-js";
+import type { AuthUserResponse } from "@cardoc/types";
 import { fetchAuthenticatedUser } from "../../lib/auth-client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -16,7 +16,7 @@ type AuthState =
     }
   | {
       status: "authenticated";
-      user: User;
+      user: AuthUserResponse;
     }
   | {
       status: "unauthenticated";

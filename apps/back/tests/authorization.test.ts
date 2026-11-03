@@ -68,6 +68,7 @@ test("mechanics cannot choose another owner; GOD can", () => {
     issuedAt: now,
     expiresAt: now + 900,
     role: "MECHANIC" as const,
+    customerId: null,
   };
   assert.equal(canChooseMechanic(context), true);
   assert.equal(canChooseMechanic(context, userId), true);
@@ -79,7 +80,12 @@ test("mechanics cannot choose another owner; GOD can", () => {
 test("customer schemas reject privilege fields, generated fields and empty updates", () => {
   for (const field of ["role", "id", "createdAt", "user_metadata", "unexpected"]) {
     assert.equal(
-      createCustomerSchema.safeParse({ firstName: "Clark", [field]: "GOD" }).success,
+      createCustomerSchema.safeParse({
+        firstName: "Clark",
+        email: "clark@example.com",
+        password: "123qweASD",
+        [field]: "GOD",
+      }).success,
       false,
     );
     assert.equal(
@@ -96,7 +102,12 @@ test("customer schemas reject privilege fields, generated fields and empty updat
   assert.equal(createCustomerSchema.safeParse({ firstName: "  " }).success, false);
   assert.equal(updateCustomerSchema.safeParse({ firstName: null }).success, false);
   assert.equal(
-    createCustomerSchema.safeParse({ firstName: " Clark ", mechanicId: userId }).data?.firstName,
+    createCustomerSchema.safeParse({
+      firstName: " Clark ",
+      mechanicId: userId,
+      email: "clark@example.com",
+      password: "123qweASD",
+    }).data?.firstName,
     "Clark",
   );
 });

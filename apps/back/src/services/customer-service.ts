@@ -6,6 +6,7 @@ import {
   updateCustomerById,
   findCustomerById,
   findCustomers,
+  resetCustomerPasswordById,
 } from "../repositories/customer-repository.js";
 import { canChooseMechanic, type AuthorizationContext } from "../schemas/authorization.js";
 import type {
@@ -62,10 +63,23 @@ export const updateCustomer = async (
   input: UpdateCustomerInput,
   persist = updateCustomerById,
 ) => {
+  if (context.role === "USER") return { outcome: "not_found" } as const;
   const customer = await persist(context, customerId, input);
   return customer
     ? ({ outcome: "success", customer: toCustomerResponse(customer) } as const)
     : ({ outcome: "not_found" } as const);
 };
 export const deleteCustomer = async (context: AuthorizationContext, customerId: number) =>
-  Boolean(await deleteCustomerById(context, customerId));
+  context.role !== "USER" && Boolean(await deleteCustomerById(context, customerId));
+
+export const resetCustomerPassword = async (
+  context: AuthorizationContext,
+  customerId: number,
+  password: string,
+  reset = resetCustomerPasswordById,
+) => {
+  if (context.role !== "MECHANIC") return { outcome: "forbidden" } as const;
+  return {
+    outcome: (await reset(context, customerId, password)) ? "success" : "not_found",
+  } as const;
+};

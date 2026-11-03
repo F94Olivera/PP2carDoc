@@ -12,7 +12,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:customers": "node --env-file=../../.env tests/integration/smoke-customers.mjs",
     "test:auth": "node --env-file=../../.env tests/integration/smoke-auth.mjs",
-    "test:unit": "tsx --test tests/*.test.ts",
+    "test:unit": "pnpm --filter @cardoc/types build && tsx --test tests/*.test.ts",
     "test:authorization": "node --env-file=../../.env tests/integration/smoke-authorization.mjs",
     "test": "pnpm test:unit"
   },

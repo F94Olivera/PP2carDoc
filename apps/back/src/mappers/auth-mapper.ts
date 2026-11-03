@@ -1,10 +1,15 @@
 import type { AuthUserResponse, LoginResponse, UserRole } from "@cardoc/types";
 import type { Session, User } from "@supabase/supabase-js";
 
-export const toUserResponse = (user: User, role: UserRole): AuthUserResponse => ({
+export const toUserResponse = (
+  user: User,
+  role: UserRole,
+  customerId: string | null = null,
+): AuthUserResponse => ({
   id: user.id,
   email: user.email ?? null,
   role,
+  customerId,
 });
 export const toLoginResponse = (user: AuthUserResponse, session: Session): LoginResponse => ({
   user,

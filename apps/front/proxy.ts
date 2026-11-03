@@ -26,7 +26,11 @@ export async function proxy(request: NextRequest) {
 
   if ((!isAuthenticated && !isLogin) || (isAuthenticated && isLogin)) {
     const url = request.nextUrl.clone();
-    url.pathname = isAuthenticated ? "/budget" : "/login";
+    url.pathname = isAuthenticated
+      ? data?.claims.app_metadata?.user_role === "USER"
+        ? "/myvehicles"
+        : "/budget"
+      : "/login";
     url.search = "";
     const redirect = NextResponse.redirect(url);
     response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
@@ -47,6 +51,7 @@ export const config = {
     "/customers/:path*",
     "/finances/:path*",
     "/vehicles/:path*",
+    "/myvehicles/:path*",
     "/work-orders/:path*",
   ],
 };

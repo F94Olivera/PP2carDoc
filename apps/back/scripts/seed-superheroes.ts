@@ -2,6 +2,7 @@ import { eq, inArray, sql } from "drizzle-orm";
 import pino from "pino";
 
 import { closeDatabase, getDatabase, initializeDatabase } from "../src/database.js";
+import { userProfiles } from "../src/models/user-profile.js";
 import { customers } from "../src/models/customer.js";
 import { vehicles } from "../src/models/vehicle.js";
 import { workOrderItems } from "../src/models/work-order-item.js";
@@ -151,7 +152,7 @@ const clearPreviousSuperheroSeed = async () => {
 
   await database.transaction(async (tx) => {
     const seededCustomers = await tx
-      .select({ id: customers.id })
+      .select({ id: customers.id, userId: customers.userId })
       .from(customers)
       .where(inArray(customers.documentNumber, customerDocumentNumbers));
     const customerIds = seededCustomers.map((customer) => customer.id);
@@ -185,6 +186,14 @@ const clearPreviousSuperheroSeed = async () => {
     }
 
     await tx.delete(customers).where(inArray(customers.id, customerIds));
+    const userIds = seededCustomers.map((customer) => customer.userId);
+    await tx.delete(userProfiles).where(inArray(userProfiles.id, userIds));
+    await tx.execute(
+      sql`delete from auth.users where id in (${sql.join(
+        userIds.map((id) => sql`${id}::uuid`),
+        sql`, `,
+      )})`,
+    );
   });
 };
 
@@ -203,6 +212,7 @@ const ensureDemoUsers = async () => {
   const result: string[] = [];
   for (const fixture of fixtures) {
     const id = await database.transaction(async (tx) => {
+      await tx.execute(sql`select set_config('cardoc.password_reset', 'allowed', true)`);
       const found = await tx.execute(sql`select id from auth.users where email = ${fixture.email}`);
       let userId = found[0]?.id as string | undefined;
       if (!userId) {
@@ -211,7 +221,7 @@ const ensureDemoUsers = async () => {
             email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
             confirmation_token, recovery_token, email_change, email_change_token_new, is_anonymous)
           values(gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-            ${fixture.email}, extensions.crypt(${password}, extensions.gen_salt('bf')), now(),
+            ${fixture.email}, extensions.crypt(${password}, extensions.gen_salt('bf', 10)), now(),
             '{"provider":"email","providers":["email"]}'::jsonb, '{"email_verified":true}'::jsonb,
             now(), now(), '', '', '', '', false) returning id`);
         userId = created[0]!.id as string;
@@ -222,7 +232,7 @@ const ensureDemoUsers = async () => {
       } else {
         // Re-running the seed invalidates fixture sessions and restores fixture credentials.
         await tx.execute(sql`delete from auth.sessions where user_id = ${userId}::uuid`);
-        await tx.execute(sql`update auth.users set encrypted_password = extensions.crypt(${password}, extensions.gen_salt('bf')),
+        await tx.execute(sql`update auth.users set encrypted_password = extensions.crypt(${password}, extensions.gen_salt('bf', 10)),
           email_confirmed_at = now(), updated_at = now() where id = ${userId}::uuid`);
       }
       // Never promote an existing customer owner; old non-seed data needs manual review.
@@ -267,13 +277,46 @@ const seedSuperheroes = async () => {
 
     for (const [customerIndex, superhero] of superheroes.entries()) {
       const documentNumber = customerDocumentNumbers[customerIndex]!;
+      const email = `${superhero.alias.toLowerCase().replaceAll(/[^a-z0-9]+/g, ".")}@hero.test`;
+      const [existingAccount] = await tx.execute(
+        sql`select id from auth.users where email = ${email}`,
+      );
+      let accountId: string;
+      if (existingAccount) {
+        accountId = String(existingAccount.id);
+        const [profile] = await tx.execute(
+          sql`select role from public.user_profiles where id = ${accountId}::uuid`,
+        );
+        if (profile?.role !== "USER")
+          throw new Error("Hero email belongs to a workshop account; refusing to overwrite");
+        await tx.execute(sql`select set_config('cardoc.password_reset', 'allowed', true)`);
+        await tx.execute(
+          sql`update auth.users set encrypted_password = extensions.crypt(${password}, extensions.gen_salt('bf', 10)), updated_at = now() where id = ${accountId}::uuid`,
+        );
+        await tx.execute(sql`select set_config('cardoc.password_reset', '', true)`);
+        await tx.execute(sql`delete from auth.sessions where user_id = ${accountId}::uuid`);
+      } else {
+        const [createdAccount] = await tx.execute(sql`
+          insert into auth.users(id, instance_id, aud, role, email, encrypted_password,
+            email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+            confirmation_token, recovery_token, email_change, email_change_token_new, is_anonymous)
+          values(gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+            ${email}, extensions.crypt(${password}, extensions.gen_salt('bf', 10)), now(),
+            '{"provider":"email","providers":["email"],"user_role":"USER","customerId":null}'::jsonb,
+            '{"email_verified":true}'::jsonb, now(), now(), '', '', '', '', false) returning id`);
+        accountId = String(createdAccount!.id);
+        await tx.execute(sql`insert into auth.identities(id, provider_id, user_id, identity_data, provider, created_at, updated_at)
+          values(gen_random_uuid(), ${accountId}, ${accountId}::uuid,
+            jsonb_build_object('sub', ${accountId}::text, 'email', ${email}::text, 'email_verified', true), 'email', now(), now())`);
+      }
       const [createdCustomer] = await tx
         .insert(customers)
         .values({
           mechanicId: mechanicIds[customerIndex % 2]!,
+          userId: accountId,
           firstName: superhero.firstName,
           lastName: superhero.lastName,
-          email: `${superhero.alias.toLowerCase().replaceAll(/[^a-z0-9]+/g, ".")}@hero.test`,
+          email,
           phone: `+54 11 5555-${String(1000 + customerIndex)}`,
           address: `${100 + customerIndex} Hero Avenue`,
           documentNumber,

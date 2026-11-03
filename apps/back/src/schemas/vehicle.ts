@@ -6,6 +6,7 @@ const queryInteger = z
   .regex(/^[1-9]\d*$/)
   .transform(Number)
   .pipe(z.number().int().positive().max(Number.MAX_SAFE_INTEGER));
+export const myVehiclesQuerySchema = z.strictObject({});
 export const vehicleByIdParamsSchema = z.strictObject({ vehicleId: queryInteger.pipe(id) });
 // Writable fields follow the Drizzle model; IDs, parents and timestamps cannot be edited.
 const fields = {

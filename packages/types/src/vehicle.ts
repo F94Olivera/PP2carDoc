@@ -23,3 +23,5 @@ export type VehicleResponse = {
 };
 
 export type UpdateVehicleRequest = Omit<CreateVehicleRequest, "customerId">;
+
+export type MyVehiclesResponse = { data: VehicleResponse[] };

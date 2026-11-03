@@ -1,3 +1,5 @@
+import { myVehiclesQuerySchema } from "../schemas/vehicle.js";
+import { listMyVehicles } from "../services/vehicle-service.js";
 import type { AuthenticatedHandler } from "../middlewares/auth-middleware.js";
 import {
   createVehicleSchema,
@@ -74,4 +76,25 @@ export const deleteVehicleController: AuthenticatedHandler = async (req, res) =>
     return;
   }
   res.status(204).end();
+};
+
+export const myVehiclesController: AuthenticatedHandler = async (req, res) => {
+  if (res.locals.authorization.role !== "USER") {
+    res.status(403).json({ error: "Customer access required." });
+    return;
+  }
+  if (
+    !myVehiclesQuerySchema.safeParse(req.query).success ||
+    (req.get("content-length") && req.get("content-length") !== "0") ||
+    req.get("transfer-encoding")
+  ) {
+    res.status(400).json({ error: "No query parameters or body are accepted." });
+    return;
+  }
+  const result = await listMyVehicles(res.locals.authorization);
+  if (!result) {
+    res.status(401).json({ error: "A valid customer session is required." });
+    return;
+  }
+  res.json(result);
 };

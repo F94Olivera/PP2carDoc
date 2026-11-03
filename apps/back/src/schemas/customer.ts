@@ -25,7 +25,7 @@ export const customerByIdParamsSchema = z.strictObject({
 const customerFields = {
   firstName: z.string().trim().min(1).max(200),
   lastName: z.string().max(200).nullable().optional(),
-  email: z.email().max(254).nullable().optional(),
+  email: z.string().trim().toLowerCase().pipe(z.email().max(254)),
   phone: z.string().max(100).nullable().optional(),
   address: z.string().max(1000).nullable().optional(),
   documentNumber: z.string().trim().min(1).max(100).nullable().optional(),
@@ -33,10 +33,30 @@ const customerFields = {
 };
 export const createCustomerSchema = z.strictObject({
   ...customerFields,
+  password: z
+    .string()
+    .min(8)
+    .max(72)
+    .refine(
+      (value) => new TextEncoder().encode(value).length <= 72,
+      "Password must fit 72 UTF-8 bytes",
+    ),
   mechanicId: z.uuid().optional(),
 });
+const { email: immutableEmail, ...editableCustomerFields } = customerFields;
+void immutableEmail;
+export const resetCustomerPasswordSchema = z.strictObject({
+  password: z
+    .string()
+    .min(8)
+    .max(72)
+    .refine(
+      (value) => new TextEncoder().encode(value).length <= 72,
+      "Password must fit 72 UTF-8 bytes",
+    ),
+});
 export const updateCustomerSchema = z
-  .strictObject({ ...customerFields, isActive: z.boolean().optional() })
+  .strictObject({ ...editableCustomerFields, isActive: z.boolean().optional() })
   .partial()
   .refine((input) => Object.keys(input).length > 0, "At least one field is required");
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;

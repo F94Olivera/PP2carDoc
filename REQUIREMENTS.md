@@ -11,27 +11,41 @@ Este documento define el comportamiento objetivo confirmado con el usuario. Las 
 - Monorepo pnpm: Next.js/React/Tailwind, Express/TypeScript, contratos `@cardoc/types`.
 - Supabase Auth y Postgres; Drizzle/Postgres.js en repositories, Zod para entradas, Pino para logs.
 - Express se ejecuta como Edge Function. Un único `.env` raíz; configuración pública separada de secretos.
-- Usuarios de demo creados solo mediante seed. No hay registro público, recuperación de contraseña ni administración de usuarios/roles en la aplicación por ahora.
-- Roles GOD y MECHANIC; no existe una entidad taller compartida entre varios mecánicos.
+- Cuentas de taller/demo por seed; cada alta de cliente crea su cuenta USER. No hay registro público ni recuperación automática. Solo el mecánico propietario restablece la contraseña desde edición de customer; USER y GOD no pueden hacerlo.
+- Roles GOD, MECHANIC y USER; no existe una entidad taller compartida entre varios mecánicos.
 - Datos ficticios y esquema de demo recreable, sin migraciones incrementales. La recreación no es parte del despliegue.
 
 ## 3. Entidades y relaciones
 
-| Entidad         | Relación y campos relevantes                                                                                                                        |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Perfil          | ID de Supabase Auth y rol GOD/MECHANIC. No almacena contraseñas propias.                                                                            |
-| Cliente         | Pertenece a un MECHANIC mediante `mechanicId`; nombre obligatorio, datos de contacto/documento/notas opcionales, `isActive`.                        |
-| Vehículo        | Pertenece a un cliente; patente, marca, modelo y unidad km/mi obligatorios; año y kilometraje inicial opcionales; `isActive`.                       |
-| Orden           | Pertenece a un vehículo; `entryDate` y `reportedProblem` obligatorios en el modelo; salida, kilometraje de ingreso, notas y diagnóstico opcionales. |
-| Ítem            | Hijo de una orden; descripción, categoría labor/part/other, cantidad positiva y precio unitario no negativo.                                        |
-| Recomendación   | Hija opcional de una orden; descripción obligatoria, motivo, estado y prioridad opcionales.                                                         |
-| Presupuesto PDF | Documento independiente formado con los datos del formulario; no es una entidad persistida.                                                         |
+| Entidad         | Relación y campos relevantes                                                                                                                                         |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Perfil          | ID de Supabase Auth y rol GOD/MECHANIC/USER. No almacena contraseñas propias.                                                                                        |
+| Cliente         | Pertenece a un MECHANIC mediante `mechanicId`; nombre/email obligatorios, email único fijo, UUID propio y cuenta USER uno a uno; otros datos opcionales, `isActive`. |
+| Vehículo        | Pertenece a un cliente; patente, marca, modelo y unidad km/mi obligatorios; año y kilometraje inicial opcionales; `isActive`.                                        |
+| Orden           | Pertenece a un vehículo; `entryDate` y `reportedProblem` obligatorios en el modelo; salida, kilometraje de ingreso, notas y diagnóstico opcionales.                  |
+| Ítem            | Hijo de una orden; descripción, categoría labor/part/other, cantidad positiva y precio unitario no negativo.                                                         |
+| Recomendación   | Hija opcional de una orden; descripción obligatoria, motivo, estado y prioridad opcionales.                                                                          |
+| Presupuesto PDF | Documento independiente formado con los datos del formulario; no es una entidad persistida.                                                                          |
 
 IDs y timestamps generados no son editables. El documento de cliente es único por mecánico cuando se informa. La patente se compara sin diferencias de mayúsculas ni espacios extremos y es única por mecánico, incluso entre vehículos de clientes distintos.
 
 El modelo actual usa enteros para precios de ítems y permite cantidades fraccionarias. La API y los formularios deben acordar esa representación antes de terminar órdenes; ver TODO. No se requiere un sistema de monedas ni conversiones.
 
 ## 4. Reglas de negocio y flujos
+
+### Portal USER y credenciales
+
+Login por email normalizado, obligatorio y único entre todas las cuentas Auth, incluso entre talleres. Una cuenta USER corresponde a un customer; no se comparte entre customers. Email, UUID del customer, cuenta vinculada y propietario son inmutables. El ID numérico de customer y sus FK se conservan; `customers.uuid` es distinto del UUID Auth.
+
+El mecánico elige la contraseña; el formulario sugiere `123qweASD`, reemplazable. Mínimo ocho caracteres y máximo 72 bytes UTF-8. Solo el MECHANIC propietario la restablece desde edición del customer, incluso archivado; se revocan todas las sesiones de ese cliente. USER no cambia su contraseña por API propia ni directamente por Auth. Si la olvida, contacta al mecánico fuera del sistema; no hay email ni autoservicio de recuperación. GOD puede crear customers para un MECHANIC pero no restablecer contraseñas.
+
+El token firmado contiene `sub`/`email`, `app_metadata.user_role` y `app_metadata.customerId`: UUID del customer para USER; null explícito para GOD/MECHANIC. Perfil y vínculo vigentes se contrastan en cada request. Token sin claims coherentes o sesión revocada no concede acceso. No usar user_metadata editable para autorización.
+
+USER entra a `/myvehicles`, única opción de navegación lateral. React llama `GET /myvehicles` sin query ni body, con Bearer y `x-region: us-west-2`, usando el transporte común. El backend resuelve el customer UUID desde la identidad autenticada y devuelve todos sus vehículos activos bajo customer activo, ordenados por ID; sin truncar a una página. Sin vehículos, lista vacía.
+
+Detalle `/myvehicles/:vehicleId` → historial completo de órdenes abiertas y cerradas, con filtros/paginación → `/myvehicles/:vehicleId/services/:workOrderId`. Se comparten presentaciones con las vistas del taller. Todos los campos de vehículo, órdenes, ítems y recomendaciones son legibles, excepto recomendaciones REJECTED, excluidas de las respuestas y de lectura directa USER. Recurso ajeno o archivado devuelve 404 en detalle. Archive conserva la cuenta y respeta los flujos actuales de restauración y finanzas.
+
+USER no accede a customers, listado global de vehículos, presupuesto, finanzas ni escrituras. La lista de métodos/rutas HTTP autorizados y RLS separan lectura/escritura; ocultar controles no reemplaza esas garantías.
 
 ### Identidad, roles y propiedad
 
@@ -43,13 +57,13 @@ El incremento local de propiedad rechaza transferencias y exige propietario MECH
 
 ### Clientes y archivo
 
-Crear cliente → validar campos declarados y propietario → persistir → devolver contrato público. Consultar/editar/eliminar requiere acceso al recurso. El nombre es obligatorio; no aceptar campos generados o de privilegio.
+Crear cliente → validar campos declarados, email, contraseña y propietario → crear Auth, perfil USER y customer vinculados en una transacción → devolver contrato público sin secretos. Consultar/editar/eliminar requiere acceso al recurso. El nombre es obligatorio; no aceptar campos generados o de privilegio.
 
 Archivar cambia `isActive` a false y lo oculta del uso habitual. Un request directo no debe permitir agregar vehículos a un cliente archivado. Sus vehículos no deben aparecer en listados operativos; las órdenes se alcanzan a través de vehículos y no necesitan su propio `isActive`. Los controles de acceso y de padres activos deben aplicarse en servidor; ocultar links no es una validación.
 
 La aplicación ya contempla filtros de archivados y restauración. Se conservan como operaciones explícitas de administración para recursos propios o de GOD, separadas de los recorridos operativos. Archivo no significa eliminación física.
 
-Eliminar físicamente un cliente con vehículos se rechaza por la relación restrictiva; sin dependencias puede eliminarse. Actualmente el detalle por ID permite clientes archivados y existe `includeArchived`; al completar la funcionalidad hay que distinguir administración de archivo de acceso operativo.
+Eliminar físicamente un cliente con vehículos se rechaza por la relación restrictiva; sin dependencias se elimina junto con su cuenta USER, perfil y sesiones en una sola transacción. Un fallo no elimina parcialmente la cuenta. Actualmente el detalle por ID permite clientes archivados y existe `includeArchived`; al completar la funcionalidad hay que distinguir administración de archivo de acceso operativo.
 
 ### Vehículos
 
@@ -105,30 +119,32 @@ Implementado localmente en el paso 7: generación en memoria con plantilla `clas
 
 Métodos/rutas relativos a la base `/functions/v1/api`. Las filas pendientes reflejan los clientes HTTP existentes y el plan; **todavía no son endpoints disponibles**. Los detalles de cuerpos y errores implementados se consultan en OpenAPI; no duplicar aquí todas sus propiedades.
 
-| Método y ruta                                       | Acceso          | Entrada / salida principal                               | Estado                               |
-| --------------------------------------------------- | --------------- | -------------------------------------------------------- | ------------------------------------ |
-| GET `/ping`                                         | Público         | `{ pong: true }`.                                        | Implementado.                        |
-| POST `/login`                                       | Público         | Email/password → usuario y sesión; límite 8 KB.          | Implementado.                        |
-| GET `/auth/me`                                      | Bearer          | Usuario actual: id, email y rol.                         | Implementado.                        |
-| POST `/logout`                                      | Bearer          | Revocar sesión actual → 204.                             | Implementado.                        |
-| GET `/customers`                                    | Propietario/GOD | Paginación y `includeArchived` → `{ data, meta }`.       | Implementado; revisar archivo.       |
-| GET `/customers/:customerId`                        | Propietario/GOD | ID → cliente o 404.                                      | Implementado.                        |
-| POST `/customers`                                   | Propietario/GOD | Datos y propietario válido → cliente, 201.               | Implementado; propietario MECHANIC.  |
-| PATCH `/customers/:customerId`                      | Propietario/GOD | Parcial no vacío, incluido `isActive` → cliente.         | Implementado; propietario inmutable. |
-| DELETE `/customers/:customerId`                     | Propietario/GOD | Sin dependencias → 204; con vehículos → 409.             | Implementado.                        |
-| GET `/vehicles`                                     | Propietario/GOD | Paginación/filtros → vehículos de clientes operativos.   | Implementado localmente.             |
-| GET `/vehicles/:vehicleId`                          | Propietario/GOD | ID → vehículo accesible.                                 | Implementado localmente.             |
-| POST `/vehicles`                                    | Propietario/GOD | Cliente activo y datos → vehículo, 201.                  | Implementado localmente.             |
-| PUT `/vehicles/:vehicleId`                          | Propietario/GOD | Datos del vehículo, sin reasignarlo → vehículo.          | Implementado localmente.             |
-| PATCH `/vehicles/:vehicleId/archive`                | Propietario/GOD | `isActive` → vehículo.                                   | Implementado localmente.             |
-| DELETE `/vehicles/:vehicleId`                       | Propietario/GOD | Sin órdenes → 204; con órdenes → 409.                    | Implementado localmente.             |
-| GET `/vehicles/:vehicleId/work-orders`              | Propietario/GOD | Paginación y filtro de cierre → órdenes de ese vehículo. | Implementado localmente.             |
-| POST `/work-orders`                                 | Propietario/GOD | Vehículo y datos de entrada/hijos → orden abierta, 201.  | Implementado localmente.             |
-| GET `/work-orders/:workOrderId`                     | Propietario/GOD | ID → orden con ítems/recomendaciones.                    | Implementado localmente.             |
-| PUT `/vehicles/:vehicleId/work-orders/:workOrderId` | Propietario/GOD | Editar orden e hijos sin reasignarla.                    | Implementado localmente.             |
-| DELETE `/work-orders/:workOrderId`                  | Propietario/GOD | Eliminar orden e hijos → 204.                            | Implementado localmente.             |
-| GET `/finances`                                     | Propietario/GOD | `startDate`, `endDate` por salida → `{ total }`.         | Implementado localmente.             |
-| POST `/budgets/pdf`                                 | Bearer          | Datos independientes del formulario → PDF descargable.   | Implementado localmente (paso 7).    |
+| Método y ruta                                       | Acceso               | Entrada / salida principal                                  | Estado                               |
+| --------------------------------------------------- | -------------------- | ----------------------------------------------------------- | ------------------------------------ |
+| GET `/ping`                                         | Público              | `{ pong: true }`.                                           | Implementado.                        |
+| POST `/login`                                       | Público              | Email/password → usuario y sesión; límite 8 KB.             | Implementado.                        |
+| GET `/auth/me`                                      | Bearer               | Usuario actual: id, email y rol.                            | Implementado.                        |
+| POST `/logout`                                      | Bearer               | Revocar sesión actual → 204.                                | Implementado.                        |
+| GET `/customers`                                    | Propietario/GOD      | Paginación y `includeArchived` → `{ data, meta }`.          | Implementado; revisar archivo.       |
+| GET `/myvehicles`                                   | USER                 | Todos los vehículos activos propios; sin query/body.        | Implementado localmente.             |
+| POST `/customers/:customerId/password`              | MECHANIC propietario | Restablece contraseña y revoca sesiones del USER vinculado. | Implementado localmente.             |
+| GET `/customers/:customerId`                        | Propietario/GOD      | ID → cliente o 404.                                         | Implementado.                        |
+| POST `/customers`                                   | Propietario/GOD      | Datos y propietario válido → cliente, 201.                  | Implementado; propietario MECHANIC.  |
+| PATCH `/customers/:customerId`                      | Propietario/GOD      | Parcial no vacío, incluido `isActive` → cliente.            | Implementado; propietario inmutable. |
+| DELETE `/customers/:customerId`                     | Propietario/GOD      | Sin dependencias → 204; con vehículos → 409.                | Implementado.                        |
+| GET `/vehicles`                                     | Propietario/GOD      | Paginación/filtros → vehículos de clientes operativos.      | Implementado localmente.             |
+| GET `/vehicles/:vehicleId`                          | Propietario/GOD      | ID → vehículo accesible.                                    | Implementado localmente.             |
+| POST `/vehicles`                                    | Propietario/GOD      | Cliente activo y datos → vehículo, 201.                     | Implementado localmente.             |
+| PUT `/vehicles/:vehicleId`                          | Propietario/GOD      | Datos del vehículo, sin reasignarlo → vehículo.             | Implementado localmente.             |
+| PATCH `/vehicles/:vehicleId/archive`                | Propietario/GOD      | `isActive` → vehículo.                                      | Implementado localmente.             |
+| DELETE `/vehicles/:vehicleId`                       | Propietario/GOD      | Sin órdenes → 204; con órdenes → 409.                       | Implementado localmente.             |
+| GET `/vehicles/:vehicleId/work-orders`              | Propietario/GOD      | Paginación y filtro de cierre → órdenes de ese vehículo.    | Implementado localmente.             |
+| POST `/work-orders`                                 | Propietario/GOD      | Vehículo y datos de entrada/hijos → orden abierta, 201.     | Implementado localmente.             |
+| GET `/work-orders/:workOrderId`                     | Propietario/GOD      | ID → orden con ítems/recomendaciones.                       | Implementado localmente.             |
+| PUT `/vehicles/:vehicleId/work-orders/:workOrderId` | Propietario/GOD      | Editar orden e hijos sin reasignarla.                       | Implementado localmente.             |
+| DELETE `/work-orders/:workOrderId`                  | Propietario/GOD      | Eliminar orden e hijos → 204.                               | Implementado localmente.             |
+| GET `/finances`                                     | Propietario/GOD      | `startDate`, `endDate` por salida → `{ total }`.            | Implementado localmente.             |
+| POST `/budgets/pdf`                                 | Bearer               | Datos independientes del formulario → PDF descargable.      | Implementado localmente (paso 7).    |
 
 El frontend de clientes usa el PATCH general con `isActive` para archivo/restauración y el mismo endpoint para edición de datos, sin permitir editar propietario. No se requiere búsqueda por patente mediante un endpoint nuevo para cumplir el alcance actual.
 
@@ -155,7 +171,7 @@ Formato de error implementado: `{ error: string }`. El contrato compartido `ApiE
 
 ## 9. Fuera de alcance y precisiones pendientes
 
-Fuera de alcance: datos reales, talleres compartidos, nuevos roles, transferencias de propiedad, registro público, administración de cuentas en UI, contabilidad/pagos/impuestos/divisas, archivos PDF persistidos, envío automático de documentos, aceptación firmada, `isActive` de órdenes y endpoint global de listado de órdenes.
+Fuera de alcance: datos reales, talleres compartidos, transferencias de propiedad, registro público, contabilidad/pagos/impuestos/divisas, archivos PDF persistidos, envío automático de documentos, aceptación firmada, `isActive` de órdenes y endpoint global de listado de órdenes.
 
 Precisiones para cerrar al implementar el módulo correspondiente, sin impedir esta reorganización documental:
 
@@ -228,3 +244,9 @@ Compatibilidad Edge del PDF: el controller importa `Buffer` desde `node:buffer` 
 La salida de diagnóstico `hola mundo` queda reemplazada por el diseño aportado en CarDoc_Racing_HTML_CSS, adaptado como PDF nativo A4: fondo oscuro, foto de automovilismo, marca CarDoc y acentos rojos, cliente/dominio/vehículo/fecha, tabla y resumen. Se conservan el identificador `classic`, la validación compartida, autenticación y descarga binaria. Las filas muestran cantidad, precio unitario e importe; subtotal y total son la suma redondeada de los renglones, sin IVA ni conceptos adicionales. Nombres y descripciones se ajustan en líneas; importes extensos ajustan tamaño para respetar su columna. Paginación sin dividir filas, encabezados repetidos y total en la última página.
 
 HTML/CSS/imagen originales conservados en `docs/templates/cardoc-racing`; el servicio reproduce su composición mediante pdf-lib y fuentes estándar Helvetica, sin ejecutar Chromium ni el JavaScript de ejemplo. Imagen integrada al bundle mediante base64; sin filesystem, recursos externos ni servicios de renderizado durante el request. Los gradientes y detalles CSS se adaptan a formas y colores PDF, por lo que no se promete reproducción píxel a píxel del HTML.
+
+## Portal del cliente — 27/10/2026
+
+Implementados rol USER, UUID de customer y vínculo Auth uno a uno, alta/borrado atómicos mediante funciones privadas de Postgres, email fijo, restablecimiento exclusivo del mecánico, claims firmados sincronizados, endpoint completo `/myvehicles`, rutas React de lectura y presentación compartida de detalles. RLS limita USER a SELECT y excluye recomendaciones rechazadas; las reglas de taller y archivo se conservan. Los triggers de Auth impiden cambios de contraseña/email del cliente fuera del caso de uso autorizado. Sin migraciones. El estado de aplicación de schema, seed y publicación se registra por separado en TESTING, no se presume por existir el código.
+
+Aplicación de este incremento: schema recreado y seed completado en la demo; backend API v14 ACTIVE. La ejecución funcional de Auth/RLS y el recorrido de navegador no se verificaron en este cambio; ver TESTING.

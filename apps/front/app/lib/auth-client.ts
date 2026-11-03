@@ -1,6 +1,10 @@
 "use client";
 
-import { ACCESS_TOKEN_MAX_AGE_SECONDS, type ApiErrorResponse } from "@cardoc/types";
+import {
+  ACCESS_TOKEN_MAX_AGE_SECONDS,
+  type AuthUserResponse,
+  type ApiErrorResponse,
+} from "@cardoc/types";
 
 import { createClient } from "./supabase/client";
 
@@ -19,11 +23,16 @@ export const getErrorMessage = async (response: Response, fallback: string) => {
   return typeof payload?.error === "string" && payload.error.trim() ? payload.error : fallback;
 };
 
-export const fetchAuthenticatedUser = async () => {
-  const { data, error } = await createClient().auth.getUser();
+export const homePathForUser = (user: Pick<AuthUserResponse, "role">) =>
+  user.role === "USER" ? "/myvehicles" : authenticatedHomePath;
 
+export const fetchAuthenticatedUser = async (): Promise<AuthUserResponse | null> => {
+  const { data, error } = await createClient().auth.getUser();
   if (error || !data.user) return null;
-  return data.user;
+  const response = await fetchAuthenticated("/auth/me");
+  if (response.status === 401) return null;
+  if (!response.ok) throw new Error("Could not verify your account.");
+  return ((await response.json()) as { user: AuthUserResponse }).user;
 };
 
 export const notifyAuthExpired = () => {

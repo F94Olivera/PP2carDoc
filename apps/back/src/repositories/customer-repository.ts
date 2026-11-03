@@ -1,12 +1,22 @@
-import { and, asc, count, eq } from "drizzle-orm";
+import { and, asc, count, eq, sql } from "drizzle-orm";
 import { withUserDatabase } from "../database.js";
-import { userProfiles } from "../models/user-profile.js";
-import { customers, type Customer, type NewCustomer } from "../models/customer.js";
+import { customers, type Customer } from "../models/customer.js";
 import type { AuthorizationContext } from "../schemas/authorization.js";
-import type { ListCustomersQuery, UpdateCustomerInput } from "../schemas/customer.js";
+import type {
+  ListCustomersQuery,
+  UpdateCustomerInput,
+  CreateCustomerInput,
+} from "../schemas/customer.js";
 
 const ownershipFilter = (context: AuthorizationContext) =>
-  context.role === "GOD" ? undefined : eq(customers.mechanicId, context.userId);
+  context.role === "GOD"
+    ? undefined
+    : context.role === "USER"
+      ? and(
+          eq(customers.userId, context.userId),
+          eq(customers.uuid, context.customerId ?? "00000000-0000-0000-0000-000000000000"),
+        )
+      : eq(customers.mechanicId, context.userId);
 
 export const findCustomers = (
   context: AuthorizationContext,
@@ -49,15 +59,32 @@ export const findCustomerById = (
     true,
   );
 
-export const insertCustomer = (context: AuthorizationContext, input: NewCustomer) =>
+export const insertCustomer = (
+  context: AuthorizationContext,
+  input: CreateCustomerInput & { mechanicId: string },
+) =>
   withUserDatabase(context, async (transaction) => {
-    const [owner] = await transaction
-      .select({ id: userProfiles.id })
-      .from(userProfiles)
-      .where(and(eq(userProfiles.id, input.mechanicId), eq(userProfiles.role, "MECHANIC")));
-    if (!owner) return null;
-    const [customer] = await transaction.insert(customers).values(input).returning();
-    return customer!;
+    const [result] = await transaction.execute(
+      sql`select private.create_customer_account(${JSON.stringify(input)}::jsonb) as id`,
+    );
+    if (!result?.id) return null;
+    const [customer] = await transaction
+      .select()
+      .from(customers)
+      .where(eq(customers.id, Number(result.id)));
+    return customer ?? null;
+  });
+
+export const resetCustomerPasswordById = (
+  context: AuthorizationContext,
+  customerId: number,
+  password: string,
+) =>
+  withUserDatabase(context, async (tx) => {
+    const [result] = await tx.execute(
+      sql`select private.reset_customer_password(${customerId}, ${password}) as changed`,
+    );
+    return result?.changed === true;
   });
 
 export const updateCustomerById = (
@@ -76,9 +103,8 @@ export const updateCustomerById = (
 
 export const deleteCustomerById = (context: AuthorizationContext, customerId: number) =>
   withUserDatabase(context, async (transaction) => {
-    const [customer] = await transaction
-      .delete(customers)
-      .where(and(eq(customers.id, customerId), ownershipFilter(context)))
-      .returning({ id: customers.id });
-    return customer;
+    const [result] = await transaction.execute(
+      sql`select private.delete_customer_account(${customerId}) as deleted`,
+    );
+    return result?.deleted ? { id: customerId } : undefined;
   });

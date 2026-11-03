@@ -8,6 +8,7 @@ import { findCurrentUserProfile } from "../repositories/user-profile-repository.
 import {
   classifyAuthenticationError,
   identityFromVerifiedToken,
+  metadataFromVerifiedToken,
 } from "../schemas/authorization.js";
 import { toLoginResponse, toUserResponse } from "../mappers/auth-mapper.js";
 import type { LoginInput } from "../schemas/auth.js";
@@ -20,12 +21,19 @@ export const getCurrentUser = async (accessToken: string) => {
   if (!identity) return { outcome: "unauthorized" } as const;
   try {
     const profile = await findCurrentUserProfile(identity);
-    if (!profile || !["GOD", "MECHANIC"].includes(profile.role))
+    const metadata = metadataFromVerifiedToken(accessToken);
+    if (
+      !profile ||
+      !metadata ||
+      metadata.user_role !== profile.role ||
+      metadata.customerId !== profile.customerId ||
+      (profile.role === "USER" && !profile.customerId)
+    )
       return { outcome: "unauthorized" } as const;
     return {
       outcome: "success",
-      response: { user: toUserResponse(data.user, profile.role) },
-      authorization: { ...identity, role: profile.role },
+      response: { user: toUserResponse(data.user, profile.role, profile.customerId) },
+      authorization: { ...identity, role: profile.role, customerId: profile.customerId },
     } as const;
   } catch (error) {
     if (isInactiveSession(error)) return { outcome: "unauthorized" } as const;

@@ -131,3 +131,16 @@ export const listVehicles = async (fallbackError: string, includeArchived = fals
     page++;
   }
 };
+
+export const resetCustomerPassword = async (
+  customerId: number,
+  password: string,
+  fallbackError: string,
+) => {
+  const response = await fetchAuthenticated(`/customers/${customerId}/password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+  if (!response.ok) throw new Error(await getErrorMessage(response, fallbackError));
+};

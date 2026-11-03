@@ -8,7 +8,10 @@ export type VerifiedIdentity = {
   sessionId: string;
   expiresAt: number;
 };
-export type AuthorizationContext = VerifiedIdentity & { role: UserRole };
+export type AuthorizationContext = VerifiedIdentity & {
+  role: UserRole;
+  customerId: string | null;
+};
 const claimsSchema = z.object({
   iat: z.number().int().positive(),
   sub: z.uuid(),
@@ -41,7 +44,7 @@ export const identityFromVerifiedToken = (
 export const canChooseMechanic = (context: AuthorizationContext, mechanicId?: string) =>
   context.role === "GOD"
     ? mechanicId !== undefined && mechanicId !== context.userId
-    : mechanicId === undefined || mechanicId === context.userId;
+    : context.role === "MECHANIC" && (mechanicId === undefined || mechanicId === context.userId);
 
 export const classifyAuthenticationError = (error: {
   status?: number;
@@ -58,3 +61,28 @@ export const classifyAuthenticationError = (error: {
     return "unauthorized" as const;
   return "unavailable" as const;
 };
+
+// Current database profile/link remain authoritative; signed metadata must agree.
+export const accessMetadataSchema = z.object({
+  user_role: z.enum(["GOD", "MECHANIC", "USER"]),
+  customerId: z.uuid().nullable(),
+});
+export const metadataFromVerifiedToken = (token: string) => {
+  try {
+    const payload = JSON.parse(Buffer.from(token.split(".")[1]!, "base64url").toString("utf8"));
+    const parsed = accessMetadataSchema.safeParse(payload.app_metadata);
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+};
+export const canReadCustomer = (
+  context: AuthorizationContext,
+  customer: { mechanicId: string; userId?: string; uuid?: string; isActive: boolean },
+) =>
+  context.role === "GOD" ||
+  (context.role === "MECHANIC" && customer.mechanicId === context.userId) ||
+  (context.role === "USER" &&
+    customer.isActive &&
+    customer.userId === context.userId &&
+    customer.uuid === context.customerId);

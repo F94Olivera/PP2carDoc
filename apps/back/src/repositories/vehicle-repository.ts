@@ -11,7 +11,15 @@ import type {
 const parentFilter = (context: AuthorizationContext) =>
   and(
     eq(customers.isActive, true),
-    context.role === "GOD" ? undefined : eq(customers.mechanicId, context.userId),
+    context.role === "USER" ? eq(vehicles.isActive, true) : undefined,
+    context.role === "GOD"
+      ? undefined
+      : context.role === "USER"
+        ? and(
+            eq(customers.userId, context.userId),
+            eq(customers.uuid, context.customerId ?? "00000000-0000-0000-0000-000000000000"),
+          )
+        : eq(customers.mechanicId, context.userId),
   );
 export const findVehicles = (context: AuthorizationContext, query: ListVehiclesQuery) =>
   withUserDatabase(
@@ -116,3 +124,16 @@ export const deleteVehicleById = (
       .returning({ id: vehicles.id });
     return row;
   });
+
+export const findMyVehicles = (context: AuthorizationContext) =>
+  withUserDatabase(
+    context,
+    (tx) =>
+      tx
+        .select({ vehicle: vehicles })
+        .from(vehicles)
+        .innerJoin(customers, eq(vehicles.customerId, customers.id))
+        .where(and(parentFilter(context), eq(vehicles.isActive, true)))
+        .orderBy(asc(vehicles.id)),
+    true,
+  );

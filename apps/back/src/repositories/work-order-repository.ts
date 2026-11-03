@@ -17,7 +17,14 @@ const parentFilter = (context: AuthorizationContext) =>
   and(
     eq(vehicles.isActive, true),
     eq(customers.isActive, true),
-    context.role === "GOD" ? undefined : eq(customers.mechanicId, context.userId),
+    context.role === "GOD"
+      ? undefined
+      : context.role === "USER"
+        ? and(
+            eq(customers.userId, context.userId),
+            eq(customers.uuid, context.customerId ?? "00000000-0000-0000-0000-000000000000"),
+          )
+        : eq(customers.mechanicId, context.userId),
   );
 const lockParent = async (tx: Transaction, context: AuthorizationContext, vehicleId: number) => {
   const [parent] = await tx

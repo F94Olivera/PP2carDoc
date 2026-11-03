@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useI18n } from "../../i18n/use-i18n";
-import { authenticatedHomePath, fetchAuthenticatedUser } from "../../lib/auth-client";
+import { homePathForUser, fetchAuthenticatedUser } from "../../lib/auth-client";
 
 import { createClient } from "../../lib/supabase/client";
 
@@ -29,7 +29,7 @@ export default function LoginPage() {
         }
 
         if (user) {
-          router.replace(authenticatedHomePath);
+          router.replace(homePathForUser(user));
           return;
         }
 
@@ -66,8 +66,13 @@ export default function LoginPage() {
         return;
       }
 
+      const user = await fetchAuthenticatedUser();
+      if (!user) {
+        setError(t.login.defaultError);
+        return;
+      }
       router.refresh();
-      router.replace(authenticatedHomePath);
+      router.replace(homePathForUser(user));
     } catch {
       setError(t.login.connectionError);
     } finally {
@@ -177,6 +182,7 @@ export default function LoginPage() {
               {isSubmitting ? t.login.submitting : t.login.submit}
             </button>
           </form>
+          <p className="mt-4 text-sm text-slate-500">{t.portal.recoveryHint}</p>
 
           <div className="mt-10 flex justify-center">
             <p className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white/60 px-3 py-1.5 text-xs font-medium text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-400">

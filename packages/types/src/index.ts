@@ -13,10 +13,20 @@ export type {
   BudgetPdfTemplateId,
   CreateBudgetPdfRequest,
 } from "./budget.js";
-export type { CreateCustomerRequest, UpdateCustomerRequest, CustomerResponse } from "./customer.js";
+export type {
+  CreateCustomerRequest,
+  UpdateCustomerRequest,
+  ResetCustomerPasswordRequest,
+  CustomerResponse,
+} from "./customer.js";
 export type { FinanceQuery, FinanceResponse } from "./finance.js";
 export type { PaginatedResponse, PaginationMeta, PaginationQuery } from "./pagination.js";
-export type { CreateVehicleRequest, UpdateVehicleRequest, VehicleResponse } from "./vehicle.js";
+export type {
+  CreateVehicleRequest,
+  UpdateVehicleRequest,
+  VehicleResponse,
+  MyVehiclesResponse,
+} from "./vehicle.js";
 export type {
   CreateWorkOrderItemRequest,
   CreateWorkOrderRecommendationRequest,

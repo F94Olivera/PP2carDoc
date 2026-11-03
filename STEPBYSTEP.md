@@ -146,3 +146,9 @@ Reproducido 500 desde Budget local con sesión existente; import explícito de `
 ### Presupuesto Racing (18/10/2026)
 
 Reemplazado `hola mundo` por diseño aportado, adaptado a PDF nativo con imagen integrada, datos del formulario, tabla paginada y subtotales/totales. Referencias HTML/CSS/JPEG conservadas. 87 unitarios y controles locales aprobados; muestras renderizadas e inspeccionadas. API v12 ACTIVE publicada en Supabase; descarga remota pendiente de la prueba del usuario.
+
+### Incremento portal del cliente — 27/10/2026
+
+Alcance aprobado en doc.md e incorporado a REQUIREMENTS: USER, cuentas de customer, UUID separado del ID numérico, `/myvehicles` frontend/backend, lectura de historial, exclusión REJECTED, contraseña administrada por mecánico y email fijo. Código, schema recreable, seed y contratos modificados. Verificaciones aisladas y estado de aplicación/publicación en TESTING. No se crearon migraciones ni se amplió el alcance a transferencias, recuperación automática o cuentas compartidas entre talleres.
+
+Cierre del incremento: schema recreado sin migraciones y seed completado (20 cuentas customer, 19 vehículos, 48 órdenes, 143 ítems y 47 recomendaciones); API v14 ACTIVE. 98 unitarios, lint, TypeScript y build completo aprobados. Sin pruebas de integración ni recorrido conectado; detalles y advertencia del advisor en TESTING.

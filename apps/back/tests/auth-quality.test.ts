@@ -80,6 +80,7 @@ test("auth mappers exclude provider metadata and internal session fields", () =>
     id: "user",
     email: "ana@example.com",
     role: "MECHANIC",
+    customerId: null,
   });
   assert.equal(toUserResponse({ id: "user" } as User, "GOD").email, null);
   const session = {
@@ -92,7 +93,7 @@ test("auth mappers exclude provider metadata and internal session fields", () =>
     user,
   } as Session;
   assert.deepEqual(toLoginResponse(toUserResponse(user, "MECHANIC"), session), {
-    user: { id: "user", email: "ana@example.com", role: "MECHANIC" },
+    user: { id: "user", email: "ana@example.com", role: "MECHANIC", customerId: null },
     session: {
       access_token: "access",
       refresh_token: "refresh",
@@ -189,7 +190,7 @@ test("auth logout service classifies provider errors without external calls", as
 test("auth login/current-user use cases honor verified identity, current role and revoke rejected sessions", async () => {
   const userId = "ed30c681-b04c-4216-a35e-14d354972461";
   const issuedAt = Math.floor(Date.now() / 1000);
-  const token = `header.${Buffer.from(JSON.stringify({ sub: userId, session_id: "4f1e78e8-2a0c-48e3-b7dd-70b5d572ae9a", iat: issuedAt, exp: issuedAt + 900, role: "authenticated" })).toString("base64url")}.verified-by-double`;
+  const token = `header.${Buffer.from(JSON.stringify({ sub: userId, session_id: "4f1e78e8-2a0c-48e3-b7dd-70b5d572ae9a", iat: issuedAt, exp: issuedAt + 900, role: "authenticated", app_metadata: { user_role: "MECHANIC", customerId: null } })).toString("base64url")}.verified-by-double`;
   const user = { id: userId, email: "ana@example.com", user_metadata: { role: "GOD" } };
   const session = {
     access_token: token,
@@ -197,7 +198,7 @@ test("auth login/current-user use cases honor verified identity, current role an
     token_type: "bearer",
     expires_in: 900,
   };
-  let profile: unknown = { role: "MECHANIC" };
+  let profile: unknown = { role: "MECHANIC", customerId: null };
   let profileFailure: unknown;
   let authError: unknown = null;
   let anonymous = false;
@@ -234,7 +235,7 @@ test("auth login/current-user use cases honor verified identity, current role an
     assert.equal((await api.login(credentials)).outcome, "unauthorized");
   }
   assert.equal(revoked, 2);
-  profile = { role: "MECHANIC" };
+  profile = { role: "MECHANIC", customerId: null };
   for (const [failure, outcome] of [
     [{ code: "SESSION_INACTIVE" }, "unauthorized"],
     [new Error("database unavailable"), "unavailable"],

@@ -120,3 +120,10 @@ Implementación posterior del paso 8: detalle de vehículo/orden consolidado y M
 Diagnóstico paso 7: fallo 500 reproducido en navegador y corregido con import explícito de `Buffer` para Edge. API v11 devuelve 200 en la repetición real; restaurar plantilla detallada sigue pendiente.
 
 Paso 7 — 18/10/2026: reemplazada la salida de diagnóstico por el presupuesto Racing solicitado, con los datos reales del formulario, imagen integrada, tabla paginada y totales. El pendiente anterior de restauración de plantilla queda resuelto mediante este nuevo modelo.
+
+### Portal del cliente — 27/10/2026 (incremento aprobado)
+
+- [x] USER, UUID de customer, cuenta uno a uno, alta/borrado atómicos, email fijo y restablecimiento exclusivo del mecánico.
+- [x] GET `/myvehicles` sin query/body y colección completa, Bearer/claims verificados y lectura propia con RLS sin escrituras ni recomendaciones REJECTED.
+- [x] Menú/rutas USER, región Oregon, detalles compartidos e historial completo; seed con cuentas USER.
+- [ ] Seguimiento del incremento en STEPBYSTEP: recorrido visual conectado y verificación de RLS/Auth reales, solo cuando se autoricen explícitamente integraciones. Los unitarios no acreditan estos recorridos.

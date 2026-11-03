@@ -20,6 +20,7 @@ import type { AuthorizationContext } from "../src/schemas/authorization.js";
 const context: AuthorizationContext = {
   userId: "mechanic",
   role: "MECHANIC",
+  customerId: null,
   sessionId: "session",
   issuedAt: 1,
   expiresAt: 901,
@@ -43,9 +44,11 @@ const vehicle = {
 const customer = {
   id: 1,
   mechanicId: context.userId,
+  uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  userId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
   firstName: "Ana",
   lastName: null,
-  email: null,
+  email: "ana@example.com",
   phone: null,
   address: null,
   documentNumber: null,

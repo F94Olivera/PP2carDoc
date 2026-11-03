@@ -58,3 +58,21 @@ export const requireAuth: AuthenticatedHandler = async (req, res, next) => {
 
   next();
 };
+
+export const restrictCustomerAccess: AuthenticatedHandler = (req, res, next) => {
+  if (res.locals.authorization.role !== "USER") {
+    next();
+    return;
+  }
+  const readable =
+    req.method === "GET" &&
+    (/^\/vehicles\/[1-9]\d*(?:\/work-orders)?$/.test(req.path) ||
+      /^\/work-orders\/[1-9]\d*$/.test(req.path) ||
+      req.path === "/myvehicles" ||
+      req.path === "/auth/me");
+  if (!readable && !(req.method === "POST" && req.path === "/logout")) {
+    res.status(403).json({ error: "Read-only customer access." });
+    return;
+  }
+  next();
+};

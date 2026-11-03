@@ -1,5 +1,6 @@
 "use client";
 
+import { useVerifiedUser } from "./auth-guard";
 import Link from "next/link";
 import { useState } from "react";
 import { signOut } from "../lib/auth-client";
@@ -35,33 +36,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   };
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const navItems = [
-    {
-      href: "/budget",
-      icon: DocumentIcon,
-      label: t.budget.navBudget,
-    },
-    {
-      href: "/customers",
-      icon: UsersIcon,
-      label: t.budget.navCustomers,
-    },
-    {
-      href: "/vehicles",
-      icon: CarIcon,
-      label: t.budget.navVehicles,
-    },
-    {
-      href: "/work-orders",
-      icon: WrenchIcon,
-      label: t.budget.navWorkOrders,
-    },
-    {
-      href: "/finances",
-      icon: ChartIcon,
-      label: t.budget.navFinances,
-    },
-  ];
+  const user = useVerifiedUser();
+  const navItems =
+    user?.role === "USER"
+      ? [{ href: "/myvehicles", icon: CarIcon, label: t.budget.navVehicles }]
+      : [
+          {
+            href: "/budget",
+            icon: DocumentIcon,
+            label: t.budget.navBudget,
+          },
+          {
+            href: "/customers",
+            icon: UsersIcon,
+            label: t.budget.navCustomers,
+          },
+          {
+            href: "/vehicles",
+            icon: CarIcon,
+            label: t.budget.navVehicles,
+          },
+          {
+            href: "/work-orders",
+            icon: WrenchIcon,
+            label: t.budget.navWorkOrders,
+          },
+          {
+            href: "/finances",
+            icon: ChartIcon,
+            label: t.budget.navFinances,
+          },
+        ];
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950 dark:bg-slate-950 dark:text-slate-50">

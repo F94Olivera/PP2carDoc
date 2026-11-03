@@ -8,6 +8,7 @@ import type * as Services from "../src/services/customer-service.js";
 const context = {
   userId: "mechanic",
   role: "MECHANIC",
+  customerId: null,
   sessionId: "session",
   issuedAt: 1,
   expiresAt: 901,
@@ -15,9 +16,11 @@ const context = {
 const row = {
   id: 7,
   mechanicId: context.userId,
+  uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  userId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
   firstName: "Ana",
   lastName: null,
-  email: null,
+  email: "ana@example.com",
   phone: null,
   address: null,
   documentNumber: null,
@@ -57,6 +60,7 @@ const load = async () => {
               "insertCustomer",
               "updateCustomerById",
               "deleteCustomerById",
+              "resetCustomerPasswordById",
             ]
               .map((name) => `export const ${name} = (...args) => invoke("${name}", args);`)
               .join("\n"),
@@ -111,8 +115,10 @@ test("customer mapper selects public fields, preserves null/archive and normaliz
     passwordHash: "private",
     verifier: "private",
   } as typeof row);
+  const { uuid: privateUuid, userId: privateUserId, ...publicRow } = row;
+  assert.ok(privateUuid && privateUserId);
   assert.deepEqual(mapped, {
-    ...row,
+    ...publicRow,
     createdAt: "2026-10-17T15:00:00.000Z",
     updatedAt: "1970-01-01T00:00:00.000Z",
   });
@@ -142,8 +148,18 @@ test("customer controllers translate successful CRUD, not found and forbidden ou
   for (const [handler, req, value, status] of [
     [api.customerByIdController, { params: { customerId: "7" } }, row, 200],
     [api.customerByIdController, { params: { customerId: "7" } }, undefined, 404],
-    [api.createCustomerController, { body: { firstName: "Ana" } }, row, 201],
-    [api.createCustomerController, { body: { firstName: "Ana" } }, null, 403],
+    [
+      api.createCustomerController,
+      { body: { firstName: "Ana", email: "ana@example.com", password: "123qweASD" } },
+      row,
+      201,
+    ],
+    [
+      api.createCustomerController,
+      { body: { firstName: "Ana", email: "ana@example.com", password: "123qweASD" } },
+      null,
+      403,
+    ],
     [
       api.updateCustomerController,
       { params: { customerId: "7" }, body: { isActive: true } },
@@ -209,7 +225,12 @@ test("customer use cases propagate persistence failures for central handling", a
   for (const operation of [
     () => api.listCustomers(context as never, { page: 1, pageSize: 10, includeArchived: false }),
     () => api.getCustomerById(context as never, 7),
-    () => api.createCustomer(context as never, { firstName: "Ana" }),
+    () =>
+      api.createCustomer(context as never, {
+        firstName: "Ana",
+        email: "ana@example.com",
+        password: "123qweASD",
+      }),
     () => api.updateCustomer(context as never, 7, { isActive: false }),
     () => api.deleteCustomer(context as never, 7),
   ])

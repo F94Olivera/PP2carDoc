@@ -25,6 +25,10 @@ export const errorMiddleware: ErrorRequestHandler = (error, _req, res, next) => 
     return;
   }
   const code = error?.cause?.code ?? error?.code;
+  if (code === "22023" || code === "23514") {
+    res.status(400).json({ error: "Invalid or immutable record fields." });
+    return;
+  }
   if (code === "23505" || code === "23503") {
     res.status(409).json({ error: "Record conflicts with existing data or related records." });
     return;

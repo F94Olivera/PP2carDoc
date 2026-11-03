@@ -5,6 +5,7 @@ import type * as Controllers from "../src/controllers/work-order-controller.js";
 const context = {
   userId: "mechanic",
   role: "MECHANIC",
+  customerId: null,
   sessionId: "session",
   issuedAt: 1,
   expiresAt: 901,

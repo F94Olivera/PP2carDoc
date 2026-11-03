@@ -4,12 +4,17 @@ info:
   version: 0.1.0
   description: >-
     Browser API requests send x-region: us-west-2 to execute the hosted Edge Function
-    near Postgres. This optional Supabase routing header is ignored locally.
+    near Postgres. The /myvehicles browser call must use this routing header; it is ignored locally.
     CORS allows x-region and exposes the x-sb-edge-region response header for
     execution-region verification. OPTIONS responses include Access-Control-Max-Age: 600
     to cache CORS permissions only; actual requests still authenticate and authorize.
     Explicit regional routing disables automatic
     cross-region failover.
+    USER is read-only: only /myvehicles, vehicle detail, vehicle work-order lists,
+    work-order detail, /auth/me and /logout are allowed. Other protected operations
+    return 403 for USER. Tokens include sub/email and signed app_metadata.user_role
+    plus customerId (customer UUID for USER; explicit null for GOD/MECHANIC).
+    Current profile, customer link and active session are checked on every request.
 servers:
   - url: http://127.0.0.1:54321/functions/v1/api
     description: Supabase Edge local
@@ -231,6 +236,8 @@ paths:
             schema:
               $ref: "#/components/schemas/BudgetPdfInput"
       responses:
+        "403":
+          description: Operation not permitted for this role (USER has read-only access to its vehicle/order details only)
         "200":
           description: Racing-style A4 budget with embedded hero image, form data, rounded line amounts, subtotal and total; complete rows and repeated table headers across pages
           headers:
@@ -283,6 +290,8 @@ paths:
           required: true
           schema: { type: string, format: date, example: "2026-10-17" }
       responses:
+        "403":
+          description: Operation not permitted for this role (USER has read-only access to its vehicle/order details only)
         "200":
           description: Financial total; Cache-Control is no-store
           content:
@@ -371,6 +380,74 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthError"
+  /myvehicles:
+    get:
+      summary: List all vehicles of the authenticated customer
+      description: USER only. No query parameters or request body. Resolves the signed customer UUID to its internal numeric ID and verifies the Auth link. Returns all active vehicles under the active customer in ascending ID order; no page-size truncation. Archived customer or no active vehicles returns an empty data array. Client sends x-region us-west-2 through the shared authenticated transport. GOD/MECHANIC use the existing workshop endpoints.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Complete authorized collection; Cache-Control no-store
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/VehicleResponse"
+        "400":
+          description: Query parameters or request body are not accepted
+        "401":
+          description: Missing, invalid, expired token, inactive session or invalid customer link/claims
+        "403":
+          description: USER role required
+        "429":
+          description: Authentication rate limit
+        "500":
+          description: Unexpected error
+        "503":
+          description: Authentication unavailable
+  /customers/{customerId}/password:
+    post:
+      summary: Reset a customer password as the owning mechanic
+      description: MECHANIC only, including archived customers owned by that mechanic. GOD and USER receive 403. Resolves the linked USER account internally, replaces its bcrypt password and revokes all its sessions/refresh tokens in the same database transaction. No email/password recovery or self-service change. Unknown body fields are rejected. The UI suggests 123qweASD; backend never supplies a default password.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: customerId
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 2147483647 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetCustomerPasswordInput"
+      responses:
+        "204":
+          description: Password replaced and customer sessions revoked
+        "400":
+          description: Invalid ID, password or undeclared body fields
+        "401":
+          description: Invalid token or inactive session
+        "403":
+          description: Only MECHANIC can reset customer passwords
+        "404":
+          description: Customer missing, not owned by this mechanic, or not linked to USER
+        "413":
+          description: Body exceeds 8 KiB
+        "429":
+          description: Authentication rate limit
+        "500":
+          description: Unexpected error; transaction rolls back
+        "503":
+          description: Authentication unavailable
   /customers:
     get:
       summary: List customers
@@ -404,6 +481,8 @@ paths:
             type: boolean
             default: false
       responses:
+        "403":
+          description: Operation not permitted for this role (USER has read-only access to its vehicle/order details only)
         "200":
           description: Paginated customers; Cache-Control is no-store
           content:
@@ -439,7 +518,7 @@ paths:
           description: Authentication unavailable or unconfigured
     post:
       summary: Create a customer
-      description: MECHANIC defaults to itself and cannot choose another owner. GOD must supply an existing MECHANIC mechanicId; GOD cannot own customers. Invalid or unauthorized owners return 403. Unknown body fields are rejected.
+      description: MECHANIC defaults to itself and cannot choose another owner. GOD must supply an existing MECHANIC mechanicId; GOD cannot own customers. Invalid or unauthorized owners return 403. Email and password are required. Email is normalized to lowercase and must not already belong to any Auth account, even in another workshop. Customer, USER profile and Auth identity are created atomically; duplicate requests conflict rather than overwrite existing accounts. Unknown body fields are rejected.
       security:
         - bearerAuth: []
       requestBody:
@@ -462,7 +541,7 @@ paths:
         "403":
           description: Owner must be an authorized existing MECHANIC
         "409":
-          description: Duplicate document for this mechanic
+          description: Email already registered or duplicate document for this mechanic
         "413":
           description: Body exceeds 32 KB
         "429":
@@ -487,6 +566,8 @@ paths:
             minimum: 1
             maximum: 2147483647
       responses:
+        "403":
+          description: Operation not permitted for this role (USER has read-only access to its vehicle/order details only)
         "200":
           description: Customer; Cache-Control is no-store
           content:
@@ -524,7 +605,7 @@ paths:
           description: Authentication unavailable or unconfigured
     patch:
       summary: Update a customer
-      description: MECHANIC can edit its customers; GOD can edit any customer, including archived customers. Send isActive false to archive or true to restore; this does not change vehicle archive flags. Archived customers remain accessible for explicit administration, not operational descendant access. mechanicId is immutable and rejected with 400 even for GOD.
+      description: MECHANIC can edit its customers; GOD can edit any customer, including archived customers. Send isActive false to archive or true to restore; this does not change vehicle archive flags. Archived customers remain accessible for explicit administration, not operational descendant access. mechanicId, email, uuid, userId and password are immutable/undeclared here and rejected with 400 even for GOD. Password has its own restricted operation.
       security:
         - bearerAuth: []
       parameters:
@@ -542,6 +623,8 @@ paths:
             schema:
               $ref: "#/components/schemas/UpdateCustomerInput"
       responses:
+        "403":
+          description: Operation not permitted for this role (USER has read-only access to its vehicle/order details only)
         "200":
           description: Updated customer
           content:
@@ -566,7 +649,7 @@ paths:
           description: Authentication or authorization lookup unavailable
     delete:
       summary: Delete a customer
-      description: MECHANIC can delete its customers; GOD can delete any customer. Customers with vehicles cannot be deleted until their related records are removed.
+      description: MECHANIC can delete its customers; GOD can delete any customer. Customers with vehicles cannot be deleted; rejection preserves both customer and account. Otherwise customer, linked USER profile, Auth account and sessions are removed atomically. The mechanic owner account is never removed.
       security:
         - bearerAuth: []
       parameters:
@@ -578,6 +661,8 @@ paths:
             minimum: 1
             maximum: 2147483647
       responses:
+        "403":
+          description: Operation not permitted for this role (USER has read-only access to its vehicle/order details only)
         "204":
           description: Customer deleted
         "400":
@@ -1042,7 +1127,7 @@ components:
           nullable: true
         email:
           type: string
-          nullable: true
+          format: email
         phone:
           type: string
           nullable: true
@@ -1106,11 +1191,16 @@ components:
     UserResponse:
       type: object
       additionalProperties: false
-      required: [id, email, role]
+      required: [id, email, role, customerId]
       properties:
+        customerId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Customer UUID for USER; null for GOD/MECHANIC. Distinct from numeric IDs in existing resource paths.
         role:
           type: string
-          enum: [GOD, MECHANIC]
+          enum: [GOD, MECHANIC, USER]
         id:
           type: string
           format: uuid
@@ -1157,11 +1247,24 @@ components:
               type: integer
             expires_at:
               type: integer
+    ResetCustomerPasswordInput:
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          writeOnly: true
+          description: At least eight characters and at most 72 UTF-8 bytes (bcrypt limit).
     CreateCustomerInput:
       type: object
       additionalProperties: false
-      required: [firstName]
+      required: [firstName, email, password]
       properties:
+        password:
+          $ref: "#/components/schemas/ResetCustomerPasswordInput/properties/password"
         firstName:
           type: string
           minLength: 1
@@ -1173,7 +1276,6 @@ components:
         email:
           type: string
           format: email
-          nullable: true
           maxLength: 254
         phone:
           type: string
@@ -1204,8 +1306,6 @@ components:
           $ref: "#/components/schemas/CreateCustomerInput/properties/firstName"
         lastName:
           $ref: "#/components/schemas/CreateCustomerInput/properties/lastName"
-        email:
-          $ref: "#/components/schemas/CreateCustomerInput/properties/email"
         phone:
           $ref: "#/components/schemas/CreateCustomerInput/properties/phone"
         address:

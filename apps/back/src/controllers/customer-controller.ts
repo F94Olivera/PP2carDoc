@@ -1,12 +1,14 @@
 import type { AuthenticatedHandler } from "../middlewares/auth-middleware.js";
 import {
   createCustomerSchema,
+  resetCustomerPasswordSchema,
   updateCustomerSchema,
   customerByIdParamsSchema,
   listCustomersQuerySchema,
 } from "../schemas/customer.js";
 import {
   createCustomer,
+  resetCustomerPassword,
   updateCustomer,
   deleteCustomer,
   getCustomerById,
@@ -78,6 +80,29 @@ export const deleteCustomerController: AuthenticatedHandler = async (req, res) =
     return;
   }
   if (!(await deleteCustomer(res.locals.authorization, parsed.data.customerId))) {
+    res.status(404).json({ error: "Customer not found." });
+    return;
+  }
+  res.status(204).end();
+};
+
+export const resetCustomerPasswordController: AuthenticatedHandler = async (req, res) => {
+  const params = customerByIdParamsSchema.safeParse(req.params);
+  const body = resetCustomerPasswordSchema.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: "Invalid customer ID or password (8–72 characters)." });
+    return;
+  }
+  const result = await resetCustomerPassword(
+    res.locals.authorization,
+    params.data.customerId,
+    body.data.password,
+  );
+  if (result.outcome === "forbidden") {
+    res.status(403).json({ error: "Only the owning mechanic can reset this password." });
+    return;
+  }
+  if (result.outcome === "not_found") {
     res.status(404).json({ error: "Customer not found." });
     return;
   }

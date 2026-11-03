@@ -5,6 +5,23 @@ export type Locale = (typeof locales)[number];
 export const defaultLocale: Locale = "es";
 
 type AppMessages = {
+  portal: {
+    title: string;
+    empty: string;
+    back: string;
+    loading: string;
+    error: string;
+    services: string;
+    all: string;
+    open: string;
+    closed: string;
+    previous: string;
+    next: string;
+    mechanicId: string;
+    resetPassword: string;
+    passwordResetSuccess: string;
+    recoveryHint: string;
+  };
   common: {
     brand: string;
     languageToggleLabel: string;
@@ -321,6 +338,23 @@ type AppMessages = {
 
 export const messages = {
   es: {
+    portal: {
+      title: "Mis vehículos",
+      empty: "No tenés vehículos disponibles.",
+      back: "Volver",
+      loading: "Cargando…",
+      error: "No se pudo cargar la información.",
+      services: "Historial de servicios",
+      all: "Todos",
+      open: "Abiertos",
+      closed: "Cerrados",
+      previous: "Anterior",
+      next: "Siguiente",
+      mechanicId: "UUID del mecánico propietario",
+      resetPassword: "Restablecer contraseña",
+      passwordResetSuccess: "Contraseña actualizada. Se cerraron las sesiones del cliente.",
+      recoveryHint: "Si olvidaste tu contraseña, contactá a tu mecánico.",
+    },
     common: {
       brand: "carDoc",
       languageToggleLabel: "Cambiar idioma",
@@ -642,6 +676,23 @@ export const messages = {
     },
   },
   en: {
+    portal: {
+      title: "My vehicles",
+      empty: "No vehicles available.",
+      back: "Back",
+      loading: "Loading…",
+      error: "Could not load the information.",
+      services: "Service history",
+      all: "All",
+      open: "Open",
+      closed: "Closed",
+      previous: "Previous",
+      next: "Next",
+      mechanicId: "Owner mechanic UUID",
+      resetPassword: "Reset password",
+      passwordResetSuccess: "Password updated. Customer sessions have been revoked.",
+      recoveryHint: "If you forgot your password, contact your mechanic.",
+    },
     common: {
       brand: "carDoc",
       languageToggleLabel: "Change language",

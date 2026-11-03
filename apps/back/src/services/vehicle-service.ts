@@ -1,7 +1,8 @@
+import type { MyVehiclesResponse } from "@cardoc/types";
 import { toVehicleResponse } from "../mappers/vehicle-mapper.js";
 import * as repository from "../repositories/vehicle-repository.js";
 import { findCustomerById } from "../repositories/customer-repository.js";
-import type { AuthorizationContext } from "../schemas/authorization.js";
+import { canReadCustomer, type AuthorizationContext } from "../schemas/authorization.js";
 import type {
   CreateVehicleInput,
   UpdateVehicleInput,
@@ -45,7 +46,8 @@ export const getVehicleById = async (
 ) => {
   const row = await deps.findVehicleDetailById(context, id);
   if (!row?.customer.isActive) return null;
-  if (context.role !== "GOD" && row.customer.mechanicId !== context.userId) return null;
+  if (!canReadCustomer(context, row.customer) || (context.role === "USER" && !row.vehicle.isActive))
+    return null;
   return toVehicleResponse(row.vehicle);
 };
 export const createVehicle = async (
@@ -53,7 +55,8 @@ export const createVehicle = async (
   input: CreateVehicleInput,
   deps = dependencies,
 ) => {
-  if (!(await accessibleCustomer(context, input.customerId, deps))) return null;
+  if (context.role === "USER" || !(await accessibleCustomer(context, input.customerId, deps)))
+    return null;
   // Repository rechecks/locks the active parent inside the write transaction.
   const row = await deps.insertVehicle(context, input);
   return row ? toVehicleResponse(row) : null;
@@ -64,7 +67,7 @@ export const updateVehicle = async (
   input: UpdateVehicleInput | { isActive: boolean },
   deps = dependencies,
 ) => {
-  if (!(await getVehicleById(context, id, deps))) return null;
+  if (context.role === "USER" || !(await getVehicleById(context, id, deps))) return null;
   const writable =
     "isActive" in input
       ? input
@@ -77,6 +80,15 @@ export const deleteVehicle = async (
   id: number,
   deps = dependencies,
 ) => {
-  if (!(await getVehicleById(context, id, deps))) return false;
+  if (context.role === "USER" || !(await getVehicleById(context, id, deps))) return false;
   return Boolean(await deps.deleteVehicleById(context, id));
+};
+
+export const listMyVehicles = async (
+  context: AuthorizationContext,
+  find = repository.findMyVehicles,
+): Promise<MyVehiclesResponse | null> => {
+  if (context.role !== "USER" || !context.customerId) return null;
+  const rows = await find(context);
+  return { data: rows.map(({ vehicle }) => toVehicleResponse(vehicle)) };
 };

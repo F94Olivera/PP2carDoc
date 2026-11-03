@@ -52,6 +52,7 @@ const api = module.exports as typeof Repository;
 const context: AuthorizationContext = {
   userId: "mechanic",
   role: "MECHANIC",
+  customerId: null,
   sessionId: "session",
   issuedAt: 1,
   expiresAt: 901,

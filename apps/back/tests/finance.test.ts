@@ -20,6 +20,7 @@ type Dates = {
 const context: AuthorizationContext = {
   userId: "mechanic",
   role: "MECHANIC",
+  customerId: null,
   sessionId: "session",
   issuedAt: 1,
   expiresAt: 901,
@@ -211,7 +212,7 @@ test("financial SQL preserves owner/session gates and archived history without r
   );
   assert.match(
     schema,
-    /grant execute on function[\s\S]*?private\.finance_total\(date, date\) to authenticated/,
+    /grant execute on function[\s\S]*?private\.finance_total\(date, date\)[\s\S]*? to authenticated/,
   );
   // The existing model serializes instants to UTC, even though SQL uses timestamp without timezone.
   assert.equal(

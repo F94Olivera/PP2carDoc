@@ -8,6 +8,7 @@ import {
 import { createBudgetPdfController } from "./controllers/budget-controller.js";
 import {
   listVehiclesController,
+  myVehiclesController,
   vehicleByIdController,
   createVehicleController,
   updateVehicleController,
@@ -22,13 +23,14 @@ import { loginController, logoutController, meController } from "./controllers/a
 
 import {
   createCustomerController,
+  resetCustomerPasswordController,
   updateCustomerController,
   deleteCustomerController,
   customerByIdController,
   listCustomersController,
 } from "./controllers/customer-controller.js";
 
-import { requireAuth } from "./middlewares/auth-middleware.js";
+import { requireAuth, restrictCustomerAccess } from "./middlewares/auth-middleware.js";
 
 import { corsMiddleware } from "./middlewares/cors-middleware.js";
 import { errorMiddleware } from "./middlewares/error-middleware.js";
@@ -47,6 +49,13 @@ router.get("/ping", (_req, res) => {
 
 const protectedRouter = express.Router();
 protectedRouter.use(requireAuth);
+protectedRouter.use(restrictCustomerAccess);
+protectedRouter.get("/myvehicles", myVehiclesController);
+protectedRouter.post(
+  "/customers/:customerId/password",
+  express.json({ limit: "8kb" }),
+  resetCustomerPasswordController,
+);
 protectedRouter.post("/logout", logoutController);
 protectedRouter.get("/auth/me", meController);
 protectedRouter.post("/budgets/pdf", express.json({ limit: "256kb" }), createBudgetPdfController);

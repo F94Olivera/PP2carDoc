@@ -1,11 +1,17 @@
 "use client";
 
-import type { CreateCustomerRequest, CustomerResponse } from "@cardoc/types";
+import type { CustomerResponse } from "@cardoc/types";
+import { useVerifiedUser } from "../auth-guard";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type SyntheticEvent, useState } from "react";
 import { useI18n } from "../../i18n/use-i18n";
-import { createCustomer, updateCustomer, getCustomerName } from "./customer-api";
+import {
+  createCustomer,
+  updateCustomer,
+  getCustomerName,
+  resetCustomerPassword,
+} from "./customer-api";
 
 type CustomerForm = {
   address: string;
@@ -29,6 +35,12 @@ const initialForm: CustomerForm = {
 
 export default function CustomerForm({ customer }: { customer?: CustomerResponse }) {
   const router = useRouter();
+  const user = useVerifiedUser();
+  const [mechanicId, setMechanicId] = useState("");
+  const [password, setPassword] = useState("123qweASD");
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
   const { t } = useI18n();
   const [form, setForm] = useState<CustomerForm>(
     customer
@@ -60,10 +72,9 @@ export default function CustomerForm({ customer }: { customer?: CustomerResponse
     setError(null);
     setIsSubmitting(true);
 
-    const payload: CreateCustomerRequest = {
+    const payload = {
       address: toOptionalValue(form.address),
       documentNumber: toOptionalValue(form.documentNumber),
-      email: toOptionalValue(form.email),
       firstName: form.firstName.trim(),
       lastName: toOptionalValue(form.lastName),
       notes: toOptionalValue(form.notes),
@@ -75,7 +86,17 @@ export default function CustomerForm({ customer }: { customer?: CustomerResponse
         await updateCustomer(String(customer.id), payload, t.customers.actionError);
         router.push(`/customers/${customer.id}`);
       } else {
-        setCreatedCustomer(await createCustomer(payload, t.customers.createError));
+        setCreatedCustomer(
+          await createCustomer(
+            {
+              ...payload,
+              email: form.email.trim().toLowerCase(),
+              password,
+              ...(user?.role === "GOD" ? { mechanicId: mechanicId.trim() } : {}),
+            },
+            t.customers.createError,
+          ),
+        );
       }
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : t.customers.createError);
@@ -129,6 +150,17 @@ export default function CustomerForm({ customer }: { customer?: CustomerResponse
         ) : null}
 
         <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
+          {!customer && user?.role === "GOD" ? (
+            <Field label={t.portal.mechanicId} required>
+              <input
+                className={inputClasses}
+                required
+                value={mechanicId}
+                onChange={(event) => setMechanicId(event.target.value)}
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              />
+            </Field>
+          ) : null}
           <Field label={t.customers.firstNameLabel} required>
             <input
               className={inputClasses}
@@ -148,15 +180,32 @@ export default function CustomerForm({ customer }: { customer?: CustomerResponse
             />
           </Field>
 
-          <Field label={t.customers.emailLabel}>
+          <Field label={t.customers.emailLabel} required>
             <input
               className={inputClasses}
               onChange={(event) => updateField("email", event.target.value)}
               placeholder={t.customers.emailPlaceholder}
               type="email"
+              required
+              disabled={Boolean(customer)}
               value={form.email}
             />
           </Field>
+
+          {!customer ? (
+            <Field label={t.login.passwordLabel} required>
+              <input
+                className={inputClasses}
+                type="text"
+                autoComplete="new-password"
+                minLength={8}
+                maxLength={72}
+                required
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </Field>
+          ) : null}
 
           <Field label={t.customers.phoneLabel}>
             <input
@@ -210,6 +259,51 @@ export default function CustomerForm({ customer }: { customer?: CustomerResponse
             </button>
           </div>
         </form>
+        {customer && user?.role === "MECHANIC" && customer.mechanicId === user.id ? (
+          <form
+            className="mt-8 space-y-4 border-t border-slate-200 pt-6 dark:border-slate-700"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (isResetting) return;
+              setIsResetting(true);
+              setResetMessage(null);
+              setResetError(null);
+              try {
+                await resetCustomerPassword(customer.id, password, t.customers.actionError);
+                setResetMessage(t.portal.passwordResetSuccess);
+              } catch (error) {
+                setResetError(error instanceof Error ? error.message : t.customers.actionError);
+              } finally {
+                setIsResetting(false);
+              }
+            }}
+          >
+            <Field label={t.portal.resetPassword} required>
+              <input
+                className={inputClasses}
+                type="text"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                maxLength={72}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </Field>
+            <button
+              className="rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white disabled:opacity-50"
+              disabled={isResetting}
+            >
+              {isResetting ? t.customers.saving : t.portal.resetPassword}
+            </button>
+            {resetMessage ? <p role="status">{resetMessage}</p> : null}
+            {resetError ? (
+              <p role="alert" className="text-red-600">
+                {resetError}
+              </p>
+            ) : null}
+          </form>
+        ) : null}
       </div>
     </div>
   );

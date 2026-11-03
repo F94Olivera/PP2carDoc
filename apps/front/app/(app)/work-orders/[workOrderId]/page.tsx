@@ -1,5 +1,7 @@
 "use client";
 
+import { WorkOrderReadView } from "../work-order-read-view";
+
 import type {
   CreateWorkOrderItemRequest,
   CreateWorkOrderRecommendationRequest,
@@ -348,138 +350,6 @@ export default function WorkOrderDetailPage() {
   );
 }
 
-function WorkOrderReadView({
-  customerName,
-  vehicle,
-  workOrder,
-}: {
-  customerName: string;
-  vehicle: VehicleResponse;
-  workOrder: WorkOrderResponse;
-}) {
-  const { t } = useI18n();
-
-  return (
-    <div className="mt-8 space-y-8">
-      <section className="grid grid-cols-2 gap-5 sm:hidden">
-        <DetailField
-          className="min-w-0 break-words"
-          label={t.workOrders.customerInfoLabel}
-          value={customerName}
-        />
-        <DetailField
-          className="min-w-0 break-words"
-          label={t.vehicles.licensePlateLabel}
-          value={vehicle.licensePlate}
-        />
-        <DetailField
-          className="min-w-0 break-words"
-          label={t.workOrders.entryDateLabel}
-          value={formatDate(workOrder.entryDate)}
-        />
-        <DetailField
-          className="min-w-0 break-words"
-          label={t.workOrders.exitDateLabel}
-          value={workOrder.exitDate ? formatDate(workOrder.exitDate) : null}
-        />
-        <DetailField
-          className="min-w-0 break-words"
-          label={t.workOrders.reportedProblemLabel}
-          value={workOrder.reportedProblem}
-        />
-        <DetailField
-          className="min-w-0 break-words"
-          label={t.vehicles.odometerLabel}
-          value={workOrder.intakeOdometer?.toString() ?? null}
-        />
-      </section>
-
-      <section className="hidden gap-5 sm:grid sm:grid-cols-2">
-        <DetailField label={t.workOrders.customerInfoLabel} value={customerName} />
-        <DetailField label={t.vehicles.licensePlateLabel} value={vehicle.licensePlate} />
-        <DetailField label={t.workOrders.entryDateLabel} value={formatDate(workOrder.entryDate)} />
-        <DetailField
-          label={t.workOrders.exitDateLabel}
-          value={workOrder.exitDate ? formatDate(workOrder.exitDate) : null}
-        />
-        <DetailField label={t.workOrders.reportedProblemLabel} value={workOrder.reportedProblem} />
-        <DetailField
-          label={t.vehicles.initialOdometerLabel}
-          value={workOrder.intakeOdometer?.toString() ?? null}
-        />
-        <DetailField label={t.workOrders.notesLabel} value={workOrder.notes} />
-        <DetailField label={t.workOrders.diagnosisLabel} value={workOrder.diagnosis} />
-      </section>
-
-      <section>
-        <h3 className="text-base font-semibold">{t.workOrders.itemsTitle}</h3>
-        <div className="mt-4 grid gap-2 sm:hidden">
-          {workOrder.items.map((item) => (
-            <article
-              className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 rounded-lg border border-slate-200 p-3 dark:border-slate-800"
-              key={item.id}
-            >
-              <p className="min-w-0 flex-1 basis-40 break-words text-sm font-medium text-slate-700 dark:text-slate-200">
-                {item.description}
-              </p>
-              <p className="whitespace-nowrap text-sm font-semibold text-slate-950 dark:text-slate-50">
-                {formatMoney(item.quantity * item.unitPrice)}
-              </p>
-            </article>
-          ))}
-        </div>
-        <div className="mt-4 hidden overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800 sm:block">
-          <table className="w-full table-fixed text-left text-sm">
-            <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 dark:bg-slate-950 dark:text-slate-400">
-              <tr>
-                <th className="px-4 py-3">{t.workOrders.descriptionLabel}</th>
-                <th className="w-32 px-4 py-3">{t.workOrders.categoryLabel}</th>
-                <th className="w-24 px-4 py-3">{t.workOrders.quantityLabel}</th>
-                <th className="w-32 px-4 py-3">{t.workOrders.unitPriceLabel}</th>
-                <th className="w-32 px-4 py-3">{t.workOrders.totalColumn}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-              {workOrder.items.map((item) => (
-                <tr key={item.id}>
-                  <td className="px-4 py-3">{item.description}</td>
-                  <td className="px-4 py-3">{item.category}</td>
-                  <td className="px-4 py-3">{item.quantity}</td>
-                  <td className="px-4 py-3">{formatMoney(item.unitPrice)}</td>
-                  <td className="px-4 py-3">{formatMoney(item.quantity * item.unitPrice)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section>
-        <h3 className="text-base font-semibold">{t.workOrders.recommendationsTitle}</h3>
-        {workOrder.recommendations.length > 0 ? (
-          <div className="mt-4 grid gap-3">
-            {workOrder.recommendations.map((recommendation) => (
-              <article
-                className="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
-                key={recommendation.id}
-              >
-                <p className="text-sm font-semibold">{recommendation.description}</p>
-                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                  {recommendation.status ?? "-"}
-                </p>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <p className="mt-4 text-sm font-medium text-slate-500 dark:text-slate-400">
-            {t.workOrders.noRecommendations}
-          </p>
-        )}
-      </section>
-    </div>
-  );
-}
-
 function WorkOrderFormView({
   form,
   isSubmitting,
@@ -776,16 +646,6 @@ const toOptionalNumber = (value: string) => {
 
 const formatWorkOrderNumber = (id: number) => `WO-${id.toString().padStart(6, "0")}`;
 
-const formatMoney = (value: number) =>
-  new Intl.NumberFormat("es-AR", { currency: "ARS", style: "currency" }).format(value);
-
-const formatDate = (value: string) =>
-  new Intl.DateTimeFormat("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(value));
-
 const inputClasses =
   "h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:focus:ring-blue-950";
 const primaryButtonClasses =
@@ -794,23 +654,6 @@ const secondaryButtonClasses =
   "inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800";
 const dangerButtonClasses =
   "inline-flex h-10 items-center justify-center rounded-lg bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60";
-
-function DetailField({
-  className = "",
-  label,
-  value,
-}: {
-  className?: string;
-  label: string;
-  value: string | null;
-}) {
-  return (
-    <div className={className}>
-      <dt className="text-sm font-semibold text-slate-800 dark:text-slate-200">{label}</dt>
-      <dd className="mt-1 text-sm text-slate-600 dark:text-slate-300">{value ?? "-"}</dd>
-    </div>
-  );
-}
 
 function Field({
   children,

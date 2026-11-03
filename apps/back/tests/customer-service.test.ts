@@ -12,6 +12,7 @@ const godId = "4f1e78e8-2a0c-48e3-b7dd-70b5d572ae9a";
 const context: AuthorizationContext = {
   userId: mechanicId,
   role: "MECHANIC",
+  customerId: null,
   sessionId: godId,
   issuedAt: 1,
   expiresAt: 901,
@@ -19,9 +20,11 @@ const context: AuthorizationContext = {
 const row = {
   id: 1,
   mechanicId,
+  uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  userId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
   firstName: "Clark",
   lastName: null,
-  email: null,
+  email: "ana@example.com",
   phone: null,
   address: null,
   documentNumber: null,
@@ -38,6 +41,8 @@ test("creation defaults to the mechanic and GOD can explicitly assign that mecha
       actor,
       {
         firstName: "Clark",
+        email: "clark@example.com",
+        password: "123qweASD",
         ...(actor.role === "GOD" ? { mechanicId } : {}),
       },
       async (identity, input) => {
@@ -62,7 +67,7 @@ test("forbidden owner choices never reach persistence", async () => {
   ] as const) {
     const result = await createCustomer(
       actor,
-      { firstName: "Clark", mechanicId: owner },
+      { firstName: "Clark", email: "clark@example.com", password: "123qweASD", mechanicId: owner },
       async () => {
         assert.fail("Persistence must not be called");
       },
@@ -75,7 +80,7 @@ test("missing or non-MECHANIC owner rejected by persistence produces forbidden o
   assert.deepEqual(
     await createCustomer(
       { ...context, userId: godId, role: "GOD" },
-      { firstName: "Clark", mechanicId },
+      { firstName: "Clark", email: "clark@example.com", password: "123qweASD", mechanicId },
       async () => null,
     ),
     { outcome: "forbidden" },

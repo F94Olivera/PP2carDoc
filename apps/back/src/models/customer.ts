@@ -16,12 +16,17 @@ export const customers = pgTable(
   "customers",
   {
     id: serial("id").primaryKey(),
+    uuid: uuid("uuid").notNull().defaultRandom().unique(),
+    userId: uuid("user_id")
+      .notNull()
+      .unique()
+      .references(() => userProfiles.id, { onDelete: "restrict" }),
     mechanicId: uuid("mechanic_id")
       .notNull()
       .references(() => userProfiles.id, { onDelete: "restrict" }),
     firstName: text("first_name").notNull(),
     lastName: text("last_name"),
-    email: text("email"),
+    email: text("email").notNull().unique(),
     phone: text("phone"),
     address: text("address"),
     documentNumber: text("document_number"),
