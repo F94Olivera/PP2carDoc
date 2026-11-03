@@ -1,3 +1,6 @@
+import pino from "pino";
+import { generateRecoveryLink, sendRecoveryEmail } from "../repositories/auth-repository.js";
+const recoveryLogger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 import {
   findUserByAccessToken,
   revokeSession,
@@ -70,4 +73,23 @@ export const logout = async (accessToken: string) => {
     return { outcome: "unauthorized" } as const;
   }
   return { outcome: "unavailable" } as const;
+};
+
+export const forgotPassword = async (email: string) => {
+  // Never log provider errors: they can contain addresses, links or credentials.
+  try {
+    const origin = process.env.FRONTEND_URL;
+    if (!origin) throw new Error("Missing frontend URL");
+    const link = new URL("/reset-password", origin);
+    if (!["http:", "https:"].includes(link.protocol)) throw new Error("Invalid frontend URL");
+    const { data, error } = await generateRecoveryLink(email);
+    if (error || !data.properties?.hashed_token) {
+      recoveryLogger.warn("Password recovery link generation failed");
+      return;
+    }
+    link.searchParams.set("token_hash", data.properties.hashed_token);
+    await sendRecoveryEmail(link.toString());
+  } catch {
+    recoveryLogger.warn("Password recovery unavailable or delivery failed");
+  }
 };

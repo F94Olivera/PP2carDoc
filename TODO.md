@@ -127,3 +127,11 @@ Paso 7 — 18/10/2026: reemplazada la salida de diagnóstico por el presupuesto 
 - [x] GET `/myvehicles` sin query/body y colección completa, Bearer/claims verificados y lectura propia con RLS sin escrituras ni recomendaciones REJECTED.
 - [x] Menú/rutas USER, región Oregon, detalles compartidos e historial completo; seed con cuentas USER.
 - [ ] Seguimiento del incremento en STEPBYSTEP: recorrido visual conectado y verificación de RLS/Auth reales, solo cuando se autoricen explícitamente integraciones. Los unitarios no acreditan estos recorridos.
+
+### Configuración pendiente de recuperación (2026-11-03)
+
+- [x] Credencial administrativa configurada como SUPABASE_SECRET_KEY en el `.env` raíz; validez/proyecto no comprobados mediante llamadas reales.
+- [x] Aplicado y verificado `supabase/password-recovery.sql` en el proyecto existente el 2026-11-03, sin ejecutar el schema demo.
+- [x] Dashboard remoto verificado el 2026-11-03: Email OTP Expiration = 3600. No requirió modificación.
+- [x] FRONTEND_URL=http://localhost:3000 configurado en Edge para esta prueba local.
+- [x] Prueba end to end autorizada el 2026-11-03: entrega real Resend, canje SSR, cambio de contraseña, cierre de sesión y login manual de Batman verificados. Ver límites en TESTING.md.

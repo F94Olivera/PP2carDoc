@@ -276,3 +276,23 @@ Advisor de seguridad consultado tras aplicar schema: solo advertencia de protecc
 ### Redespliegue solicitado — 27/10/2026
 
 pnpm build:api aprobado. Función api publicada como **v15 ACTIVE** en carDoc; bundle remoto recuperado y comparado exactamente con el build local. Sin cambios de schema, seed ni suites de integración en este redespliegue.
+
+### Recuperación de contraseña — 2026-11-03 (local)
+
+Implementados endpoint público, envío Resend a casilla demo, canje SSR, formulario y cierre de sesión. `pnpm test:unit`: **102/102 aprobados**, con dobles de Supabase y fetch/Resend. Cobertura: esquema estricto, normalización del email, límites de contraseña UTF-8, destinatario fijo distinto del email de cuenta, enlace construido con hashed_token, respuesta genérica ante cuenta inexistente/excepciones/fallo de envío/falta de configuración, respuestas sin tokens, no-store, canje único compartido, limpieza de URL, enlace ausente/vencido/usado, reintento de updateUser y de signOut sin repetir una actualización exitosa. Los dobles no prueban la expiración real ni la política de Auth; eso queda delegado al proveedor.
+
+Aprobados TypeScript, lint, build completo y git diff --check. Formato enfocado con Prettier. Sin integraciones, correos reales, llamadas de aplicación/Auth, aplicación SQL, seed, deploy ni commit. `.env` está ignorado por Git; las credenciales provistas quedaron allí y `.env.example` solo documenta placeholders. Validez de las claves y pertenencia al proyecto no comprobadas por red.
+
+Pendiente remoto: aplicar el parche acotado `supabase/password-recovery.sql` para permitir updateUser de USER; verificar **Authentication → Sign In / Providers → Email → Email OTP Expiration = 3600 segundos** (`mailer_otp_exp`). El archivo local declara auth.email.otp_expiry=3600; no implica configuración aplicada en remoto. JWT expiry sigue en 900 segundos. Ajustar FRONTEND_URL al origen donde se pruebe. Entrega Resend con onboarding@resend.dev y recorrido real de recuperación requieren autorización explícita, no fueron ejecutados.
+
+### Recuperación — prueba end to end autorizada, 2026-11-03 (completada)
+
+El usuario autorizó deploy del backend, frontend local y correo real de recuperación para Batman. Proyecto carDoc comprobado ACTIVE_HEALTHY. API desplegada **v18 ACTIVE**; GET /ping respondió 200 con pong=true. Frontend existente en http://localhost:3000 reutilizado. Cuenta identificada por customer Bruce Wayne: batman@hero.test; no se modificó su email.
+
+Aplicado exclusivamente supabase/password-recovery.sql y comprobada la presencia del permiso supabase_auth_admin en la función remota. Dashboard remoto consultado: Email OTP expiration ya estaba en **3600 segundos**, sin cambio necesario. Variables RESEND_API_KEY, RESEND_TEST_TO, RESEND_FROM y FRONTEND_URL guardadas y visibles por nombre en los secretos de Edge. Credencial administrativa tomada del runtime Supabase; no se expuso al frontend.
+
+Solicitud desde login → Olvidé mi contraseña → email de Batman → mensaje genérico observado. Resend confirmó **delivered** a la casilla demo configurada; usuario confirmó recepción y devolvió el enlace. Sin suites de integración, seed, schema destructivo ni commit. Luego se completaron cambio de contraseña, cierre de sesión y login manual, según el resultado final registrado debajo.
+
+Canje del enlace recibido verificado visualmente: URL limpia `/reset-password`, formulario con ambos campos habilitado y sin redirección del guard. El usuario completó el formulario de nueva contraseña (requisito de la herramienta de navegador).
+
+Resultado final: observada la pantalla `/login?password_updated=1` con “Contraseña actualizada. Iniciá sesión con tu nueva contraseña”, sin redirección automática a la aplicación. Inicio de sesión manual realizado desde la UI con batman@hero.test y la contraseña nueva indicada por el usuario: acceso correcto a `/myvehicles`, con WayneTech Tumbler 2024 y WayneTech Batmobile Classic 1989. Prueba end to end del camino exitoso completada. No se probó reutilización del enlace real, vencimiento por espera de una hora ni rechazo de la contraseña anterior; no se ejecutaron las tres suites de integración. Sin commit ni nuevos correos en esta verificación final.

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useI18n } from "../../i18n/use-i18n";
@@ -10,6 +11,7 @@ import { createClient } from "../../lib/supabase/client";
 export default function LoginPage() {
   const router = useRouter();
   const { t } = useI18n();
+  const [passwordUpdated, setPasswordUpdated] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -33,9 +35,15 @@ export default function LoginPage() {
           return;
         }
 
+        setPasswordUpdated(
+          new URLSearchParams(window.location.search).get("password_updated") === "1",
+        );
         setIsCheckingSession(false);
       } catch {
         if (isActive) {
+          setPasswordUpdated(
+            new URLSearchParams(window.location.search).get("password_updated") === "1",
+          );
           setIsCheckingSession(false);
         }
       }
@@ -115,6 +123,11 @@ export default function LoginPage() {
             {t.login.mobileContext}
           </p>
 
+          {passwordUpdated && (
+            <p role="status" className="mt-4">
+              Contraseña actualizada. Iniciá sesión con tu nueva contraseña
+            </p>
+          )}
           <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
             <div>
               <label
@@ -182,7 +195,9 @@ export default function LoginPage() {
               {isSubmitting ? t.login.submitting : t.login.submit}
             </button>
           </form>
-          <p className="mt-4 text-sm text-slate-500">{t.portal.recoveryHint}</p>
+          <Link className="mt-4 block text-sm text-blue-600 underline" href="/forgot-password">
+            Olvidé mi contraseña
+          </Link>
 
           <div className="mt-10 flex justify-center">
             <p className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white/60 px-3 py-1.5 text-xs font-medium text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-400">

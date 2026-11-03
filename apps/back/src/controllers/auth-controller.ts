@@ -1,3 +1,6 @@
+import { PASSWORD_RECOVERY_MESSAGE } from "@cardoc/types";
+import { forgotPasswordSchema } from "../schemas/auth.js";
+import { forgotPassword } from "../services/auth-service.js";
 import type { RequestHandler } from "express";
 import pino from "pino";
 import { loginSchema } from "../schemas/auth.js";
@@ -61,4 +64,15 @@ export const loginController: RequestHandler = async (req, res) => {
     logger.error("Login failed because authentication is unavailable");
     res.status(503).json({ error: "Authentication service unavailable." });
   }
+};
+
+export const forgotPasswordController: RequestHandler = async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const parsed = forgotPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Expected only a valid email." });
+    return;
+  }
+  await forgotPassword(parsed.data.email);
+  res.json({ message: PASSWORD_RECOVERY_MESSAGE });
 };

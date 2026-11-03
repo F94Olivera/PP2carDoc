@@ -223,7 +223,7 @@ create trigger customers_claim after insert on public.customers
 for each row execute function private.sync_customer_claim();
 
 -- Invoker trigger: only our narrow SECURITY DEFINER reset (or demo seed) runs as
--- postgres with the local permit. Auth's connection cannot bypass it using metadata.
+-- postgres with the local permit. Supabase Auth owns verified recovery/updateUser.
 create function private.guard_customer_credentials() returns trigger
 language plpgsql set search_path = '' as $$
 begin
@@ -232,9 +232,9 @@ begin
       raise exception 'Customer email is immutable' using errcode = '42501';
     end if;
     if new.encrypted_password is distinct from old.encrypted_password and not (
-      current_user = 'postgres' and coalesce(current_setting('cardoc.password_reset', true), '') = 'allowed'
+      current_user = 'supabase_auth_admin' or (current_user = 'postgres' and coalesce(current_setting('cardoc.password_reset', true), '') = 'allowed')
     ) then
-      raise exception 'Only the owning mechanic can reset the password' using errcode = '42501';
+      raise exception 'Password changes require Supabase Auth or the owning mechanic' using errcode = '42501';
     end if;
   end if;
   return new;

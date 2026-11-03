@@ -111,7 +111,7 @@ test("auth controllers translate login/logout outcomes, cache headers and failur
   const api = (await load(
     "../src/controllers/auth-controller.ts",
     /\/services\/auth-service\.js$/,
-    'export const login = (...args) => invoke("login", ...args); export const logout = (...args) => invoke("logout", ...args);',
+    'export const forgotPassword = async () => {}; export const login = (...args) => invoke("login", ...args); export const logout = (...args) => invoke("logout", ...args);',
     async (...args) => {
       calls.push(args);
       if (failure) throw new Error("private service failure");
@@ -168,7 +168,7 @@ test("auth logout service classifies provider errors without external calls", as
   const api = (await load(
     "../src/services/auth-service.ts",
     /\/repositories\/auth-repository\.js$/,
-    'export const revokeSession = (...args) => invoke(...args); export const findUserByAccessToken = () => { throw Error("Unexpected Auth call"); }; export const signInWithPassword = () => { throw Error("Unexpected Auth call"); };',
+    'export const generateRecoveryLink = () => {}; export const sendRecoveryEmail = () => {}; export const revokeSession = (...args) => invoke(...args); export const findUserByAccessToken = () => { throw Error("Unexpected Auth call"); }; export const signInWithPassword = () => { throw Error("Unexpected Auth call"); };',
     async (...args) => {
       assert.deepEqual(args, ["session-token"]);
       return { error };
@@ -206,7 +206,14 @@ test("auth login/current-user use cases honor verified identity, current role an
   const api = (await load(
     "../src/services/auth-service.ts",
     /\/repositories\/(auth|user-profile)-repository\.js$/,
-    ["findUserByAccessToken", "signInWithPassword", "revokeSession", "findCurrentUserProfile"]
+    [
+      "findUserByAccessToken",
+      "signInWithPassword",
+      "revokeSession",
+      "findCurrentUserProfile",
+      "generateRecoveryLink",
+      "sendRecoveryEmail",
+    ]
       .map((name) => `export const ${name} = (...args) => invoke("${name}", ...args);`)
       .join("\n"),
     async (name, ...args) => {

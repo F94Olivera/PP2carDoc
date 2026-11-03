@@ -41,3 +41,6 @@ export type {
 } from "./work-order.js";
 
 export { budgetPdfSchema, budgetItemAmount } from "./budget.js";
+
+export { PASSWORD_RECOVERY_MESSAGE, isValidPassword } from "./auth.js";
+export type { ForgotPasswordRequest, ForgotPasswordResponse } from "./auth.js";

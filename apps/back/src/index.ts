@@ -19,7 +19,12 @@ import { financesController } from "./controllers/finance-controller.js";
 import express from "express";
 import pino from "pino";
 
-import { loginController, logoutController, meController } from "./controllers/auth-controller.js";
+import {
+  forgotPasswordController,
+  loginController,
+  logoutController,
+  meController,
+} from "./controllers/auth-controller.js";
 
 import {
   createCustomerController,
@@ -42,6 +47,7 @@ const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 app.disable("x-powered-by");
 app.use(corsMiddleware);
 
+router.post("/auth/forgot-password", express.json({ limit: "8kb" }), forgotPasswordController);
 router.post("/login", express.json({ limit: "8kb" }), loginController);
 router.get("/ping", (_req, res) => {
   res.json({ pong: true });

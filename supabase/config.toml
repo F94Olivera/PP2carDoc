@@ -59,3 +59,7 @@ backend = "postgres"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/api/index.ts"
+
+# Recovery link expiry (independent of jwt_expiry). Supabase consumes tokens once.
+[auth.email]
+otp_expiry = 3600

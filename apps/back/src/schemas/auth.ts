@@ -11,3 +11,5 @@ export const bearerTokenSchema = z
   .string()
   .regex(/^Bearer [A-Za-z0-9._~+/-]+=*$/i)
   .transform((authorization) => authorization.slice(7));
+
+export const forgotPasswordSchema = loginSchema.pick({ email: true });

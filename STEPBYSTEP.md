@@ -152,3 +152,7 @@ Reemplazado `hola mundo` por diseño aportado, adaptado a PDF nativo con imagen 
 Alcance aprobado en doc.md e incorporado a REQUIREMENTS: USER, cuentas de customer, UUID separado del ID numérico, `/myvehicles` frontend/backend, lectura de historial, exclusión REJECTED, contraseña administrada por mecánico y email fijo. Código, schema recreable, seed y contratos modificados. Verificaciones aisladas y estado de aplicación/publicación en TESTING. No se crearon migraciones ni se amplió el alcance a transferencias, recuperación automática o cuentas compartidas entre talleres.
 
 Cierre del incremento: schema recreado sin migraciones y seed completado (20 cuentas customer, 19 vehículos, 48 órdenes, 143 ítems y 47 recomendaciones); API v14 ACTIVE. 98 unitarios, lint, TypeScript y build completo aprobados. Sin pruebas de integración ni recorrido conectado; detalles y advertencia del advisor en TESTING.
+
+- 2026-11-03: recuperación pública de contraseña implementada localmente con Resend demo y Supabase SSR; sin correo de alta, integraciones, SQL remoto, deploy ni commit. Ver TESTING.md para verificaciones y pendientes.
+
+- 2026-11-03: prueba end to end autorizada completada: backend v18 ACTIVE, parche Auth aplicado, OTP remoto verificado en 3600, entrega Resend, canje SSR, cambio de contraseña, cierre de sesión y login manual de Batman con acceso a sus vehículos. Límites en TESTING.md.

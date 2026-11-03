@@ -11,7 +11,7 @@ Este documento define el comportamiento objetivo confirmado con el usuario. Las 
 - Monorepo pnpm: Next.js/React/Tailwind, Express/TypeScript, contratos `@cardoc/types`.
 - Supabase Auth y Postgres; Drizzle/Postgres.js en repositories, Zod para entradas, Pino para logs.
 - Express se ejecuta como Edge Function. Un único `.env` raíz; configuración pública separada de secretos.
-- Cuentas de taller/demo por seed; cada alta de cliente crea su cuenta USER. No hay registro público ni recuperación automática. Solo el mecánico propietario restablece la contraseña desde edición de customer; USER y GOD no pueden hacerlo.
+- Cuentas de taller/demo por seed; cada alta de cliente crea su cuenta USER. No hay registro público. Todas las cuentas pueden recuperar su contraseña por email mediante Supabase Auth; el mecánico propietario también puede restablecer la del cliente desde edición de customer.
 - Roles GOD, MECHANIC y USER; no existe una entidad taller compartida entre varios mecánicos.
 - Datos ficticios y esquema de demo recreable, sin migraciones incrementales. La recreación no es parte del despliegue.
 
@@ -37,7 +37,7 @@ El modelo actual usa enteros para precios de ítems y permite cantidades fraccio
 
 Login por email normalizado, obligatorio y único entre todas las cuentas Auth, incluso entre talleres. Una cuenta USER corresponde a un customer; no se comparte entre customers. Email, UUID del customer, cuenta vinculada y propietario son inmutables. El ID numérico de customer y sus FK se conservan; `customers.uuid` es distinto del UUID Auth.
 
-El mecánico elige la contraseña; el formulario sugiere `123qweASD`, reemplazable. Mínimo ocho caracteres y máximo 72 bytes UTF-8. Solo el MECHANIC propietario la restablece desde edición del customer, incluso archivado; se revocan todas las sesiones de ese cliente. USER no cambia su contraseña por API propia ni directamente por Auth. Si la olvida, contacta al mecánico fuera del sistema; no hay email ni autoservicio de recuperación. GOD puede crear customers para un MECHANIC pero no restablecer contraseñas.
+El mecánico elige la contraseña; el formulario sugiere `123qweASD`, reemplazable. Mínimo ocho caracteres y máximo 72 bytes UTF-8. Solo el MECHANIC propietario la restablece desde edición del customer, incluso archivado; se revocan todas las sesiones de ese cliente. La recuperación pública canjea un token de Supabase Auth y usa updateUser; no escribe contraseñas en la base. GOD puede crear customers para un MECHANIC pero no restablecer contraseñas.
 
 El token firmado contiene `sub`/`email`, `app_metadata.user_role` y `app_metadata.customerId`: UUID del customer para USER; null explícito para GOD/MECHANIC. Perfil y vínculo vigentes se contrastan en cada request. Token sin claims coherentes o sesión revocada no concede acceso. No usar user_metadata editable para autorización.
 
@@ -123,6 +123,7 @@ Métodos/rutas relativos a la base `/functions/v1/api`. Las filas pendientes ref
 | --------------------------------------------------- | -------------------- | ----------------------------------------------------------- | ------------------------------------ |
 | GET `/ping`                                         | Público              | `{ pong: true }`.                                           | Implementado.                        |
 | POST `/login`                                       | Público              | Email/password → usuario y sesión; límite 8 KB.             | Implementado.                        |
+| POST `/auth/forgot-password`                        | Público              | Email → mensaje genérico; límite 8 KiB; correo demo.        | Publicado v18; E2E exitoso.          |
 | GET `/auth/me`                                      | Bearer               | Usuario actual: id, email y rol.                            | Implementado.                        |
 | POST `/logout`                                      | Bearer               | Revocar sesión actual → 204.                                | Implementado.                        |
 | GET `/customers`                                    | Propietario/GOD      | Paginación y `includeArchived` → `{ data, meta }`.          | Implementado; revisar archivo.       |
@@ -247,6 +248,16 @@ HTML/CSS/imagen originales conservados en `docs/templates/cardoc-racing`; el ser
 
 ## Portal del cliente — 27/10/2026
 
-Implementados rol USER, UUID de customer y vínculo Auth uno a uno, alta/borrado atómicos mediante funciones privadas de Postgres, email fijo, restablecimiento exclusivo del mecánico, claims firmados sincronizados, endpoint completo `/myvehicles`, rutas React de lectura y presentación compartida de detalles. RLS limita USER a SELECT y excluye recomendaciones rechazadas; las reglas de taller y archivo se conservan. Los triggers de Auth impiden cambios de contraseña/email del cliente fuera del caso de uso autorizado. Sin migraciones. El estado de aplicación de schema, seed y publicación se registra por separado en TESTING, no se presume por existir el código.
+Implementados rol USER, UUID de customer y vínculo Auth uno a uno, alta/borrado atómicos mediante funciones privadas de Postgres, email fijo, restablecimiento del mecánico y recuperación pública por Supabase Auth, claims firmados sincronizados, endpoint completo `/myvehicles`, rutas React de lectura y presentación compartida de detalles. RLS limita USER a SELECT y excluye recomendaciones rechazadas; las reglas de taller y archivo se conservan. Los triggers conservan el email inmutable y permiten cambios de contraseña por Supabase Auth o el caso de uso del mecánico. Sin migraciones. El estado de aplicación de schema, seed y publicación se registra por separado en TESTING, no se presume por existir el código.
 
 Aplicación de este incremento: schema recreado y seed completado en la demo; backend API v14 ACTIVE. La ejecución funcional de Auth/RLS y el recorrido de navegador no se verificaron en este cambio; ver TESTING.
+
+### Recuperación de contraseña (2026-11-03)
+
+Login → “Olvidé mi contraseña” → `/forgot-password`: email con formato válido → POST `/auth/forgot-password` público (solo email, límite 8 KiB). Siempre responde “Si el email ingresado corresponde a una cuenta, recibirás un mensaje con un enlace para restablecer tu contraseña”, incluso ante cuenta inexistente o fallo interno. Sin tokens/enlaces en respuestas ni secretos en logs.
+
+El backend genera type recovery con credencial administrativa y construye `/reset-password?token_hash=...` desde FRONTEND_URL. Resend entrega exclusivamente a RESEND_TEST_TO; el email ingresado identifica la cuenta real y nunca se reemplaza en Supabase. No se implementa correo de alta de clientes.
+
+La pantalla pública canjea token_hash con verifyOtp/type recovery usando el cliente SSR existente; comparte la promesa para evitar canjes duplicados y limpia la URL. Enlace inválido/usado/vencido ofrece solicitar otro. Contraseña y confirmación deben coincidir; mínimo 8 caracteres y máximo 72 bytes UTF-8. updateUser utiliza la sesión obtenida; fallos permiten reintentar. Tras éxito se cierra la sesión local antes de ir al login y mostrar “Contraseña actualizada. Iniciá sesión con tu nueva contraseña”. Se requiere login manual.
+
+El token vence a los 3600 segundos desde emisión y Supabase impone uso único; no se confunde con jwt_expiry=900 ni con la duración de la sesión recuperada. Configurado en archivo local y verificado en el dashboard remoto el 2026-11-03. Parche del trigger aplicado y comprobado; endpoint publicado en API v18. Verificado el camino exitoso end to end: entrega del correo, canje SSR, cambio de contraseña, cierre de sesión y login manual de Batman. Límites de verificación en TESTING.md.

@@ -124,7 +124,7 @@ Actualización de rendimiento del 17/10/2026: API v9 publicada con caché de per
 
 ## Portal del cliente (USER)
 
-Las altas de customer requieren email único y contraseña y crean su acceso USER; email fijo después del alta. El mecánico puede restablecer la contraseña desde edición; el cliente debe contactarlo si la olvida. La sugerencia del formulario es `123qweASD`, reemplazable. No hay recuperación automática ni cambio propio. Restablecer revoca las sesiones del cliente.
+Las altas de customer requieren email único y contraseña y crean su acceso USER; email fijo después del alta. El mecánico puede restablecer la contraseña desde edición; el cliente también puede solicitar un enlace desde el login. La sugerencia del formulario es `123qweASD`, reemplazable. La recuperación pública usa Supabase Auth y entrega a la casilla demo. Restablecer revoca las sesiones del cliente.
 
 USER inicia en `/myvehicles`, única opción lateral, y consulta vehículos e historial propios sin edición. El GET dedicado no recibe query/body; usa Bearer y el transporte fija `x-region: us-west-2`. El historial incluye abiertas/cerradas y excluye recomendaciones REJECTED. Archivar oculta recursos, sin borrar la cuenta. Borrar customer sin vehículos elimina su acceso; con vehículos se rechaza.
 
@@ -132,4 +132,16 @@ El schema de demo se recrea desde `supabase/schema.sql`, sin migraciones; despu�
 
 El comando unitario construye primero `@cardoc/types` para no depender de un `dist` previo; no llama a Supabase ni ejecuta las integraciones.
 
-Las funciones privadas de ciclo de cuenta escriben Auth y negocio en una misma transacción, con identidad/sesión y propietario comprobados. Usan el mismo formato bcrypt que el seed; no requieren exponer claves administrativas al cliente. El trigger sobre Auth rechaza cambios directos de contraseña/email de USER; el restablecimiento privado del mecánico habilita únicamente su actualización local y revoca sesiones. Los claims de rol/customer UUID se sincronizan mediante metadata administrativa al crear el vínculo, y Auth los firma al iniciar/renovar sesión. No hace falta configurar un Access Token Hook.
+Las funciones privadas de ciclo de cuenta escriben Auth y negocio en una misma transacción, con identidad/sesión y propietario comprobados. Usan el mismo formato bcrypt que el seed; no requieren exponer claves administrativas al cliente. El trigger sobre Auth conserva el email inmutable y delega cambios de contraseña a Supabase Auth; el restablecimiento privado del mecánico habilita únicamente su actualización local y revoca sesiones. Los claims de rol/customer UUID se sincronizan mediante metadata administrativa al crear el vínculo, y Auth los firma al iniciar/renovar sesión. No hace falta configurar un Access Token Hook.
+
+### Recuperación de contraseña de demostración
+
+Variables en el único `.env` raíz: `SUPABASE_SECRET_KEY` (o `SUPABASE_SERVICE_ROLE_KEY` legacy; credencial administrativa del mismo proyecto que SUPABASE_URL; solo backend), `RESEND_API_KEY`, `RESEND_TEST_TO`, `RESEND_FROM=onboarding@resend.dev` y `FRONTEND_URL` (origen real del frontend, por ejemplo `http://localhost:3000`). `.env.example` contiene placeholders. El runtime Edge debe recibir los secretos de su proyecto; nunca usar NEXT_PUBLIC para secretos. El destinatario fijo solo cambia el sobre del correo; no modifica las cuentas.
+
+Se usa la [API HTTP de Resend](https://resend.com/docs/api-reference/emails/send-email), sin SDK adicional. El remitente de prueba requiere que RESEND_TEST_TO sea la casilla admitida por tu cuenta Resend. El 2026-11-03 se verificó la entrega real a la casilla demo durante la prueba end to end autorizada.
+
+`supabase/config.toml` declara `[auth.email] otp_expiry = 3600`. Para el proyecto remoto, ir a **Authentication → Sign In / Providers → Email → Email OTP Expiration**, establecer **3600 segundos** y guardar (campo de Management API: `mailer_otp_exp`). Verificado el 2026-11-03 en el dashboard remoto: ya estaba en 3600; no requirió modificación. No cambiar JWT expiry para ajustar el enlace. Supabase verifica expiración y uso único al canjearlo.
+
+El trigger anterior bloquea updateUser para USER. Para una instalación existente, revisar/aplicar **solo** `supabase/password-recovery.sql` mediante SQL Editor; no ejecutar el schema demo destructivo. El parche permite al rol interno `supabase_auth_admin` actualizar contraseñas y conserva la inmutabilidad del email y el permiso del mecánico. Esto también permite updateUser autenticado de Supabase, cuya autorización es responsabilidad de Auth; no agrega permisos SQL a clientes. El schema demo incorpora la misma regla. Aplicado y verificado el 2026-11-03 bajo autorización de la prueba end to end; no se ejecutó el schema demo.
+
+Las rutas `/forgot-password` y `/reset-password` quedan fuera del matcher del proxy y del layout privado para evitar redirecciones al recibir la sesión. El canje usa cookies SSR, elimina el token de la URL y no acepta tokens por query en el middleware del backend. Si se recarga tras limpiar la URL se necesita solicitar otro enlace. Si falla el cierre de sesión tras actualizar, reintentar finaliza el cierre sin repetir updateUser.

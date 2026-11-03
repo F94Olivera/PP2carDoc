@@ -23,6 +23,44 @@ servers:
 # OPTIONS is public and handled by the gateway or Express CORS middleware.
 # Bearer tokens authenticate protected routes; browser cookies are not used.
 paths:
+  /auth/forgot-password:
+    post:
+      summary: Request password recovery through demo email
+      description: Generates a Supabase recovery link for the entered account and sends it only to RESEND_TEST_TO via Resend. Does not modify account emails. Missing accounts, generation failures and delivery failures share the same public response. Never returns tokens or links. Body limit 8 KiB.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email]
+              properties:
+                email: { type: string, format: email, maxLength: 254 }
+      responses:
+        "200":
+          description: Generic acknowledgment, including internal provider failures
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: [no-store] }
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [message]
+                properties:
+                  message:
+                    type: string
+                    enum:
+                      [
+                        "Si el email ingresado corresponde a una cuenta, recibirás un mensaje con un enlace para restablecer tu contraseña",
+                      ]
+        "400":
+          description: Invalid JSON, email or undeclared fields
+        "413":
+          description: Body exceeds 8 KiB
   /work-orders:
     post:
       summary: Create an open order and its children atomically

@@ -16,3 +16,10 @@ export type AuthSessionResponse = {
 };
 export type LoginResponse = { user: AuthUserResponse; session: AuthSessionResponse };
 export type MeResponse = { user: AuthUserResponse };
+
+export const PASSWORD_RECOVERY_MESSAGE =
+  "Si el email ingresado corresponde a una cuenta, recibirás un mensaje con un enlace para restablecer tu contraseña";
+export type ForgotPasswordRequest = { email: string };
+export type ForgotPasswordResponse = { message: string };
+export const isValidPassword = (value: string) =>
+  value.length >= 8 && new TextEncoder().encode(value).length <= 72;
