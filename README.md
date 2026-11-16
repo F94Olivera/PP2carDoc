@@ -2,6 +2,10 @@
 
 Sistema para mecánicos con clientes, vehículos, órdenes de trabajo, recomendaciones, finanzas y presupuestos PDF. Cada MECHANIC trabaja con sus propios datos; GOD puede operar sobre todos, respetando las reglas de negocio. Se usan exclusivamente datos ficticios.
 
+## Uso de agentes de IA
+
+Durante el desarrollo de carDoc se utilizaron Claude y Codex como agentes de IA de apoyo al equipo.
+
 ## Documentación
 
 | Archivo                                | Propósito                                                                   |
@@ -89,7 +93,7 @@ El seed usa acceso privilegiado para fixtures, sin registro público ni SMTP. De
 
 Las rutas de OpenAPI son relativas a la URL base. `/login` recibe email/password; las rutas protegidas requieren `Authorization: Bearer <access_token>`. La función tiene `verify_jwt=false` para permitir login público; `requireAuth` protege las rutas privadas y consulta Auth, sesión y rol actual. La aplicación limita la antigüedad del token a 15 minutos. Logout revoca la sesión actual y las comprobaciones de sesión rechazan sus tokens en requests posteriores.
 
-El frontend inicia sesión directamente con Supabase Auth y `@supabase/ssr`, que gestiona cookies y renovación. Para la API debe enviar Bearer explícito; el transporte autenticado ya se usa en clientes, pero falta extenderlo a otros módulos. Las cookies entre frontend y API no reemplazan ese token.
+El frontend inicia sesión directamente con Supabase Auth y `@supabase/ssr`, que gestiona cookies y renovación. Clientes, vehículos, el portal del cliente, finanzas y presupuestos usan el transporte autenticado, que envía el token Bearer en las solicitudes a la API.
 
 El transporte actual agrega `x-region: us-west-2` para acercar Edge remoto a Postgres; CORS lo admite y expone `x-sb-edge-region`. Esto no modifica llamadas directas a Auth ni ofrece failover regional automático. No usar el diagnóstico histórico como prueba de una nueva medición.
 
@@ -125,6 +129,8 @@ Actualización de rendimiento del 17/10/2026: API v9 publicada con caché de per
 ## Portal del cliente (USER)
 
 Las altas de customer requieren email único y contraseña y crean su acceso USER; email fijo después del alta. El mecánico puede restablecer la contraseña desde edición; el cliente también puede solicitar un enlace desde el login. La sugerencia del formulario es `123qweASD`, reemplazable. La recuperación pública usa Supabase Auth y entrega a la casilla demo. Restablecer revoca las sesiones del cliente.
+
+Después de crear la cuenta, la API intenta enviar un correo de bienvenida sin incluir la contraseña ni enlaces de recuperación. Si Resend rechaza el envío o falta configuración, la cuenta queda creada y la interfaz informa el fallo.
 
 USER inicia en `/myvehicles`, única opción lateral, y consulta vehículos e historial propios sin edición. El GET dedicado no recibe query/body; usa Bearer y el transporte fija `x-region: us-west-2`. El historial incluye abiertas/cerradas y excluye recomendaciones REJECTED. Archivar oculta recursos, sin borrar la cuenta. Borrar customer sin vehículos elimina su acceso; con vehículos se rechaza.
 
