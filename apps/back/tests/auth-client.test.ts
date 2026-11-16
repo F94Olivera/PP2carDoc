@@ -96,8 +96,8 @@ const loadClient = async () => {
     setSession: (value: Session) => {
       session = value;
     },
-    failRefresh: () => {
-      refreshError = { message: "revoked" };
+    failRefresh: (error = { code: "session_expired", message: "revoked" }) => {
+      refreshError = error;
     },
     setResponse: (value: Response) => {
       response = value;
@@ -191,7 +191,7 @@ test("errors use the shared error string and tolerate invalid bodies", async () 
 });
 
 test("logout revokes via API then clears local session; failures do not confirm success", async () => {
-  for (const status of [204, 401, 429, 503]) {
+  for (const status of [204, 401, 403, 429, 503]) {
     const state = await loadClient();
     state.setResponse(new Response(null, { status }));
     if (status === 204 || status === 401) await state.api.signOut();
@@ -201,6 +201,72 @@ test("logout revokes via API then clears local session; failures do not confirm 
     assert.equal(new Headers(state.calls[0]!.init.headers).get("x-region"), "us-west-2");
     assert.equal(state.counts().cleanups, status === 204 || status === 401 ? 1 : 0);
   }
+});
+
+test("logout clears an expired session without calling the revocation endpoint", async () => {
+  const state = await loadClient();
+  state.setSession({ access_token: token(Math.floor(Date.now() / 1000) - 900) });
+  state.failRefresh();
+
+  await state.api.signOut();
+
+  assert.equal(state.calls.length, 0);
+  assert.deepEqual(state.counts(), { refreshes: 1, cleanups: 1 });
+  assert.deepEqual(state.events, []);
+});
+
+test("logout propagates a genuine refresh failure without clearing the session", async () => {
+  const state = await loadClient();
+  const error = { code: "unexpected_failure", message: "Auth unavailable" };
+  state.setSession({ access_token: token(Math.floor(Date.now() / 1000) - 900) });
+  state.failRefresh(error);
+
+  await assert.rejects(state.api.signOut(), error);
+
+  assert.equal(state.calls.length, 0);
+  assert.deepEqual(state.counts(), { refreshes: 1, cleanups: 0 });
+  assert.deepEqual(state.events, []);
+});
+
+test("Supabase local logout only normalizes a 403 for session_not_found", async () => {
+  const origin = "https://auth.example.test";
+  const bundle = await build({
+    entryPoints: [new URL("../../front/app/lib/supabase/client.ts", import.meta.url).pathname],
+    bundle: true,
+    write: false,
+    format: "cjs",
+    platform: "node",
+    external: ["@supabase/ssr"],
+    define: { "process.env.NEXT_PUBLIC_SUPABASE_URL": JSON.stringify(origin) },
+  });
+  const forbidden = (payload: object) => Response.json(payload, { status: 403 });
+  let response = forbidden({ code: "session_not_found" });
+  const module = { exports: {} };
+  new Function("module", "exports", "require", "fetch", bundle.outputFiles[0]!.text)(
+    module,
+    module.exports,
+    () => ({
+      createBrowserClient: (
+        _url: string,
+        _key: string,
+        options: { global: { fetch: typeof fetch } },
+      ) => options.global.fetch,
+    }),
+    async () => response,
+  );
+  const authFetch = (module.exports as { createClient: () => typeof fetch }).createClient();
+  const localLogout = `${origin}/auth/v1/logout?scope=local`;
+  const post = { method: "POST" };
+  assert.equal((await authFetch(localLogout, post)).status, 204);
+
+  response = forbidden({ error_code: "session_not_found" });
+  assert.equal((await authFetch(localLogout, post)).status, 204);
+  assert.equal(await authFetch(`${origin}/auth/v1/logout?scope=global`, post), response);
+
+  response = forbidden({ code: "insufficient_permission" });
+  const result = await authFetch(localLogout, post);
+  assert.equal(result.ok, false);
+  assert.deepEqual(await result.json(), { code: "insufficient_permission" });
 });
 
 test("finance and PDF domain clients use authenticated transport and propagate API errors", async () => {

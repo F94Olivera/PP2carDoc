@@ -3,7 +3,7 @@
 import { useVerifiedUser } from "./auth-guard";
 import Link from "next/link";
 import { useState } from "react";
-import { signOut } from "../lib/auth-client";
+import { loginPath, signOut } from "../lib/auth-client";
 import { usePathname, useRouter } from "next/navigation";
 import { LanguageToggle } from "../language-toggle";
 import { ThemeToggle } from "../theme-toggle";
@@ -27,8 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setSignOutError(false);
     try {
       await signOut();
-      router.replace("/login");
-      router.refresh();
+      router.replace(loginPath);
     } catch {
       setSignOutError(true);
     } finally {

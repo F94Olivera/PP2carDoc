@@ -6,6 +6,8 @@ import {
   type ApiErrorResponse,
 } from "@cardoc/types";
 
+import { isAuthSessionMissingError, type AuthError } from "@supabase/supabase-js";
+
 import { createClient } from "./supabase/client";
 
 import { fetchApi } from "./api-client";
@@ -59,10 +61,17 @@ export const onAuthExpired = (handler: () => void) => {
   return () => window.removeEventListener(authExpiredEventName, handler);
 };
 
+const isEndedSession = (error: AuthError) =>
+  isAuthSessionMissingError(error) ||
+  error.code === "session_not_found" ||
+  error.code === "session_expired" ||
+  error.code === "refresh_token_not_found" ||
+  error.code === "refresh_token_already_used";
+
 const readApiSession = async () => {
   const client = createClient();
   let { data, error } = await client.auth.getSession();
-  if (data.session) {
+  if (!error && data.session) {
     // This decode only schedules renewal. The backend verifies identity and permissions.
     let needsRefresh = true;
     try {
@@ -82,42 +91,55 @@ const readApiSession = async () => {
     }
     if (needsRefresh) ({ data, error } = await client.auth.refreshSession());
   }
-  if (error || !data.session) {
-    notifyAuthExpired();
-    throw new Error("Authentication required.");
-  }
-
-  return data.session;
+  if (error && !isEndedSession(error)) throw error;
+  return error ? null : data.session;
 };
 
 // Share renewal across concurrent API requests in this browser context.
 let pendingSession: ReturnType<typeof readApiSession> | undefined;
 
-export const fetchAuthenticated = async (path: string, init?: RequestInit) => {
+const getApiSession = () => {
   pendingSession ??= readApiSession().finally(() => {
     pendingSession = undefined;
   });
-  const session = await pendingSession;
+  return pendingSession;
+};
+
+const fetchWithBearer = (accessToken: string, path: string, init?: RequestInit) => {
   const headers = new Headers(init?.headers);
-  headers.set("Authorization", `Bearer ${session.access_token}`);
+  headers.set("Authorization", `Bearer ${accessToken}`);
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
 
-  const response = await fetchApi(path, {
+  return fetchApi(path, {
     ...init,
     headers,
     credentials: "omit",
     cache: "no-store",
   });
+};
+
+export const fetchAuthenticated = async (path: string, init?: RequestInit) => {
+  const session = await getApiSession().catch(() => null);
+  if (!session) {
+    notifyAuthExpired();
+    throw new Error("Authentication required.");
+  }
+
+  const response = await fetchWithBearer(session.access_token, path, init);
   handleUnauthorizedResponse(response);
   return response;
 };
 
 export const signOut = async () => {
-  const response = await fetchAuthenticated("/logout", { method: "POST" });
-  if (!response.ok && response.status !== 401) {
-    throw new Error(await getErrorMessage(response, "Could not sign out."));
+  const session = await getApiSession();
+  if (session) {
+    const response = await fetchWithBearer(session.access_token, "/logout", { method: "POST" });
+    if (!response.ok && response.status !== 401) {
+      throw new Error(await getErrorMessage(response, "Could not sign out."));
+    }
   }
-  // The SDK removes SSR cookies and local tokens, including an already revoked session.
+
+  // Let the SSR client clear the session, including chunked cookies and PKCE state.
   const { error } = await createClient().auth.signOut({ scope: "local" });
   if (error) throw error;
 };

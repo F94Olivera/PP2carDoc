@@ -23,6 +23,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     let isActive = true;
 
     const redirectToLogin = () => {
+      isActive = false;
+      setUser(null);
       router.replace(loginPath);
     };
 
@@ -57,10 +59,19 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       }
     };
 
+    const recheckRestoredPage = (event: PageTransitionEvent) => {
+      if (event.persisted && isActive) {
+        setUser(null);
+        void verifySession();
+      }
+    };
+
+    window.addEventListener("pageshow", recheckRestoredPage);
     void verifySession();
 
     return () => {
       isActive = false;
+      window.removeEventListener("pageshow", recheckRestoredPage);
       unsubscribe();
       subscription.subscription.unsubscribe();
     };

@@ -169,3 +169,7 @@ Cierre del incremento: schema recreado sin migraciones y seed completado (20 cue
 
 - [x] Mostrar errores del esquema compartido por campo e ítem en español e inglés, con actualización al editar.
 - [x] Verificar el bloqueo de solicitudes inválidas, la recuperación del borrador y la descarga del PDF con Playwright. Resultados en [TESTING.md](TESTING.md).
+
+## 2026-11-15 — Cierre de sesión en el frontend
+
+- El frontend conserva la revocación Bearer, completa la limpieza local cuando la sesión ya terminó y descarta el usuario verificado al volver a login. Resultados y límites en [TESTING.md](TESTING.md).
