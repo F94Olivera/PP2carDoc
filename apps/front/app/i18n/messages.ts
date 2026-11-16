@@ -533,10 +533,8 @@ export const messages = {
       saving: "Guardando...",
       createError: "No se pudo crear el cliente.",
       createdSuccess: "Cliente creado correctamente",
-      welcomeEmailSent:
-        "Se envió el correo con las credenciales (envío aceptado por el proveedor).",
-      welcomeEmailFailed:
-        "El cliente fue creado, pero no pudimos enviar el correo con sus credenciales",
+      welcomeEmailSent: "Se envió el correo de bienvenida (envío aceptado por el proveedor).",
+      welcomeEmailFailed: "El cliente fue creado, pero no pudimos enviar el correo de bienvenida",
       addVehicle: "Agregar vehículo",
       backToCustomers: "Volver a clientes",
       detailTitle: "Detalle cliente",
@@ -888,9 +886,8 @@ export const messages = {
       saving: "Saving...",
       createError: "Could not create the customer.",
       createdSuccess: "Customer created successfully",
-      welcomeEmailSent: "The credentials email was sent (accepted by the provider).",
-      welcomeEmailFailed:
-        "The customer was created, but we could not send the email with their credentials",
+      welcomeEmailSent: "The welcome email was sent (accepted by the provider).",
+      welcomeEmailFailed: "The customer was created, but we could not send the welcome email",
       addVehicle: "Add vehicle",
       backToCustomers: "Back to customers",
       detailTitle: "Customer detail",

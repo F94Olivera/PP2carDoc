@@ -60,7 +60,7 @@ export const createCustomer = async (
   // insertCustomer resolves only after withUserDatabase commits the transaction.
   let welcomeEmailStatus: CreateCustomerResponse["welcomeEmailStatus"] = "failed";
   try {
-    await sendWelcome(customer.email, input.password);
+    await sendWelcome(customer.email);
     welcomeEmailStatus = "sent";
   } catch {
     // An accepted account remains successful; never expose provider errors or credentials.

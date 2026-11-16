@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { sendCustomerWelcomeEmail } from "../src/repositories/email-repository.js";
 import { sendRecoveryEmail } from "../src/repositories/auth-repository.js";
 
-test("welcome uses fixed demo recipient and plain credentials; transport rejects failures and missing configuration", async () => {
+test("welcome uses fixed demo recipient without a password; transport rejects failures and missing configuration", async () => {
   const previous = { ...process.env };
   const originalFetch = globalThis.fetch;
   Object.assign(process.env, {
@@ -21,22 +21,18 @@ test("welcome uses fixed demo recipient and plain credentials; transport rejects
       from: "sender@example.com",
       to: ["demo@example.com"],
       subject: "Tu cuenta de carDoc",
-      text: "Se creó tu cuenta de carDoc.\nUsuario: real@example.com\nContraseña inicial: initial-secret\nIngresá acá: https://cardoc.test/login",
+      text: "Se creó tu cuenta de carDoc.\nUsuario: real@example.com\nIngresá acá: https://cardoc.test/login",
     });
     return new Response(null, { status: 200 });
   };
   try {
-    await sendCustomerWelcomeEmail("real@example.com", "initial-secret", send);
+    await sendCustomerWelcomeEmail("real@example.com", send);
     assert.equal(calls, 1);
     await assert.rejects(
-      sendCustomerWelcomeEmail(
-        "real@example.com",
-        "initial-secret",
-        async () => new Response(null, { status: 503 }),
-      ),
+      sendCustomerWelcomeEmail("real@example.com", async () => new Response(null, { status: 503 })),
     );
     await assert.rejects(
-      sendCustomerWelcomeEmail("real@example.com", "initial-secret", async () => {
+      sendCustomerWelcomeEmail("real@example.com", async () => {
         throw new Error("network");
       }),
     );
@@ -52,7 +48,7 @@ test("welcome uses fixed demo recipient and plain credentials; transport rejects
       const value = process.env[key];
       delete process.env[key];
       await assert.rejects(
-        sendCustomerWelcomeEmail("real@example.com", "initial-secret", async () =>
+        sendCustomerWelcomeEmail("real@example.com", async () =>
           assert.fail("No network without configuration"),
         ),
       );

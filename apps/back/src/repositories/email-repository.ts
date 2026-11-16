@@ -11,7 +11,7 @@ export const sendResendEmail = async (message: { subject: string; text: string }
   if (!response.ok) throw new Error("Mail submission failed");
 };
 
-export const sendCustomerWelcomeEmail = async (email: string, password: string, send = fetch) => {
+export const sendCustomerWelcomeEmail = async (email: string, send = fetch) => {
   const origin = process.env.FRONTEND_URL;
   if (!origin) throw new Error("Frontend URL configuration missing");
   const loginUrl = new URL(`${origin.replace(/\/$/, "")}/login`);
@@ -19,7 +19,7 @@ export const sendCustomerWelcomeEmail = async (email: string, password: string, 
   await sendResendEmail(
     {
       subject: "Tu cuenta de carDoc",
-      text: `Se creó tu cuenta de carDoc.\nUsuario: ${email}\nContraseña inicial: ${password}\nIngresá acá: ${loginUrl.href}`,
+      text: `Se creó tu cuenta de carDoc.\nUsuario: ${email}\nIngresá acá: ${loginUrl.href}`,
     },
     send,
   );

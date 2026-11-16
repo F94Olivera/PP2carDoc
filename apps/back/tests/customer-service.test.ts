@@ -134,10 +134,9 @@ test("welcome runs after committed persistence; failure preserves creation witho
         committed = true;
         return { ...row, password: input.password };
       },
-      async (email, password) => {
+      async (...args) => {
         assert.equal(committed, true);
-        assert.equal(email, row.email);
-        assert.equal(password, input.password);
+        assert.deepEqual(args, [row.email]);
         sends++;
         if (fails) throw new Error("private provider details");
       },

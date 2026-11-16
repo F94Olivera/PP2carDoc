@@ -173,3 +173,7 @@ Cierre del incremento: schema recreado sin migraciones y seed completado (20 cue
 ## 2026-11-15 — Cierre de sesión en el frontend
 
 - El frontend conserva la revocación Bearer, completa la limpieza local cuando la sesión ya terminó y descarta el usuario verificado al volver a login. Resultados y límites en [TESTING.md](TESTING.md).
+
+### Corrección de exposición de credenciales
+
+- 2026-11-16: alta y restablecimiento de clientes con campos de contraseña vacíos y enmascarados. El correo de bienvenida incluye el usuario y el enlace de ingreso. Verificación local en TESTING.md. La rotación de contraseñas que usaron el valor anterior queda pendiente en el entorno publicado.

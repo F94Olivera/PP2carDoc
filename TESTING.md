@@ -327,3 +327,9 @@ Playwright con Chrome sobre Next.js local, en escritorio en español y en móvil
 - `pnpm test:unit`: 108/108 aprobados. Los dobles cubren POST `/logout` con respuestas 204, 401, 403, 429 y 503, renovación con sesión vencida frente a un fallo real, y normalización del 403 de Auth exclusivamente para `session_not_found` en el cierre local.
 - Chrome local con frontend y SDK reales y dobles HTTP: para cliente y mecánica, POST `/logout` → 204 y POST `/auth/v1/logout?scope=local` → 403 con `session_not_found`. Se verificaron la eliminación de ambas partes de la cookie, la llegada a `/login` sin recarga manual y el bloqueo al volver atrás o abrir directamente una ruta privada. Se incluyeron una sesión vencida durante la renovación y un 503 de revocación para comprobar el flujo de error.
 - Integraciones solicitadas, ejecutadas una vez contra la API remota configurada. `test:auth`, `test:customers` y `test:authorization` terminaron con salida 1 al recibir 401 en el login esperado como válido. Como faltaban `TEST_API_URL` y las credenciales `TEST_LOGIN_*`, las dos primeras usaron la URL pública configurada, la cuenta demo de mecánica Mateo y `SEED_DEMO_PASSWORD`. Autorización usó sus cuentas demo habituales y ejecutó su bloque de limpieza. El flujo autenticado remoto quedó sin verificar. Sin deploy.
+
+### Corrección de exposición de credenciales (2026-11-16)
+
+- `pnpm test:unit`: 108/108. El doble de Resend verifica el contenido exacto del correo de bienvenida sin contraseña. El doble del servicio verifica que solo se envía el email de la cuenta después del commit y que una falla de correo conserva el alta.
+- `pnpm lint` y `pnpm typecheck`: aprobados. Revisión de los dos campos de contraseña: empiezan vacíos, ocultan caracteres y se limpian tras guardar la contraseña.
+- Verificación local con dobles. No se enviaron correos ni se ejecutaron integraciones, rotaciones o despliegues.

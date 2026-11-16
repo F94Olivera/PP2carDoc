@@ -37,7 +37,7 @@ export default function CustomerForm({ customer }: { customer?: CustomerResponse
   const router = useRouter();
   const user = useVerifiedUser();
   const [mechanicId, setMechanicId] = useState("");
-  const [password, setPassword] = useState("123qweASD");
+  const [password, setPassword] = useState("");
   const [isResetting, setIsResetting] = useState(false);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
   const [resetError, setResetError] = useState<string | null>(null);
@@ -202,7 +202,7 @@ export default function CustomerForm({ customer }: { customer?: CustomerResponse
             <Field label={t.login.passwordLabel} required>
               <input
                 className={inputClasses}
-                type="text"
+                type="password"
                 autoComplete="new-password"
                 minLength={8}
                 maxLength={72}
@@ -276,6 +276,7 @@ export default function CustomerForm({ customer }: { customer?: CustomerResponse
               setResetError(null);
               try {
                 await resetCustomerPassword(customer.id, password, t.customers.actionError);
+                setPassword("");
                 setResetMessage(t.portal.passwordResetSuccess);
               } catch (error) {
                 setResetError(error instanceof Error ? error.message : t.customers.actionError);
@@ -287,7 +288,7 @@ export default function CustomerForm({ customer }: { customer?: CustomerResponse
             <Field label={t.portal.resetPassword} required>
               <input
                 className={inputClasses}
-                type="text"
+                type="password"
                 autoComplete="new-password"
                 required
                 minLength={8}

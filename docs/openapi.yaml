@@ -453,7 +453,7 @@ paths:
   /customers/{customerId}/password:
     post:
       summary: Reset a customer password as the owning mechanic
-      description: MECHANIC only, including archived customers owned by that mechanic. GOD and USER receive 403. Resolves the linked USER account internally, replaces its bcrypt password and revokes all its sessions/refresh tokens in the same database transaction. No email/password recovery or self-service change. Unknown body fields are rejected. The UI suggests 123qweASD; backend never supplies a default password.
+      description: MECHANIC only, including archived customers owned by that mechanic. GOD and USER receive 403. Resolves the linked USER account internally, replaces its bcrypt password and revokes all its sessions/refresh tokens in the same database transaction. No email/password recovery or self-service change. Unknown body fields are rejected. The password must be entered explicitly.
       security:
         - bearerAuth: []
       parameters:
@@ -1144,7 +1144,7 @@ components:
         welcomeEmailStatus:
           type: string
           enum: [sent, failed]
-          description: sent indicates Resend accepted the request; failed includes missing configuration. Never includes credentials or provider details.
+          description: sent indicates Resend accepted the welcome email; failed includes missing configuration. The email excludes passwords and recovery tokens. The response excludes credentials and provider details.
     CustomerResponse:
       type: object
       additionalProperties: false
