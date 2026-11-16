@@ -3,8 +3,7 @@ import { fetchAuthenticated, getErrorMessage } from "../../lib/auth-client";
 
 export const createBudgetPdf = async (payload: CreateBudgetPdfRequest, fallbackError: string) => {
   const parsed = budgetPdfSchema.safeParse(payload);
-  if (!parsed.success)
-    throw new Error(`Datos inválidos: ${parsed.error.issues[0]?.message ?? fallbackError}`);
+  if (!parsed.success) throw new Error(fallbackError);
   const response = await fetchAuthenticated("/budgets/pdf", {
     body: JSON.stringify(parsed.data),
     headers: { Accept: "application/pdf", "Content-Type": "application/json" },

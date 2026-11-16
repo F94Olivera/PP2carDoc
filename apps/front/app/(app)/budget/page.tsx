@@ -1,19 +1,16 @@
 "use client";
 
-import {
-  budgetItemAmount,
-  type BudgetPdfTemplateId,
-  type CreateBudgetPdfRequest,
-} from "@cardoc/types";
+import { budgetItemAmount, budgetPdfSchema, type BudgetPdfTemplateId } from "@cardoc/types";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "../../i18n/use-i18n";
+import { budgetValidationMessages } from "./budget-validation";
 import { createBudgetPdf, downloadBudgetPdf } from "./budget-api";
 
 type BudgetItem = {
   id: number;
   description: string;
-  quantity: number;
-  unitPrice: number;
+  quantity: string;
+  unitPrice: string;
 };
 
 type BudgetDraft = {
@@ -30,8 +27,8 @@ const budgetDraftStorageKey = "cardoc-budget-draft";
 const defaultBudgetItem: BudgetItem = {
   description: "",
   id: 1,
-  quantity: 1,
-  unitPrice: 0,
+  quantity: "1",
+  unitPrice: "",
 };
 
 const defaultBudgetPdfTemplateId: BudgetPdfTemplateId = "classic";
@@ -52,6 +49,7 @@ export default function BudgetPage() {
   const [templateId, setTemplateId] = useState<BudgetPdfTemplateId>(defaultBudgetPdfTemplateId);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [showValidation, setShowValidation] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [items, setItems] = useState<BudgetItem[]>([defaultBudgetItem]);
 
@@ -103,10 +101,34 @@ export default function BudgetPage() {
     }
   }, [budgetDate, customerName, domain, isDraftLoaded, items, templateId, vehicleName]);
 
-  const total = useMemo(
-    () => items.reduce((sum, item) => sum + Math.round(budgetItemAmount(item) * 100), 0) / 100,
-    [items],
-  );
+  const pdfItems = items.map(({ description, quantity, unitPrice }) => ({
+    description,
+    quantity: parseNumberInput(quantity),
+    unitPrice: unitPrice.trim() ? parseNumberInput(unitPrice) : 0,
+  }));
+  const validation = budgetPdfSchema.safeParse({
+    templateId,
+    customer: { fullName: customerName },
+    date: budgetDate,
+    items: pdfItems,
+    vehicle: { name: vehicleName, plate: domain },
+  });
+  const errors =
+    showValidation && !validation.success
+      ? budgetValidationMessages(validation.error.issues, t.budget)
+      : new Map<string, string>();
+
+  const fieldError = (path: string) =>
+    errors.has(path)
+      ? { "aria-invalid": true as const, "aria-describedby": `budget-error-${path}` }
+      : {};
+
+  const itemAmounts = pdfItems.map((item) => {
+    if (!Number.isFinite(item.quantity) || !Number.isFinite(item.unitPrice)) return 0;
+    const amount = budgetItemAmount(item);
+    return Number.isFinite(amount) ? amount : 0;
+  });
+  const total = itemAmounts.reduce((sum, amount) => sum + Math.round(amount * 100), 0) / 100;
 
   const updateItem = (id: number, changes: Partial<BudgetItem>) => {
     setItems((currentItems) =>
@@ -120,8 +142,8 @@ export default function BudgetPage() {
       {
         description: "",
         id: Date.now(),
-        quantity: 1,
-        unitPrice: 0,
+        quantity: "1",
+        unitPrice: "",
       },
     ]);
   };
@@ -140,41 +162,17 @@ export default function BudgetPage() {
     event.currentTarget.select();
   };
 
-  const toPositiveNumber = (rawValue: string, fallback: number) => {
-    const normalizedValue = normalizeNumberInput(rawValue);
-
-    if (!normalizedValue) {
-      return fallback;
-    }
-
-    const parsedValue = Number(normalizedValue);
-
-    return Number.isFinite(parsedValue) && parsedValue >= 0 ? parsedValue : fallback;
-  };
-
   const handleGeneratePdf = async () => {
     setPdfError(null);
+    if (!validation.success) {
+      setShowValidation(true);
+      return;
+    }
+
+    setShowValidation(false);
     setIsGeneratingPdf(true);
-
-    const payload: CreateBudgetPdfRequest = {
-      templateId,
-      customer: {
-        fullName: customerName.trim(),
-      },
-      date: budgetDate,
-      items: items.map((item) => ({
-        description: item.description.trim(),
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-      })),
-      vehicle: {
-        name: vehicleName.trim(),
-        plate: domain.trim().toUpperCase(),
-      },
-    };
-
     try {
-      const response = await createBudgetPdf(payload, t.budget.pdfDefaultError);
+      const response = await createBudgetPdf(validation.data, t.budget.pdfDefaultError);
 
       await downloadBudgetPdf(response, budgetDate);
     } catch (error) {
@@ -204,6 +202,7 @@ export default function BudgetPage() {
             <input
               className={inputClasses}
               name="customer"
+              {...fieldError("customer.fullName")}
               onChange={(event) => setCustomerName(event.target.value)}
               placeholder={t.budget.customerPlaceholder}
               type="text"
@@ -212,8 +211,9 @@ export default function BudgetPage() {
           </Field>
           <Field label={t.budget.domainLabel}>
             <input
-              className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm uppercase text-slate-950 outline-none transition placeholder:normal-case placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:placeholder:text-slate-500 dark:focus:ring-blue-950"
+              className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm uppercase text-slate-950 outline-none transition placeholder:normal-case placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 aria-invalid:border-red-600 dark:aria-invalid:border-red-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:placeholder:text-slate-500 dark:focus:ring-blue-950"
               name="domain"
+              {...fieldError("vehicle.plate")}
               onChange={(event) => setDomain(event.target.value)}
               placeholder={t.budget.domainPlaceholder}
               type="text"
@@ -224,6 +224,7 @@ export default function BudgetPage() {
             <input
               className={inputClasses}
               name="vehicle"
+              {...fieldError("vehicle.name")}
               onChange={(event) => setVehicleName(event.target.value)}
               placeholder={t.budget.vehiclePlaceholder}
               type="text"
@@ -235,6 +236,7 @@ export default function BudgetPage() {
         <div className="grid gap-5 md:grid-cols-3">
           <Field label={t.budget.dateLabel}>
             <DatePicker
+              error={fieldError("date")}
               locale={locale}
               onChange={setBudgetDate}
               translations={{
@@ -249,6 +251,7 @@ export default function BudgetPage() {
 
           <Field label={t.budget.templateLabel}>
             <select
+              {...fieldError("templateId")}
               className={inputClasses}
               onChange={(event) => setTemplateId(event.target.value as BudgetPdfTemplateId)}
               value={templateId}
@@ -287,7 +290,7 @@ export default function BudgetPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {items.map((item) => (
+                {items.map((item, index) => (
                   <tr key={item.id}>
                     <td className="px-3 py-3">
                       <input
@@ -295,6 +298,8 @@ export default function BudgetPage() {
                         onChange={(event) =>
                           updateItem(item.id, { description: event.target.value })
                         }
+                        aria-label={`${t.budget.itemLabel(index + 1)} · ${t.budget.descriptionColumn}`}
+                        {...fieldError(`items.${index}.description`)}
                         placeholder={t.budget.descriptionPlaceholder}
                         type="text"
                         value={item.description}
@@ -303,10 +308,11 @@ export default function BudgetPage() {
                     <td className="px-3 py-3">
                       <input
                         className={compactInputClasses}
-                        min="1"
+                        aria-label={`${t.budget.itemLabel(index + 1)} · ${t.budget.quantityColumn}`}
+                        {...fieldError(`items.${index}.quantity`)}
                         onChange={(event) =>
                           updateItem(item.id, {
-                            quantity: Math.max(1, toPositiveNumber(event.target.value, 1)),
+                            quantity: event.target.value,
                           })
                         }
                         onFocus={handleNumberFocus}
@@ -319,20 +325,21 @@ export default function BudgetPage() {
                       <input
                         className={compactInputClasses}
                         inputMode="decimal"
-                        min="0"
+                        aria-label={`${t.budget.itemLabel(index + 1)} · ${t.budget.unitPriceColumn}`}
+                        {...fieldError(`items.${index}.unitPrice`)}
                         onChange={(event) =>
                           updateItem(item.id, {
-                            unitPrice: toPositiveNumber(event.target.value, 0),
+                            unitPrice: event.target.value,
                           })
                         }
                         onFocus={handleNumberFocus}
                         placeholder="0"
                         type="text"
-                        value={item.unitPrice === 0 ? "" : item.unitPrice}
+                        value={item.unitPrice}
                       />
                     </td>
                     <td className="px-4 py-3 text-right font-semibold">
-                      {currencyFormatter.format(budgetItemAmount(item))}
+                      {currencyFormatter.format(itemAmounts[index]!)}
                     </td>
                     <td className="px-3 py-3 text-right">
                       <button
@@ -374,6 +381,8 @@ export default function BudgetPage() {
                     <input
                       className={inputClasses}
                       onChange={(event) => updateItem(item.id, { description: event.target.value })}
+                      aria-label={`${t.budget.itemLabel(index + 1)} · ${t.budget.descriptionColumn}`}
+                      {...fieldError(`items.${index}.description`)}
                       placeholder={t.budget.descriptionPlaceholder}
                       type="text"
                       value={item.description}
@@ -383,10 +392,11 @@ export default function BudgetPage() {
                     <Field label={t.budget.quantityColumn}>
                       <input
                         className={inputClasses}
-                        min="1"
+                        aria-label={`${t.budget.itemLabel(index + 1)} · ${t.budget.quantityColumn}`}
+                        {...fieldError(`items.${index}.quantity`)}
                         onChange={(event) =>
                           updateItem(item.id, {
-                            quantity: Math.max(1, toPositiveNumber(event.target.value, 1)),
+                            quantity: event.target.value,
                           })
                         }
                         onFocus={handleNumberFocus}
@@ -399,22 +409,23 @@ export default function BudgetPage() {
                       <input
                         className={inputClasses}
                         inputMode="decimal"
-                        min="0"
+                        aria-label={`${t.budget.itemLabel(index + 1)} · ${t.budget.unitPriceColumn}`}
+                        {...fieldError(`items.${index}.unitPrice`)}
                         onChange={(event) =>
                           updateItem(item.id, {
-                            unitPrice: toPositiveNumber(event.target.value, 0),
+                            unitPrice: event.target.value,
                           })
                         }
                         onFocus={handleNumberFocus}
                         placeholder="0"
                         type="text"
-                        value={item.unitPrice === 0 ? "" : item.unitPrice}
+                        value={item.unitPrice}
                       />
                     </Field>
                   </div>
                   <div className="flex justify-between border-t border-slate-200 pt-3 text-sm font-semibold dark:border-slate-800">
                     <span>{t.budget.totalLabel}</span>
-                    <span>{currencyFormatter.format(budgetItemAmount(item))}</span>
+                    <span>{currencyFormatter.format(itemAmounts[index]!)}</span>
                   </div>
                 </div>
               </div>
@@ -447,6 +458,18 @@ export default function BudgetPage() {
               <PdfIcon />
             </button>
 
+            <div aria-live="polite">
+              {errors.size > 0 ? (
+                <ul className="list-disc space-y-1 rounded-lg border border-red-200 bg-red-50 py-3 pl-8 pr-4 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+                  {[...errors].map(([path, message]) => (
+                    <li id={`budget-error-${path}`} key={path}>
+                      {message}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+
             {pdfError ? (
               <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
                 {pdfError}
@@ -460,31 +483,18 @@ export default function BudgetPage() {
 }
 
 const inputClasses =
-  "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:placeholder:text-slate-500 dark:focus:ring-blue-950";
+  "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 aria-invalid:border-red-600 dark:aria-invalid:border-red-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 dark:placeholder:text-slate-500 dark:focus:ring-blue-950";
 
 const compactInputClasses =
-  "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50 dark:placeholder:text-slate-500 dark:focus:ring-blue-950";
+  "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 aria-invalid:border-red-600 dark:aria-invalid:border-red-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50 dark:placeholder:text-slate-500 dark:focus:ring-blue-950";
 
-const normalizeNumberInput = (value: string) => {
-  const cleanValue = value.replace(/[^\d.,-]/g, "").trim();
+const parseNumberInput = (value: string) => {
+  const input = value.trim();
+  const normalized = /^-?\d{1,3}(?:\.\d{3})+,\d+$/.test(input)
+    ? input.replaceAll(".", "").replace(",", ".")
+    : input.replace(",", ".");
 
-  if (!cleanValue) {
-    return "";
-  }
-
-  if (cleanValue.includes(",") && cleanValue.includes(".")) {
-    return cleanValue.replace(/\./g, "").replace(",", ".");
-  }
-
-  if (cleanValue.includes(",")) {
-    return cleanValue.replace(",", ".");
-  }
-
-  if (/^\d{1,3}(?:\.\d{3})+$/.test(cleanValue)) {
-    return cleanValue.replace(/\./g, "");
-  }
-
-  return cleanValue;
+  return /^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(normalized) ? Number(normalized) : NaN;
 };
 
 const parseBudgetDraft = (value: unknown): BudgetDraft | null => {
@@ -526,20 +536,22 @@ const parseBudgetItems = (value: unknown) => {
         return null;
       }
 
-      const candidate = item as Partial<BudgetItem>;
+      const { description, id, quantity, unitPrice } = item as Partial<
+        Omit<BudgetItem, "quantity" | "unitPrice">
+      > & {
+        quantity?: string | number;
+        unitPrice?: string | number;
+      };
 
-      if (typeof candidate.description !== "string") {
-        return null;
-      }
-
-      const quantity = typeof candidate.quantity === "number" ? candidate.quantity : 1;
-      const unitPrice = typeof candidate.unitPrice === "number" ? candidate.unitPrice : 0;
+      if (typeof description !== "string") return null;
 
       return {
-        description: candidate.description,
-        id: typeof candidate.id === "number" ? candidate.id : Date.now() + index,
-        quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
-        unitPrice: Number.isFinite(unitPrice) && unitPrice >= 0 ? unitPrice : 0,
+        description,
+        id: typeof id === "number" ? id : Date.now() + index,
+        quantity:
+          typeof quantity === "string" || typeof quantity === "number" ? String(quantity) : "1",
+        unitPrice:
+          typeof unitPrice === "string" || typeof unitPrice === "number" ? String(unitPrice) : "",
       };
     })
     .filter((item): item is BudgetItem => item !== null);
@@ -576,11 +588,13 @@ function Field({
 }
 
 function DatePicker({
+  error,
   locale,
   onChange,
   translations,
   value,
 }: {
+  error: React.AriaAttributes;
   locale: string;
   onChange: (value: string) => void;
   translations: {
@@ -624,13 +638,14 @@ function DatePicker({
   return (
     <div className="relative max-w-xs">
       <button
+        {...error}
         aria-expanded={isOpen}
         aria-label={translations.openCalendar}
         className={`${inputClasses} flex items-center justify-between pr-3 text-left`}
         onClick={() => setIsOpen((currentValue) => !currentValue)}
         type="button"
       >
-        <span>{displayValue}</span>
+        <span>{error["aria-invalid"] ? translations.openCalendar : displayValue}</span>
         <span className="text-slate-400">
           <CalendarIcon />
         </span>

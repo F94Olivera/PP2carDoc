@@ -113,6 +113,19 @@ type AppMessages = {
     generatingPdf: string;
     pdfDefaultError: string;
     pdfConnectionError: string;
+    validation: {
+      textRequired: (field: string) => string;
+      textLength: (field: string, max: number) => string;
+      textCharacters: (field: string) => string;
+      date: string;
+      template: string;
+      items: string;
+      quantity: (row: string) => string;
+      quantityPrecision: (row: string) => string;
+      price: (row: string) => string;
+      pricePrecision: (row: string) => string;
+      total: string;
+    };
   };
   customers: {
     editAction: string;
@@ -448,6 +461,20 @@ export const messages = {
       generatingPdf: "Generando PDF...",
       pdfDefaultError: "No se pudo generar el PDF. Revisá los datos e intentá nuevamente.",
       pdfConnectionError: "No se pudo conectar con la API. Verificá que el backend esté corriendo.",
+      validation: {
+        textRequired: (field) => `${field} · Completá este campo.`,
+        textLength: (field, max) => `${field} · Usá hasta ${max} caracteres.`,
+        textCharacters: (field) =>
+          `${field} · Usá caracteres Latin-1 (como letras con tildes y ñ), sin emojis ni saltos de línea.`,
+        date: "Fecha · Elegí una fecha válida en el calendario.",
+        template: "Plantilla · Seleccioná classic.",
+        items: "Ítems del presupuesto · Incluí entre 1 y 100 ítems.",
+        quantity: (row) => `${row} · Cantidad · Ingresá un número entre 1 y 1.000.000.`,
+        quantityPrecision: (row) => `${row} · Cantidad · Usá hasta 3 decimales.`,
+        price: (row) => `${row} · Precio unitario · Ingresá un número entre 0 y 1.000.000.000.`,
+        pricePrecision: (row) => `${row} · Precio unitario · Usá hasta 2 decimales.`,
+        total: "Total · Reducí la cantidad o el precio de uno o más ítems.",
+      },
     },
     customers: {
       editAction: "Editar",
@@ -790,6 +817,20 @@ export const messages = {
       generatingPdf: "Generating PDF...",
       pdfDefaultError: "Could not generate the PDF. Check the data and try again.",
       pdfConnectionError: "Could not connect to the API. Check that the backend is running.",
+      validation: {
+        textRequired: (field) => `${field} · Fill in this field.`,
+        textLength: (field, max) => `${field} · Use up to ${max} characters.`,
+        textCharacters: (field) =>
+          `${field} · Use Latin-1 characters (such as accented letters), without emoji or line breaks.`,
+        date: "Date · Choose a valid date from the calendar.",
+        template: "Template · Select classic.",
+        items: "Budget items · Include between 1 and 100 items.",
+        quantity: (row) => `${row} · Quantity · Enter a number between 1 and 1,000,000.`,
+        quantityPrecision: (row) => `${row} · Quantity · Use up to 3 decimal places.`,
+        price: (row) => `${row} · Unit price · Enter a number between 0 and 1,000,000,000.`,
+        pricePrecision: (row) => `${row} · Unit price · Use up to 2 decimal places.`,
+        total: "Total · Reduce the quantity or price of one or more items.",
+      },
     },
     customers: {
       editAction: "Edit",

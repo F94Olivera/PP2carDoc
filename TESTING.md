@@ -312,3 +312,12 @@ Pendiente: E2E de bienvenida con usuario copiloto en navegador. Usar configuraci
 - Actualización posterior del 2026-11-03, autorizada por el usuario: backend `api` desplegado mediante conector Supabase como v20 ACTIVE; frontend reiniciado con `pnpm dev:web` en http://localhost:3000, configurado contra API remota. CLI sin sesión, por lo que no se usó para publicar. No se crearon cuentas ni se enviaron correos; E2E de bienvenida sigue pendiente con copiloto.
 
 - Confirmación manual del usuario (2026-11-03): probó el envío del correo de bienvenida y confirmó que se envía. Esto no registra una verificación de login con las credenciales iniciales ni del escenario real de fallo de correo; ambos siguen pendientes. No se ejecutaron suites de integración ni se generaron correos adicionales como parte del cierre.
+
+### 2026-11-15 — Validación del formulario de presupuesto
+
+Playwright con Chrome sobre Next.js local, en escritorio en español y en móvil en inglés. La autenticación y las rutas HTTP se simularon en localhost. La respuesta de descarga se generó con el esquema compartido y el servicio local de PDF.
+
+- Se comprobaron campos obligatorios vacíos, fecha inexistente, descripciones largas y con caracteres no admitidos, cantidad fuera del rango y precisión de cantidad y precio, y precios negativos o no numéricos.
+- Se verificaron los mensajes localizados por campo y el número de ítem, su desaparición al corregir los datos y la ausencia de solicitudes de PDF durante los intentos inválidos.
+- Se recuperaron borradores con valores numéricos del formato anterior y con el texto del formato actual. Dos presupuestos válidos iniciaron descargas con contenido PDF; se verificó también el nombre de archivo indicado por la respuesta.
+- Se ejecutaron 105 pruebas unitarias y se verificó TypeScript. La prueba de navegador no usó Supabase ni la API desplegada.

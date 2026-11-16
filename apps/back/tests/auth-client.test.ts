@@ -240,7 +240,8 @@ test("finance and PDF domain clients use authenticated transport and propagate A
   assert.equal(await pdf.text(), "fake PDF");
   assert.equal(pdf.headers.get("Content-Disposition"), 'attachment; filename="budget.pdf"');
   assert.equal(new Headers(state.calls[1]!.init.headers).get("Accept"), "application/pdf");
-  await assert.rejects(state.api.createBudgetPdf({}, "failed"), /Datos inválidos/);
+  await assert.rejects(state.api.createBudgetPdf({}, "failed"), { message: "failed" });
+  assert.equal(state.calls.length, 2);
   state.setResponse(new Response("not a PDF"));
   await assert.rejects(state.api.createBudgetPdf(payload, "failed"), /failed/);
   state.setResponse(new Response('{"error":"unavailable"}', { status: 503 }));

@@ -164,3 +164,8 @@ Cierre del incremento: schema recreado sin migraciones y seed completado (20 cue
 - 2026-11-03: por autorización posterior del usuario, bienvenida publicada en API v20 (ACTIVE) y frontend local iniciado en http://localhost:3000 contra backend remoto. E2E de bienvenida pendiente con copiloto.
 
 - 2026-11-03: usuario confirma prueba manual satisfactoria del envío de bienvenida contra API publicada. Login con credenciales iniciales y fallo real de correo no confirmados; límites en TESTING.md.
+
+### 2026-11-15 — Validación localizada del presupuesto
+
+- [x] Mostrar errores del esquema compartido por campo e ítem en español e inglés, con actualización al editar.
+- [x] Verificar el bloqueo de solicitudes inválidas, la recuperación del borrador y la descarga del PDF con Playwright. Resultados en [TESTING.md](TESTING.md).
