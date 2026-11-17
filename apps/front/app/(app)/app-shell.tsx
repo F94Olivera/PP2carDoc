@@ -124,10 +124,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </nav>
 
-          <CreditFooter
-            className={`mt-3 justify-center ${isMobileNavOpen ? "flex" : "hidden"} md:hidden`}
-          />
-
           <div className="mt-8 hidden items-center gap-2 md:flex">
             <LanguageToggle className={toggleClassName} />
             <ThemeToggle className={iconToggleClassName} />
@@ -146,45 +142,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {t.login.signOutError}
             </p>
           ) : null}
-
-          <div className="mt-auto hidden pb-2 md:block">
-            <CreditFooter className="flex justify-center" />
-          </div>
         </aside>
 
         <section className="flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">{children}</section>
       </div>
     </main>
-  );
-}
-
-function CreditFooter({ className }: { className?: string }) {
-  const { t } = useI18n();
-
-  return (
-    <p
-      className={`items-center gap-1.5 whitespace-nowrap text-xs font-medium text-slate-500 dark:text-slate-400 ${
-        className ?? ""
-      }`}
-    >
-      {t.login.creditPrefix}
-      <HeartIcon />
-      {t.login.creditSuffix}
-    </p>
-  );
-}
-
-function HeartIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-3.5 w-3.5 fill-rose-500"
-      role="img"
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path d="M12 21s-6.7-4.25-9.45-8.34C.65 9.83.99 6.2 3.46 4.39 5.5 2.9 8.38 3.25 10.2 5.08L12 6.88l1.8-1.8c1.82-1.83 4.7-2.18 6.74-.69 2.47 1.81 2.81 5.44.91 8.27C18.7 16.75 12 21 12 21Z" />
-    </svg>
   );
 }
 

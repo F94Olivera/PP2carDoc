@@ -52,9 +52,6 @@ type AppMessages = {
     signingOut: string;
     signOutError: string;
     connectionError: string;
-    creditPrefix: string;
-    creditIconLabel: string;
-    creditSuffix: string;
   };
   ok: {
     status: string;
@@ -400,9 +397,6 @@ export const messages = {
       signingOut: "Cerrando sesión...",
       signOutError: "No se pudo cerrar la sesión. Intentá nuevamente.",
       connectionError: "No se pudo conectar con el servicio de autenticación.",
-      creditPrefix: "<> with",
-      creditIconLabel: "amor",
-      creditSuffix: "by F94",
     },
     ok: {
       status: "Sesión validada",
@@ -754,9 +748,6 @@ export const messages = {
       signingOut: "Signing out...",
       signOutError: "Could not sign out. Try again.",
       connectionError: "Could not connect to the authentication service.",
-      creditPrefix: "<> with",
-      creditIconLabel: "love",
-      creditSuffix: "by F94",
     },
     ok: {
       status: "Session validated",

@@ -198,22 +198,6 @@ export default function LoginPage() {
           <Link className="mt-4 block text-sm text-blue-600 underline" href="/forgot-password">
             Olvidé mi contraseña
           </Link>
-
-          <div className="mt-10 flex justify-center">
-            <p className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white/60 px-3 py-1.5 text-xs font-medium text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-400">
-              {t.login.creditPrefix}
-              <svg
-                aria-label={t.login.creditIconLabel}
-                className="h-3.5 w-3.5 fill-rose-500"
-                role="img"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M12 21s-6.7-4.25-9.45-8.34C.65 9.83.99 6.2 3.46 4.39 5.5 2.9 8.38 3.25 10.2 5.08L12 6.88l1.8-1.8c1.82-1.83 4.7-2.18 6.74-.69 2.47 1.81 2.81 5.44.91 8.27C18.7 16.75 12 21 12 21Z" />
-              </svg>
-              {t.login.creditSuffix}
-            </p>
-          </div>
         </div>
       </section>
     </main>
